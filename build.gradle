@@ -1,0 +1,75 @@
+buildscript {
+    repositories {
+    	mavenCentral()
+	    maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
+			maven { setUrl("https://repo.spring.io/milestone") }
+		}
+}
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.vaadin' version '24.8.4'
+}
+group = 'com.RafaelDiaz'
+version = '0.0.1-SNAPSHOT'
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+	mavenCentral()
+	maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
+	maven { setUrl("https://repo.spring.io/milestone") }
+	maven { setUrl("https://maven.vaadin.com/vaadin-addons") }
+    maven { setUrl("https://jitpack.io") }
+}
+ext {
+    vaadinVersion = '24.8.4'
+}
+
+configurations {
+	developmentOnly
+	runtimeClasspath {
+		extendsFrom developmentOnly
+	}
+}
+
+dependencies {
+    // ---- Spring Boot ----
+    // Para la persistencia (Entidades, Repositorios)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Para tener un servidor web (necesario para Vaadin)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Herramientas de desarrollo (reinicios automáticos, etc.)
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // ---- Vaadin ----
+    // Importa la lista de versiones correctas de Vaadin
+    implementation enforcedPlatform("com.vaadin:vaadin-bom:$vaadinVersion")
+    // El "starter" que integra Vaadin con Spring Boot
+    implementation 'com.vaadin:vaadin-spring-boot-starter'
+    // Para la seguridad (autenticación, autorización y encriptación)
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+// --- NUEVA DEPENDENCIA (Flyway) ---
+    // Para migraciones de base de datos (versionar la BD con archivos SQL)
+    implementation 'org.flywaydb:flyway-mysql'
+
+    implementation 'com.github.appreciated:apexcharts:24.0.1'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // ---- Testing ----
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+}
+
+
+dependencyManagement {
+	imports {
+		mavenBom "com.vaadin:vaadin-bom:$vaadinVersion"
+	}
+}
