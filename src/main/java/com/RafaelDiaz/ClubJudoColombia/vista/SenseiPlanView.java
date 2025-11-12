@@ -47,15 +47,15 @@ public class SenseiPlanView extends VerticalLayout {
     // --- Servicios y Repositorios (Actualizados) ---
     private final PlanEntrenamientoService planEntrenamientoService;
     private final GrupoEntrenamientoRepository grupoEntrenamientoRepository;
-    private final PruebaEstandarRepository pruebaEstandarRepository;
+    private final PruebaEstandarRepository pruebaEstandarRepository; // Refactorizado
     private final TareaDiariaRepository tareaDiariaRepository; // --- NUEVO ---
     private final TraduccionService traduccionService;
     private final SecurityService securityService;
 
     // --- Componentes de UI (Actualizados) ---
     private ComboBox<GrupoEntrenamiento> grupoComboBox;
-    private Grid<PruebaEstandar> pruebasGrid; // Grid para Pruebas
-    private Grid<TareaDiaria> tareasGrid; // Grid para Tareas
+    private Grid<PruebaEstandar> pruebasGrid; // Grid para Pruebas (Flujo 1)
+    private Grid<TareaDiaria> tareasGrid; // Grid para Tareas (Flujo 2)
     private VerticalLayout panelIzquierdoBibliotecas; // Contenedor para los 2 grids
     private VerticalLayout panelDerechoPlan; // Contenedor para el plan actual
     private Button btnNuevoPlan;
