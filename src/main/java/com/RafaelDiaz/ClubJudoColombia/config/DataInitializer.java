@@ -38,7 +38,7 @@ public class DataInitializer implements CommandLineRunner {
     private final MetricaRepository metricaRepository;
     private final ResultadoPruebaService resultadoPruebaService; // Refactorizado
     private final TareaDiariaRepository tareaDiariaRepository; // Nuevo
-
+    private final TraduccionRepository traduccionRepository;
     /**
      * --- CONSTRUCTOR ACTUALIZADO ---
      */
@@ -53,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
                            PruebaEstandarRepository pruebaEstandarRepository, // Refactorizado
                            MetricaRepository metricaRepository,
                            ResultadoPruebaService resultadoPruebaService, // Refactorizado
-                           TareaDiariaRepository tareaDiariaRepository // Nuevo
+                           TareaDiariaRepository tareaDiariaRepository, TraduccionRepository traduccionRepository // Nuevo
     ) {
         this.rolRepository = rolRepository;
         this.usuarioService = usuarioService;
@@ -67,6 +67,7 @@ public class DataInitializer implements CommandLineRunner {
         this.metricaRepository = metricaRepository;
         this.resultadoPruebaService = resultadoPruebaService; // Refactorizado
         this.tareaDiariaRepository = tareaDiariaRepository; // Nuevo
+        this.traduccionRepository = traduccionRepository;
     }
 
     @Override
@@ -78,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
         Judoka judokaDePrueba = crearJudokaYGrupoDePrueba();
         generarCalendarioSesiones(senseiDePrueba);
 
-        // --- LÓGICA DE DATOS REFACTORIZADA ---
+        crearTraduccionesDias();
         crearResultadosDePrueba(senseiDePrueba, judokaDePrueba); // Flujo 1: Evaluación (Sensei)
         crearPlanDeTareasDiarias(senseiDePrueba, judokaDePrueba); // Flujo 2: Tareas (Judoka)
     }
@@ -251,6 +252,16 @@ public class DataInitializer implements CommandLineRunner {
      * --- ¡NUEVO MÉTODO AÑADIDO! ---
      * Flujo 2: Crea Tareas Diarias y un Plan de Acondicionamiento (para el Judoka).
      */
+    /**
+     * --- ¡MÉTODO ACTUALIZADO! ---
+     * Flujo 2: Crea Tareas Diarias y un Plan de Acondicionamiento (para el Judoka).
+     * (Ahora asigna los días de la semana a las tareas).
+     */
+    /**
+     * --- ¡MÉTODO ACTUALIZADO! ---
+     * Flujo 2: Crea Tareas Diarias y un Plan de Acondicionamiento (para el Judoka).
+     * (Ahora asigna los días de la semana a las tareas).
+     */
     private void crearPlanDeTareasDiarias(Sensei sensei, Judoka judoka) {
         System.out.println("--- Verificando tareas diarias (Flujo 2) ---");
 
@@ -286,17 +297,46 @@ public class DataInitializer implements CommandLineRunner {
                 gruposDelPlan
         );
 
-        // 3. Vincular las tareas al plan
+        // --- ¡LÓGICA DE DÍAS AÑADIDA! ---
+        Set<DayOfWeek> diasAlternos = Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY);
+        Set<DayOfWeek> diasMartesJueves = Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY);
+
+        // 3. Vincular las tareas al plan CON DÍAS
         EjercicioPlanificado tareaPlan1 = new EjercicioPlanificado();
         tareaPlan1.setTareaDiaria(flexiones); // <-- Vincula a la TAREA
+        tareaPlan1.setDiasAsignados(diasAlternos); // <-- Asigna L-M-V
         planAcond.addEjercicio(tareaPlan1);
 
         EjercicioPlanificado tareaPlan2 = new EjercicioPlanificado();
         tareaPlan2.setTareaDiaria(saltos); // <-- Vincula a la TAREA
+        tareaPlan2.setDiasAsignados(diasMartesJueves); // <-- Asigna M-J
         planAcond.addEjercicio(tareaPlan2);
 
         planEntrenamientoService.guardarPlan(planAcond);
 
         System.out.println(">>> Plan de Acondicionamiento creado.");
+    }
+    private void crearTraduccionesDias() {
+        // Verificamos si ya existen para no duplicar
+        if (traduccionRepository.findByClaveAndIdioma("MONDAY", "es").isPresent()) {
+            return; // Ya existen
+        }
+
+        System.out.println(">>> Poblando traducciones de días de la semana...");
+
+        traduccionRepository.saveAll(List.of(
+                new Traduccion("MONDAY", "es", "Lunes"),
+                new Traduccion("TUESDAY", "es", "Martes"),
+                new Traduccion("WEDNESDAY", "es", "Miércoles"),
+                new Traduccion("THURSDAY", "es", "Jueves"),
+                new Traduccion("FRIDAY", "es", "Viernes"),
+                new Traduccion("SATURDAY", "es", "Sábado"),
+                new Traduccion("SUNDAY", "es", "Domingo"),
+
+                // (Traducciones de Estados de Plan, por si acaso)
+                new Traduccion("PENDIENTE", "es", "Pendiente"),
+                new Traduccion("EN_PROGRESO", "es", "En Progreso"),
+                new Traduccion("COMPLETADO", "es", "Completado")
+        ));
     }
 }

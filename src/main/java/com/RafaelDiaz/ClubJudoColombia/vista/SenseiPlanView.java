@@ -1,27 +1,22 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-// --- Imports de Modelo (Refactorizados) ---
-import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
-import com.RafaelDiaz.ClubJudoColombia.modelo.TareaDiaria;
-import com.RafaelDiaz.ClubJudoColombia.modelo.EjercicioPlanificado;
-import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
-import com.RafaelDiaz.ClubJudoColombia.modelo.PlanEntrenamiento;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
-// --- Repositorios (Refactorizados) ---
-import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan; // Importante
 import com.RafaelDiaz.ClubJudoColombia.repositorio.GrupoEntrenamientoRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TareaDiariaRepository;
-// --- Servicios ---
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
-// --- Componentes UI ---
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.CheckboxGroup; // --- NUEVO ---
+import com.vaadin.flow.component.checkbox.CheckboxGroupVariant; // --- NUEVO ---
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -32,60 +27,55 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
+import java.time.DayOfWeek; // --- NUEVO ---
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * --- VISTA REFACTORIZADA ---
- * Ahora permite al Sensei crear planes mezclando
- * Pruebas Estándar (para evaluar) y Tareas Diarias (para entrenar).
- */
 @Route("gestion-planes")
 @RolesAllowed("ROLE_SENSEI")
 public class SenseiPlanView extends VerticalLayout {
 
-    // --- Servicios y Repositorios (Actualizados) ---
     private final PlanEntrenamientoService planEntrenamientoService;
     private final GrupoEntrenamientoRepository grupoEntrenamientoRepository;
-    private final PruebaEstandarRepository pruebaEstandarRepository; // Refactorizado
-    private final TareaDiariaRepository tareaDiariaRepository; // --- NUEVO ---
+    private final PruebaEstandarRepository pruebaEstandarRepository;
+    private final TareaDiariaRepository tareaDiariaRepository;
     private final TraduccionService traduccionService;
     private final SecurityService securityService;
 
-    // --- Componentes de UI (Actualizados) ---
     private ComboBox<GrupoEntrenamiento> grupoComboBox;
-    private Grid<PruebaEstandar> pruebasGrid; // Grid para Pruebas (Flujo 1)
-    private Grid<TareaDiaria> tareasGrid; // Grid para Tareas (Flujo 2)
-    private VerticalLayout panelIzquierdoBibliotecas; // Contenedor para los 2 grids
-    private VerticalLayout panelDerechoPlan; // Contenedor para el plan actual
+    private Grid<PruebaEstandar> pruebasGrid;
+    private Grid<TareaDiaria> tareasGrid;
+    private VerticalLayout panelIzquierdoBibliotecas;
+    private VerticalLayout panelDerechoPlan;
     private Button btnNuevoPlan;
     private TextField nombrePlanField;
-    private Grid<EjercicioPlanificado> planGrid; // Grid para el plan actual
+    private Grid<EjercicioPlanificado> planGrid;
     private Button btnGuardarPlan;
+    private Button btnCompletarPlan; // --- NUEVO BOTÓN ---
 
-    // --- Estado ---
+    // --- NUEVO COMPONENTE: Selector de Días ---
+    private CheckboxGroup<DayOfWeek> diasSelector;
+
     private PlanEntrenamiento planActual;
     private Sensei senseiActual;
     private Set<EjercicioPlanificado> ejerciciosDelPlan = new HashSet<>();
 
-    /**
-     * --- CONSTRUCTOR ACTUALIZADO ---
-     */
     public SenseiPlanView(PlanEntrenamientoService planEntrenamientoService,
                           GrupoEntrenamientoRepository grupoEntrenamientoRepository,
                           PruebaEstandarRepository pruebaEstandarRepository,
-                          TareaDiariaRepository tareaDiariaRepository, // --- NUEVO ---
+                          TareaDiariaRepository tareaDiariaRepository,
                           TraduccionService traduccionService,
                           SecurityService securityService) {
         this.planEntrenamientoService = planEntrenamientoService;
         this.grupoEntrenamientoRepository = grupoEntrenamientoRepository;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
-        this.tareaDiariaRepository = tareaDiariaRepository; // --- NUEVO ---
+        this.tareaDiariaRepository = tareaDiariaRepository;
         this.traduccionService = traduccionService;
         this.securityService = securityService;
 
         this.senseiActual = securityService.getAuthenticatedSensei()
-                .orElseThrow(() -> new RuntimeException("Error de seguridad: No se pudo encontrar el perfil del Sensei logueado."));
+                .orElseThrow(() -> new RuntimeException("Error de seguridad"));
 
         setSizeFull();
         add(new H1("Gestión de Planes de Entrenamiento"));
@@ -97,57 +87,66 @@ public class SenseiPlanView extends VerticalLayout {
     }
 
     private HorizontalLayout configurarPanelSuperior() {
-        // ... (Este método no cambia) ...
         grupoComboBox = new ComboBox<>("Seleccionar Grupo");
         grupoComboBox.setItems(grupoEntrenamientoRepository.findAll());
         grupoComboBox.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
         btnNuevoPlan = new Button("Crear Nuevo Plan", event -> habilitarFormularioPlan());
         nombrePlanField = new TextField("Nombre del Plan");
         nombrePlanField.setVisible(false);
-        HorizontalLayout panelSuperior = new HorizontalLayout(grupoComboBox, btnNuevoPlan, nombrePlanField);
+
+        // --- Selector de Días (MODIFICADO) ---
+        diasSelector = new CheckboxGroup<>();
+        diasSelector.setLabel("Asignar para los días:");
+        diasSelector.setItems(DayOfWeek.values());
+        diasSelector.addThemeVariants(CheckboxGroupVariant.LUMO_VERTICAL);
+        diasSelector.setVisible(false);
+
+        // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+        // Usamos el servicio de traducción. day.name() devuelve "MONDAY", "TUESDAY", etc.
+        diasSelector.setItemLabelGenerator(day ->
+                traduccionService.get(day.name()) // Llama al TraduccionService
+        );
+
+        HorizontalLayout panelSuperior = new HorizontalLayout(grupoComboBox, btnNuevoPlan, nombrePlanField, diasSelector);
         panelSuperior.setDefaultVerticalComponentAlignment(Alignment.BASELINE);
         return panelSuperior;
     }
-
-    /**
-     * --- MÉTODO REFACTORIZADO ---
-     * Ahora crea dos Grids a la izquierda (Pruebas y Tareas).
-     */
     private HorizontalLayout configurarContenido() {
-
-        // --- Panel Izquierdo (Bibliotecas) ---
         panelIzquierdoBibliotecas = new VerticalLayout();
         panelIzquierdoBibliotecas.setWidth("50%");
         panelIzquierdoBibliotecas.setHeightFull();
 
-        // 1. Grid de Pruebas Estándar (SJFT, Salto, etc.)
         configurarGridPruebas();
-
-        // 2. Grid de Tareas Diarias (Flexiones, etc.)
         configurarGridTareas();
 
-        panelIzquierdoBibliotecas.add(new H3("Biblioteca de Pruebas (Evaluación)"), pruebasGrid,
-                new H3("Biblioteca de Tareas (Acondicionamiento)"), tareasGrid);
+        panelIzquierdoBibliotecas.add(new H3("Bibliotecas (Seleccione días arriba primero)"), pruebasGrid, tareasGrid);
 
-        // --- Panel Derecho (Plan Actual) ---
         panelDerechoPlan = new VerticalLayout();
         panelDerechoPlan.setWidth("50%");
 
-        configurarGridPlanActual(); // Configura el grid de la derecha
+        configurarGridPlanActual();
 
-        btnGuardarPlan = new Button("Guardar Plan", event -> guardarPlan());
+        btnGuardarPlan = new Button("Guardar Cambios", event -> guardarPlan());
+        btnGuardarPlan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        panelDerechoPlan.add(new H3("Plan Actual"), planGrid, btnGuardarPlan);
-        panelDerechoPlan.setVisible(false); // Oculto al inicio
+        // --- NUEVO: Botón para Completar ---
+        btnCompletarPlan = new Button("Marcar Plan como COMPLETADO", event -> completarPlan());
+        btnCompletarPlan.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
+        btnCompletarPlan.setVisible(false); // Solo visible si el plan ya existe
+
+        HorizontalLayout botonesPlan = new HorizontalLayout(btnGuardarPlan, btnCompletarPlan);
+
+        panelDerechoPlan.add(new H3("Plan Actual"), planGrid, botonesPlan);
+        panelDerechoPlan.setVisible(false);
 
         return new HorizontalLayout(panelIzquierdoBibliotecas, panelDerechoPlan);
     }
 
+    // ... (configurarGridPruebas y configurarGridTareas igual que antes, llaman a add...APlan) ...
     private void configurarGridPruebas() {
         pruebasGrid = new Grid<>(PruebaEstandar.class);
         pruebasGrid.setHeight("300px");
         pruebasGrid.removeAllColumns();
-
         pruebasGrid.addComponentColumn(prueba -> {
             String nombre = traduccionService.get(prueba.getNombreKey());
             Span nombreSpan = new Span(nombre);
@@ -160,52 +159,40 @@ public class SenseiPlanView extends VerticalLayout {
             } else {
                 return nombreSpan;
             }
-        }).setHeader("Prueba (Haga clic para añadir)").setFlexGrow(1);
-
+        }).setHeader("Prueba").setFlexGrow(1);
         pruebasGrid.setItems(pruebaEstandarRepository.findAll());
-        pruebasGrid.asSingleSelect().addValueChangeListener(event ->
-                addPruebaAPlan(event.getValue()) // Llama al nuevo método
-        );
+        pruebasGrid.asSingleSelect().addValueChangeListener(event -> addPruebaAPlan(event.getValue()));
     }
 
     private void configurarGridTareas() {
         tareasGrid = new Grid<>(TareaDiaria.class);
         tareasGrid.setHeight("300px");
         tareasGrid.removeAllColumns();
-
-        tareasGrid.addColumn(TareaDiaria::getNombre)
-                .setHeader("Tarea (Haga clic para añadir)")
-                .setAutoWidth(true);
-
-        tareasGrid.addColumn(TareaDiaria::getMetaTexto)
-                .setHeader("Meta")
-                .setAutoWidth(true);
-
-        tareasGrid.asSingleSelect().addValueChangeListener(event ->
-                addTareaAPlan(event.getValue()) // Llama al nuevo método
-        );
-
-        // Cargamos las tareas que el Sensei ha creado (desde BibliotecaView)
+        tareasGrid.addColumn(TareaDiaria::getNombre).setHeader("Tarea");
+        tareasGrid.addColumn(TareaDiaria::getMetaTexto).setHeader("Meta");
         tareasGrid.setItems(tareaDiariaRepository.findAll());
+        tareasGrid.asSingleSelect().addValueChangeListener(event -> addTareaAPlan(event.getValue()));
     }
 
-    /**
-     * --- MÉTODO REFACTORIZADO ---
-     * El Grid de la derecha ahora debe mostrar inteligentemente
-     * si el item es una Prueba o una Tarea.
-     */
     private void configurarGridPlanActual() {
         planGrid = new Grid<>();
         planGrid.addColumn(ep -> {
+            String nombre = "";
             if (ep.getPruebaEstandar() != null) {
-                // Es una Prueba
-                return "[Prueba] " + traduccionService.get(ep.getPruebaEstandar().getNombreKey());
+                nombre = "[Prueba] " + traduccionService.get(ep.getPruebaEstandar().getNombreKey());
             } else if (ep.getTareaDiaria() != null) {
-                // Es una Tarea
-                return "[Tarea] " + ep.getTareaDiaria().getNombre();
+                nombre = "[Tarea] " + ep.getTareaDiaria().getNombre();
             }
-            return "Item inválido";
-        }).setHeader("Ejercicios en este Plan");
+            return nombre;
+        }).setHeader("Ejercicio");
+
+        // --- Columna para mostrar los días ---
+        planGrid.addColumn(ep -> {
+            if (ep.getDiasAsignados().isEmpty()) return "Cualquier día";
+            return ep.getDiasAsignados().stream()
+                    .map(d -> d.name().substring(0, 3)) // MON, TUE
+                    .collect(Collectors.joining(", "));
+        }).setHeader("Días");
     }
 
     private void habilitarFormularioPlan() {
@@ -218,70 +205,75 @@ public class SenseiPlanView extends VerticalLayout {
         planActual.getGruposAsignados().add(grupoComboBox.getValue());
         ejerciciosDelPlan.clear();
         planGrid.setItems(ejerciciosDelPlan);
+
         nombrePlanField.setVisible(true);
-        panelDerechoPlan.setVisible(true); // Panel derecho
+        diasSelector.setVisible(true); // Mostrar selector
+        diasSelector.setValue(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)); // Default
+
+        panelDerechoPlan.setVisible(true);
         btnNuevoPlan.setEnabled(false);
+        btnCompletarPlan.setVisible(false); // No se puede completar un plan nuevo
     }
 
-    /**
-     * --- NUEVO MÉTODO ---
-     * Se llama al hacer clic en el Grid de Pruebas.
-     */
     private void addPruebaAPlan(PruebaEstandar prueba) {
-        if (planActual == null) {
-            Notification.show("Por favor, cree un 'Nuevo Plan' antes de añadir.", 3000, Notification.Position.MIDDLE);
-            return;
-        }
-        if (prueba == null) return;
+        if (planActual == null || prueba == null) return;
 
         EjercicioPlanificado nuevaTarea = new EjercicioPlanificado();
-        nuevaTarea.setPruebaEstandar(prueba); // <-- Vincula a la PRUEBA
+        nuevaTarea.setPruebaEstandar(prueba);
         nuevaTarea.setPlanEntrenamiento(planActual);
+        // --- ASIGNAR DÍAS ---
+        nuevaTarea.setDiasAsignados(new HashSet<>(diasSelector.getValue()));
 
         ejerciciosDelPlan.add(nuevaTarea);
-        planGrid.setItems(ejerciciosDelPlan); // Refresca el Grid de la derecha
+        planGrid.setItems(ejerciciosDelPlan);
     }
 
-    /**
-     * --- NUEVO MÉTODO ---
-     * Se llama al hacer clic en el Grid de Tareas.
-     */
     private void addTareaAPlan(TareaDiaria tarea) {
-        if (planActual == null) {
-            Notification.show("Por favor, cree un 'Nuevo Plan' antes de añadir.", 3000, Notification.Position.MIDDLE);
-            return;
-        }
-        if (tarea == null) return;
+        if (planActual == null || tarea == null) return;
 
         EjercicioPlanificado nuevaTarea = new EjercicioPlanificado();
-        nuevaTarea.setTareaDiaria(tarea); // <-- Vincula a la TAREA
+        nuevaTarea.setTareaDiaria(tarea);
         nuevaTarea.setPlanEntrenamiento(planActual);
+        // --- ASIGNAR DÍAS ---
+        nuevaTarea.setDiasAsignados(new HashSet<>(diasSelector.getValue()));
 
         ejerciciosDelPlan.add(nuevaTarea);
-        planGrid.setItems(ejerciciosDelPlan); // Refresca el Grid de la derecha
+        planGrid.setItems(ejerciciosDelPlan);
     }
 
     private void guardarPlan() {
-        // ... (Este método no cambia, gracias a Cascade.ALL) ...
         if (nombrePlanField.getValue().isEmpty()) {
-            Notification.show("Por favor, ingrese un nombre para el plan.", 3000, Notification.Position.MIDDLE);
-            return;
-        }
-        if (ejerciciosDelPlan.isEmpty()) {
-            Notification.show("Por favor, añada al menos un ejercicio o prueba al plan.", 3000, Notification.Position.MIDDLE);
+            Notification.show("Ingrese nombre.", 3000, Notification.Position.MIDDLE);
             return;
         }
         planActual.setNombre(nombrePlanField.getValue());
+        // Limpiar y re-agregar para asegurar integridad (en edición real sería diferente)
+        planActual.getEjerciciosPlanificados().clear();
         for (EjercicioPlanificado tarea : ejerciciosDelPlan) {
             planActual.addEjercicio(tarea);
         }
         try {
-            planEntrenamientoService.guardarPlan(planActual);
-            Notification.show("¡Plan '" + planActual.getNombre() + "' guardado con éxito!", 3000, Notification.Position.MIDDLE);
-            resetearVista();
+            planActual = planEntrenamientoService.guardarPlan(planActual); // Guardar y actualizar referencia
+            Notification.show("Plan guardado.", 3000, Notification.Position.MIDDLE);
+
+            // Ahora que está guardado, mostramos el botón completar si aplica
+            btnCompletarPlan.setVisible(true);
+
         } catch (Exception e) {
-            Notification.show("Error al guardar el plan: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
+            Notification.show("Error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
         }
+    }
+
+    /**
+     * --- NUEVO MÉTODO ---
+     * Marca el plan como COMPLETADO.
+     */
+    private void completarPlan() {
+        if (planActual == null || planActual.getId() == null) return;
+
+        planEntrenamientoService.actualizarEstadoPlan(planActual.getId(), EstadoPlan.COMPLETADO);
+        Notification.show("Plan marcado como COMPLETADO.", 3000, Notification.Position.MIDDLE);
+        resetearVista();
     }
 
     private void resetearVista() {
@@ -290,6 +282,7 @@ public class SenseiPlanView extends VerticalLayout {
         planGrid.setItems(ejerciciosDelPlan);
         panelDerechoPlan.setVisible(false);
         nombrePlanField.setVisible(false);
+        diasSelector.setVisible(false);
         nombrePlanField.clear();
         grupoComboBox.clear();
         btnNuevoPlan.setEnabled(true);

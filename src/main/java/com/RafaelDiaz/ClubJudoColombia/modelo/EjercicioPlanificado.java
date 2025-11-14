@@ -2,8 +2,11 @@ package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.time.DayOfWeek;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ENTIDAD REFACTORIZADA
@@ -43,6 +46,12 @@ public class EjercicioPlanificado implements Serializable {
     @Column(name = "orden")
     private Integer orden;
 
+    // Días de la semana asignados ---
+    @ElementCollection(targetClass = DayOfWeek.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "plan_tarea_dias", joinColumns = @JoinColumn(name = "id_ejercicio_plan"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dia_semana")
+    private Set<DayOfWeek> diasAsignados = new HashSet<>();
     /**
      * Un EjercicioPlanificado (tipo Prueba) tendrá MUCHOS ResultadosPrueba.
      */
@@ -82,6 +91,20 @@ public class EjercicioPlanificado implements Serializable {
     public void setResultadosPrueba(List<ResultadoPrueba> resultadosPrueba) { this.resultadosPrueba = resultadosPrueba; }
     public List<EjecucionTarea> getEjecucionesTarea() { return ejecucionesTarea; }
     public void setEjecucionesTarea(List<EjecucionTarea> ejecucionesTarea) { this.ejecucionesTarea = ejecucionesTarea; }
+    // --- GETTER/SETTER NUEVO ---
+    public Set<DayOfWeek> getDiasAsignados() {
+        return diasAsignados;
+    }
 
-    // (hashCode y equals)
-}
+    public void setDiasAsignados(Set<DayOfWeek> diasAsignados) {
+        this.diasAsignados = diasAsignados;
+    }
+    @Override
+    public int hashCode() { return id != null ? id.hashCode() : 0; }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        EjercicioPlanificado that = (EjercicioPlanificado) obj;
+        return id != null && id.equals(that.id);
+    }}
