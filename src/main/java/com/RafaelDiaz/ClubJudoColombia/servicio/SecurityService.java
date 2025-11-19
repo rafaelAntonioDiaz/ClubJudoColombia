@@ -46,7 +46,8 @@ public class SecurityService {
     @Transactional(readOnly = true)
     public Optional<Usuario> getAuthenticatedUsuario() {
         return getAuthenticatedUserDetails()
-                .flatMap(userDetails -> usuarioRepository.findByUsername(userDetails.getUsername()));
+                .flatMap(userDetails -> usuarioRepository.
+                        findByUsername(userDetails.getUsername()));
     }
 
     /**

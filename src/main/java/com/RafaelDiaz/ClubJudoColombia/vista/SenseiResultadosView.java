@@ -7,6 +7,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.vista.form.ResultadoPruebaForm;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H1;

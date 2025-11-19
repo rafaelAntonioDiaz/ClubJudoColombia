@@ -2,13 +2,11 @@ package com.RafaelDiaz.ClubJudoColombia.config;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Grupo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 // --- Servicios Refactorizados ---
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService; // Refactorizado
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -31,7 +29,6 @@ public class DataInitializer implements CommandLineRunner {
     private final SenseiRepository senseiRepository;
     private final JudokaRepository judokaRepository;
     private final GrupoEntrenamientoRepository grupoEntrenamientoRepository;
-    private final SesionService sesionService;
     private final SesionProgramadaRepository sesionProgramadaRepository;
     private final PlanEntrenamientoService planEntrenamientoService;
     private final PruebaEstandarRepository pruebaEstandarRepository; // Refactorizado
@@ -47,7 +44,6 @@ public class DataInitializer implements CommandLineRunner {
                            SenseiRepository senseiRepository,
                            JudokaRepository judokaRepository,
                            GrupoEntrenamientoRepository grupoEntrenamientoRepository,
-                           SesionService sesionService,
                            SesionProgramadaRepository sesionProgramadaRepository,
                            PlanEntrenamientoService planEntrenamientoService,
                            PruebaEstandarRepository pruebaEstandarRepository, // Refactorizado
@@ -60,7 +56,6 @@ public class DataInitializer implements CommandLineRunner {
         this.senseiRepository = senseiRepository;
         this.judokaRepository = judokaRepository;
         this.grupoEntrenamientoRepository = grupoEntrenamientoRepository;
-        this.sesionService = sesionService;
         this.sesionProgramadaRepository = sesionProgramadaRepository;
         this.planEntrenamientoService = planEntrenamientoService;
         this.pruebaEstandarRepository = pruebaEstandarRepository; // Refactorizado

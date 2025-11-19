@@ -1,6 +1,5 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Grupo;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -33,11 +32,10 @@ public class SesionProgramada implements Serializable {
     private Sensei sensei;
 
     /**
-     * El grupo de edad al que va dirigida esta sesión.
+     * El grupo de entrenamiento al que va dirigida la sesión.
      */
-    @Enumerated(EnumType.STRING)
     @Column(name = "grupo", nullable = false)
-    private Grupo grupo;
+    private GrupoEntrenamiento grupo;
 
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
@@ -67,8 +65,8 @@ public class SesionProgramada implements Serializable {
     public void setId(Long id) { this.id = id; }
     public Sensei getSensei() { return sensei; }
     public void setSensei(Sensei sensei) { this.sensei = sensei; }
-    public Grupo getGrupo() { return grupo; }
-    public void setGrupo(Grupo grupo) { this.grupo = grupo; }
+    public GrupoEntrenamiento getGrupo() { return grupo; }
+    public void setGrupo(GrupoEntrenamiento grupo) { this.grupo = grupo; }
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
     public LocalTime getHoraInicio() { return horaInicio; }

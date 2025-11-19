@@ -119,14 +119,16 @@ public class SenseiPlanView extends VerticalLayout {
         configurarGridPruebas();
         configurarGridTareas();
 
-        panelIzquierdoBibliotecas.add(new H3("Bibliotecas (Seleccione días arriba primero)"), pruebasGrid, tareasGrid);
+        panelIzquierdoBibliotecas.add(new H3(
+                "Bibliotecas (Seleccione días arriba primero)"), pruebasGrid, tareasGrid);
 
         panelDerechoPlan = new VerticalLayout();
         panelDerechoPlan.setWidth("50%");
 
         configurarGridPlanActual();
 
-        btnGuardarPlan = new Button("Guardar Cambios", event -> guardarPlan());
+        btnGuardarPlan = new Button("Guardar Cambios",
+                event -> guardarPlan());
         btnGuardarPlan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         // --- NUEVO: Botón para Completar ---

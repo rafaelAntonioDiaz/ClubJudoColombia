@@ -1,4 +1,4 @@
-package com.RafaelDiaz.ClubJudoColombia.vista;
+package com.RafaelDiaz.ClubJudoColombia.vista.form;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.vaadin.flow.component.ComponentEvent;

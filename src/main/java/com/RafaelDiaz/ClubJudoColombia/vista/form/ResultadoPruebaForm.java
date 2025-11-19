@@ -1,4 +1,4 @@
-package com.RafaelDiaz.ClubJudoColombia.vista;
+package com.RafaelDiaz.ClubJudoColombia.vista.form;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.EjercicioPlanificado;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
