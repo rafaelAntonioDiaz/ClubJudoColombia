@@ -1,18 +1,22 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoSesion;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashSet; // --- NUEVO ---
+import java.util.HashSet;
 import java.util.List;
-import java.util.Set; // --- NUEVO ---
+import java.util.Set;
 
 /**
- * --- ACTUALIZADO ---
  * Entidad que representa el "contenedor" de un plan de entrenamiento.
  * Creado por un Sensei y asignado a uno o más Grupos de Entrenamiento.
+ *
+ * @author RafaelDiaz
+ * @version 1.1 (Corregida)
+ * @since 2025-11-20
  */
 @Entity
 @Table(name = "planes_entrenamiento")
@@ -23,20 +27,9 @@ public class PlanEntrenamiento implements Serializable {
     @Column(name = "id_plan")
     private Long id;
 
-    /**
-     * El Sensei que crea y asigna este plan.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_sensei_creador", nullable = false)
     private Sensei sensei;
-
-    /**
-     * --- CAMPO ELIMINADO ---
-     * Ya no hay un 'id_judoka_asignado'.
-     */
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "id_judoka_asignado", nullable = false)
-    // private Judoka judoka;
 
     @Column(name = "nombre_plan", nullable = false, length = 200)
     private String nombre;
@@ -48,23 +41,18 @@ public class PlanEntrenamiento implements Serializable {
     @Column(name = "estado", nullable = false)
     private EstadoPlan estado;
 
-    /**
-     * --- RELACIÓN NUEVA (Muchos-a-Muchos con Grupo) ---
-     * Un plan se puede asignar a muchos grupos.
-     * Un grupo puede recibir muchos planes.
-     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_sesion", nullable = false, length = 50)
+    private TipoSesion tipoSesion = TipoSesion.ENTRENAMIENTO;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "plan_grupos", // Tabla de unión
+            name = "plan_grupos",
             joinColumns = @JoinColumn(name = "id_plan"),
             inverseJoinColumns = @JoinColumn(name = "id_grupo")
     )
     private Set<GrupoEntrenamiento> gruposAsignados = new HashSet<>();
 
-    /**
-     * --- RELACIÓN (One-to-Many) (Sin cambios) ---
-     * Un Plan de Entrenamiento tiene MUCHOS Ejercicios Planificados.
-     */
     @OneToMany(
             mappedBy = "planEntrenamiento",
             cascade = CascadeType.ALL,
@@ -73,34 +61,37 @@ public class PlanEntrenamiento implements Serializable {
     )
     private List<EjercicioPlanificado> ejerciciosPlanificados = new ArrayList<>();
 
-    // --- Constructores ---
     public PlanEntrenamiento() {
         this.fechaAsignacion = LocalDate.now();
         this.estado = EstadoPlan.PENDIENTE;
     }
 
-    // --- Getters y Setters (Actualizados) ---
-
+    // ✅ CORREGIDO: Getters y Setters completos incluyendo tipoSesion
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
     public Sensei getSensei() { return sensei; }
     public void setSensei(Sensei sensei) { this.sensei = sensei; }
-    // public Judoka getJudoka() { return judoka; } // --- ELIMINADO ---
-    // public void setJudoka(Judoka judoka) { this.judoka = judoka; } // --- ELIMINADO ---
+
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+
     public LocalDate getFechaAsignacion() { return fechaAsignacion; }
     public void setFechaAsignacion(LocalDate fechaAsignacion) { this.fechaAsignacion = fechaAsignacion; }
+
     public EstadoPlan getEstado() { return estado; }
     public void setEstado(EstadoPlan estado) { this.estado = estado; }
+
+    // ✅ NUEVO: Getter y Setter para tipoSesion
+    public TipoSesion getTipoSesion() { return tipoSesion; }
+    public void setTipoSesion(TipoSesion tipoSesion) { this.tipoSesion = tipoSesion; }
+
     public List<EjercicioPlanificado> getEjerciciosPlanificados() { return ejerciciosPlanificados; }
     public void setEjerciciosPlanificados(List<EjercicioPlanificado> ejerciciosPlanificados) { this.ejerciciosPlanificados = ejerciciosPlanificados; }
 
-    // --- Getter/Setter NUEVO ---
     public Set<GrupoEntrenamiento> getGruposAsignados() { return gruposAsignados; }
     public void setGruposAsignados(Set<GrupoEntrenamiento> gruposAsignados) { this.gruposAsignados = gruposAsignados; }
 
-    // --- Métodos Helper (Sin cambios) ---
     public void addEjercicio(EjercicioPlanificado ejercicio) {
         ejerciciosPlanificados.add(ejercicio);
         ejercicio.setPlanEntrenamiento(this);
@@ -111,7 +102,6 @@ public class PlanEntrenamiento implements Serializable {
         ejercicio.setPlanEntrenamiento(null);
     }
 
-    // hashCode y equals (Sin cambios)
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : 0;

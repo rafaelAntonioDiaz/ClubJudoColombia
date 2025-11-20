@@ -1,7 +1,8 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan; // Importante
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoSesion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.GrupoEntrenamientoRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TareaDiariaRepository;
@@ -10,8 +11,8 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.CheckboxGroup; // --- NUEVO ---
-import com.vaadin.flow.component.checkbox.CheckboxGroupVariant; // --- NUEVO ---
+import com.vaadin.flow.component.checkbox.CheckboxGroup;
+import com.vaadin.flow.component.checkbox.CheckboxGroupVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Anchor;
@@ -27,7 +28,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
-import java.time.DayOfWeek; // --- NUEVO ---
+import java.time.DayOfWeek;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,10 +53,12 @@ public class SenseiPlanView extends VerticalLayout {
     private TextField nombrePlanField;
     private Grid<EjercicioPlanificado> planGrid;
     private Button btnGuardarPlan;
-    private Button btnCompletarPlan; // --- NUEVO BOTÓN ---
+    private Button btnCompletarPlan;
 
-    // --- NUEVO COMPONENTE: Selector de Días ---
     private CheckboxGroup<DayOfWeek> diasSelector;
+
+    // ✅ CORREGIDO: Mover tipoSesionCombo a campo de clase
+    private ComboBox<TipoSesion> tipoSesionCombo;
 
     private PlanEntrenamiento planActual;
     private Sensei senseiActual;
@@ -87,6 +90,13 @@ public class SenseiPlanView extends VerticalLayout {
     }
 
     private HorizontalLayout configurarPanelSuperior() {
+        // ✅ CORREGIDO: Inicializar como campo de clase
+        tipoSesionCombo = new ComboBox<>("Tipo de Sesión");
+        tipoSesionCombo.setItems(TipoSesion.values());
+        tipoSesionCombo.setValue(TipoSesion.ENTRENAMIENTO);
+        tipoSesionCombo.addValueChangeListener(
+                event -> planActual.setTipoSesion(event.getValue()));
+
         grupoComboBox = new ComboBox<>("Seleccionar Grupo");
         grupoComboBox.setItems(grupoEntrenamientoRepository.findAll());
         grupoComboBox.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
@@ -94,23 +104,21 @@ public class SenseiPlanView extends VerticalLayout {
         nombrePlanField = new TextField("Nombre del Plan");
         nombrePlanField.setVisible(false);
 
-        // --- Selector de Días (MODIFICADO) ---
         diasSelector = new CheckboxGroup<>();
         diasSelector.setLabel("Asignar para los días:");
         diasSelector.setItems(DayOfWeek.values());
         diasSelector.addThemeVariants(CheckboxGroupVariant.LUMO_VERTICAL);
         diasSelector.setVisible(false);
 
-        // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
-        // Usamos el servicio de traducción. day.name() devuelve "MONDAY", "TUESDAY", etc.
         diasSelector.setItemLabelGenerator(day ->
-                traduccionService.get(day.name()) // Llama al TraduccionService
+                traduccionService.get(day.name())
         );
 
         HorizontalLayout panelSuperior = new HorizontalLayout(grupoComboBox, btnNuevoPlan, nombrePlanField, diasSelector);
         panelSuperior.setDefaultVerticalComponentAlignment(Alignment.BASELINE);
         return panelSuperior;
     }
+
     private HorizontalLayout configurarContenido() {
         panelIzquierdoBibliotecas = new VerticalLayout();
         panelIzquierdoBibliotecas.setWidth("50%");
@@ -131,10 +139,9 @@ public class SenseiPlanView extends VerticalLayout {
                 event -> guardarPlan());
         btnGuardarPlan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        // --- NUEVO: Botón para Completar ---
         btnCompletarPlan = new Button("Marcar Plan como COMPLETADO", event -> completarPlan());
         btnCompletarPlan.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
-        btnCompletarPlan.setVisible(false); // Solo visible si el plan ya existe
+        btnCompletarPlan.setVisible(false);
 
         HorizontalLayout botonesPlan = new HorizontalLayout(btnGuardarPlan, btnCompletarPlan);
 
@@ -144,7 +151,6 @@ public class SenseiPlanView extends VerticalLayout {
         return new HorizontalLayout(panelIzquierdoBibliotecas, panelDerechoPlan);
     }
 
-    // ... (configurarGridPruebas y configurarGridTareas igual que antes, llaman a add...APlan) ...
     private void configurarGridPruebas() {
         pruebasGrid = new Grid<>(PruebaEstandar.class);
         pruebasGrid.setHeight("300px");
@@ -188,11 +194,10 @@ public class SenseiPlanView extends VerticalLayout {
             return nombre;
         }).setHeader("Ejercicio");
 
-        // --- Columna para mostrar los días ---
         planGrid.addColumn(ep -> {
             if (ep.getDiasAsignados().isEmpty()) return "Cualquier día";
             return ep.getDiasAsignados().stream()
-                    .map(d -> d.name().substring(0, 3)) // MON, TUE
+                    .map(d -> d.name().substring(0, 3))
                     .collect(Collectors.joining(", "));
         }).setHeader("Días");
     }
@@ -209,12 +214,12 @@ public class SenseiPlanView extends VerticalLayout {
         planGrid.setItems(ejerciciosDelPlan);
 
         nombrePlanField.setVisible(true);
-        diasSelector.setVisible(true); // Mostrar selector
-        diasSelector.setValue(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)); // Default
+        diasSelector.setVisible(true);
+        diasSelector.setValue(Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY));
 
         panelDerechoPlan.setVisible(true);
         btnNuevoPlan.setEnabled(false);
-        btnCompletarPlan.setVisible(false); // No se puede completar un plan nuevo
+        btnCompletarPlan.setVisible(false);
     }
 
     private void addPruebaAPlan(PruebaEstandar prueba) {
@@ -223,7 +228,6 @@ public class SenseiPlanView extends VerticalLayout {
         EjercicioPlanificado nuevaTarea = new EjercicioPlanificado();
         nuevaTarea.setPruebaEstandar(prueba);
         nuevaTarea.setPlanEntrenamiento(planActual);
-        // --- ASIGNAR DÍAS ---
         nuevaTarea.setDiasAsignados(new HashSet<>(diasSelector.getValue()));
 
         ejerciciosDelPlan.add(nuevaTarea);
@@ -236,7 +240,6 @@ public class SenseiPlanView extends VerticalLayout {
         EjercicioPlanificado nuevaTarea = new EjercicioPlanificado();
         nuevaTarea.setTareaDiaria(tarea);
         nuevaTarea.setPlanEntrenamiento(planActual);
-        // --- ASIGNAR DÍAS ---
         nuevaTarea.setDiasAsignados(new HashSet<>(diasSelector.getValue()));
 
         ejerciciosDelPlan.add(nuevaTarea);
@@ -249,27 +252,23 @@ public class SenseiPlanView extends VerticalLayout {
             return;
         }
         planActual.setNombre(nombrePlanField.getValue());
-        // Limpiar y re-agregar para asegurar integridad (en edición real sería diferente)
         planActual.getEjerciciosPlanificados().clear();
         for (EjercicioPlanificado tarea : ejerciciosDelPlan) {
             planActual.addEjercicio(tarea);
         }
+
+        // ✅ CORREGIDO: Guardar tipoSesion antes de persistir
+        planActual.setTipoSesion(tipoSesionCombo.getValue());
+
         try {
-            planActual = planEntrenamientoService.guardarPlan(planActual); // Guardar y actualizar referencia
+            planActual = planEntrenamientoService.guardarPlan(planActual);
             Notification.show("Plan guardado.", 3000, Notification.Position.MIDDLE);
-
-            // Ahora que está guardado, mostramos el botón completar si aplica
             btnCompletarPlan.setVisible(true);
-
         } catch (Exception e) {
             Notification.show("Error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
         }
     }
 
-    /**
-     * --- NUEVO MÉTODO ---
-     * Marca el plan como COMPLETADO.
-     */
     private void completarPlan() {
         if (planActual == null || planActual.getId() == null) return;
 

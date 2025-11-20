@@ -220,9 +220,17 @@ public abstract class SenseiLayout extends AppLayout {
         menuTabs.addClassName("sensei-layout-tabs");
 
         // Cada tab verifica permisos con AccessAnnotationChecker
-        addTabIfAllowed(menuTabs, "Grupos", VaadinIcon.GROUP, "gestion-grupos");
-        addTabIfAllowed(menuTabs, "Planes", VaadinIcon.CALENDAR, "gestion-planes");
-
+        // Haz que "Dashboard" sea la primera tab y la ruta por defecto
+        addTabIfAllowed(menuTabs, "Dashboard",
+                VaadinIcon.DASHBOARD, "dashboard-sensei");
+        addTabIfAllowed(menuTabs, "Grupos",
+                VaadinIcon.GROUP, "gestion-grupos");
+        addTabIfAllowed(menuTabs, "Planes",
+                VaadinIcon.CALENDAR, "gestion-planes");
+        addTabIfAllowed(menuTabs, "Asignar Judokas",
+                VaadinIcon.USERS, "asignar-judokas");
+        addTabIfAllowed(menuTabs, "Asistencia",
+                VaadinIcon.CHECK_SQUARE, "registrar-asistencia");
         return menuTabs;
     }
 

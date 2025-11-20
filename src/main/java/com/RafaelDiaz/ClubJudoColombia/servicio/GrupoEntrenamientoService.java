@@ -115,31 +115,52 @@ public class GrupoEntrenamientoService {
         logger.info("Judoka {} removido del grupo {}", judokaId, grupoId);
     }
 
+
     @Transactional(readOnly = true)
     public List<Judoka> findJudokasDisponibles(Long grupoId, String searchNombre, Sexo sexo, GradoCinturon grado) {
-        List<Judoka> todos = judokaService.findAllJudokasWithUsuario();
-        Optional<GrupoEntrenamiento> grupoOpt = grupoRepository.findById(grupoId);
-        if (grupoOpt.isPresent()) {
-            todos.removeAll(grupoOpt.get().getJudokas());
-        }
-        return todos.stream()
-                .filter(j -> searchNombre == null || (j.getUsuario().getNombre() + " " + j.getUsuario().getApellido()).toLowerCase().contains(searchNombre.toLowerCase()))
+        String nombreFilter = (searchNombre != null && !searchNombre.trim().isEmpty()) ? searchNombre.toLowerCase() : null;
+
+        return judokaRepository.findAll().stream()
+                .filter(j -> {
+                    if (nombreFilter != null) {
+                        String nombreCompleto = (j.getUsuario().getNombre() + " " + j.getUsuario().getApellido()).toLowerCase();
+                        return nombreCompleto.contains(nombreFilter);
+                    }
+                    return true;
+                })
                 .filter(j -> sexo == null || j.getSexo() == sexo)
                 .filter(j -> grado == null || j.getGrado() == grado)
+                .filter(j -> {
+                    // Excluir judokas ya en el grupo
+                    if (grupoId == null) return true;
+                    return grupoRepository.findById(grupoId)
+                            .map(grupo -> !grupo.getJudokas().contains(j))
+                            .orElse(true);
+                })
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<Judoka> findJudokasEnGrupo(Long grupoId, String searchNombre, Sexo sexo, GradoCinturon grado) {
-        Optional<GrupoEntrenamiento> grupoOpt = grupoRepository.findById(grupoId);
-        if (grupoOpt.isEmpty()) return List.of();
-        return grupoOpt.get().getJudokas().stream()
-                .filter(j -> searchNombre == null || (j.getUsuario().getNombre() + " " + j.getUsuario().getApellido()).toLowerCase().contains(searchNombre.toLowerCase()))
+        if (grupoId == null) return List.of();
+
+        GrupoEntrenamiento grupo = grupoRepository.findById(grupoId)
+                .orElseThrow(() -> new RuntimeException("Grupo no encontrado: " + grupoId));
+
+        String nombreFilter = (searchNombre != null && !searchNombre.trim().isEmpty()) ? searchNombre.toLowerCase() : null;
+
+        return grupo.getJudokas().stream()
+                .filter(j -> {
+                    if (nombreFilter != null) {
+                        String nombreCompleto = (j.getUsuario().getNombre() + " " + j.getUsuario().getApellido()).toLowerCase();
+                        return nombreCompleto.contains(nombreFilter);
+                    }
+                    return true;
+                })
                 .filter(j -> sexo == null || j.getSexo() == sexo)
                 .filter(j -> grado == null || j.getGrado() == grado)
                 .collect(Collectors.toList());
     }
-
     /**
      * Elimina un grupo de entrenamiento de forma segura.
      */
@@ -168,4 +189,5 @@ public class GrupoEntrenamientoService {
         grupoRepository.delete(grupo);
         logger.info("Grupo {} eliminado exitosamente", grupoId);
     }
+
 }

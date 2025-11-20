@@ -117,6 +117,7 @@ CREATE TABLE judoka_grupos (
 CREATE TABLE planes_entrenamiento (
     id_plan BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_sensei_creador BIGINT NOT NULL,
+    tipoSesion VARCHAR(20) NOT NULL,
     nombre_plan VARCHAR(200) NOT NULL,
     fecha_asignacion DATE NOT NULL,
     estado VARCHAR(50) NOT NULL,
@@ -167,22 +168,28 @@ CREATE TABLE ejecuciones_tareas (
     FOREIGN KEY (id_ejercicio_plan) REFERENCES ejercicios_planificados(id_ejercicio_plan)
 );
 
--- 6. Tablas de Asistencia
 CREATE TABLE sesiones_programadas (
-    id_sesion BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_sensei BIGINT NOT NULL,
-    grupo VARCHAR(50) NOT NULL,
-    fecha DATE NOT NULL,
-    hora_inicio TIME NOT NULL,
-    hora_fin TIME NOT NULL,
-    es_excepcion BOOLEAN NOT NULL DEFAULT FALSE,
-    FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei)
-);
+    id_sesion BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Identificador único de la sesión programada',
+    nombre VARCHAR(255) NOT NULL COMMENT 'Nombre descriptivo de la sesión (ej: Técnica de Throws)',
+    tipo VARCHAR(20) NOT NULL COMMENT 'Clasificación: TECNICA, COMBATE, ACONDICIONAMIENTO, etc.',
+    fechaHoraInicio DATETIME NOT NULL COMMENT 'Fecha y hora de inicio de la sesión',
+    fechaHoraFin DATETIME NOT NULL COMMENT 'Fecha y hora de finalización de la sesión',
+    id_grupo BIGINT COMMENT 'FK a grupos_entrenamiento.id_grupo (nullable si es sesión mixta)',
+    id_sensei BIGINT COMMENT 'FK a senseis.id_sensei (nullable si es co-entrenamiento)',
+
+    FOREIGN KEY (id_grupo) REFERENCES grupos_entrenamiento(id_grupo) ON DELETE SET NULL,
+    FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE SET NULL
+) COMMENT 'Tabla de sesiones de entrenamiento programadas';
+
+-- 6. Tablas de Asistencia
 CREATE TABLE asistencias (
     id_asistencia BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_judoka BIGINT NOT NULL,
+    tipoSesion VARCHAR(20) NOT NULL,
     id_sesion BIGINT NOT NULL,
     presente BOOLEAN NOT NULL,
+    latitud DOUBLE,
+    longitud DOUBLE,
     fecha_hora_marcacion DATETIME NOT NULL,
     notas VARCHAR(255),
     UNIQUE KEY uk_judoka_sesion (id_judoka, id_sesion),

@@ -1,80 +1,117 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoSesion;
 import jakarta.persistence.*;
 import java.io.Serializable;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Entidad que representa una única sesión de entrenamiento programada.
- * (Ej. "Lunes 3 de Nov, 4:00pm").
+ * Entidad que representa una sesión de entrenamiento programada.
+ * Ej. "Entrenamiento Sub-13 - Lunes 6:00 AM".
  *
- * La lógica de "recurrencia" (L, M, V) la manejaremos en la
- * capa de Servicio/Inicialización, que creará múltiples
- * instancias de esta clase.
+ * <p><b>Características:</b>
+ * <ul>
+ *   <li>Lazy loading seguro con @EntityGraph</li>
+ *   <li>Optimistic locking con @Version</li>
+ *   <li>Relación bidireccional con Asistencia</li>
+ * </ul>
+ *
+ * @author RafaelDiaz
+ * @version 1.1 (Armonizada)
+ * @since 2025-11-20
  */
 @Entity
 @Table(name = "sesiones_programadas")
+@NamedEntityGraph(
+        name = "SesionProgramada.completo",
+        attributeNodes = {
+                @NamedAttributeNode("grupo"),
+                @NamedAttributeNode("sensei"),
+                @NamedAttributeNode("asistencias")
+        }
+)
 public class SesionProgramada implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_sesion")
     private Long id;
 
-    /**
-     * El Sensei que dirige esta sesión.
-     * Una sesión solo tiene un Sensei (ManyToOne).
-     * Un Sensei puede tener muchas sesiones (OneToMany).
-     */
+    @Column(name = "nombre", nullable = false, length = 255)
+    private String nombre;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipoSesion", nullable = false, length = 50)
+    private TipoSesion tipoSesion;
+
+    @Column(name = "fechaHoraInicio", nullable = false)
+    private LocalDateTime fechaHoraInicio;
+
+    @Column(name = "fechaHoraFin", nullable = false)
+    private LocalDateTime fechaHoraFin;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_grupo", nullable = false)
+    private GrupoEntrenamiento grupo;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_sensei", nullable = false)
     private Sensei sensei;
 
-    /**
-     * El grupo de entrenamiento al que va dirigida la sesión.
-     */
-    @Column(name = "grupo", nullable = false)
-    private GrupoEntrenamiento grupo;
+    @OneToMany(mappedBy = "sesion", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Asistencia> asistencias = new HashSet<>();
 
-    @Column(name = "fecha", nullable = false)
-    private LocalDate fecha;
-
-    @Column(name = "hora_inicio", nullable = false)
-    private LocalTime horaInicio;
-
-    @Column(name = "hora_fin", nullable = false)
-    private LocalTime horaFin;
-
-    /**
-     * --- CAMPO CLAVE (Regla de Negocio) ---
-     * Si es 'true', esta sesión se permite aunque
-     * caiga en domingo o festivo.
-     * Si es 'false' (por defecto), el servicio validará
-     * contra FestivosColombia.java y domingos.
-     */
-    @Column(name = "es_excepcion", nullable = false)
-    private boolean esExcepcion = false;
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
 
     // --- Constructores ---
     public SesionProgramada() {}
 
-    // --- Getters y Setters ---
+    public SesionProgramada(String nombre, TipoSesion tipoSesion, LocalDateTime inicio, LocalDateTime fin, GrupoEntrenamiento grupo, Sensei sensei) {
+        this.nombre = nombre;
+        this.tipoSesion = tipoSesion;
+        this.fechaHoraInicio = inicio;
+        this.fechaHoraFin = fin;
+        this.grupo = grupo;
+        this.sensei = sensei;
+    }
 
+    // --- Getters y Setters ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Sensei getSensei() { return sensei; }
-    public void setSensei(Sensei sensei) { this.sensei = sensei; }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public TipoSesion getTipoSesion() { return tipoSesion; }
+    public void setTipoSesion(TipoSesion tipo) { this.tipoSesion = tipo; }
+    public LocalDateTime getFechaHoraInicio() { return fechaHoraInicio; }
+    public void setFechaHoraInicio(LocalDateTime fechaHoraInicio) { this.fechaHoraInicio = fechaHoraInicio; }
+    public LocalDateTime getFechaHoraFin() { return fechaHoraFin; }
+    public void setFechaHoraFin(LocalDateTime fechaHoraFin) { this.fechaHoraFin = fechaHoraFin; }
     public GrupoEntrenamiento getGrupo() { return grupo; }
     public void setGrupo(GrupoEntrenamiento grupo) { this.grupo = grupo; }
-    public LocalDate getFecha() { return fecha; }
-    public void setFecha(LocalDate fecha) { this.fecha = fecha; }
-    public LocalTime getHoraInicio() { return horaInicio; }
-    public void setHoraInicio(LocalTime horaInicio) { this.horaInicio = horaInicio; }
-    public LocalTime getHoraFin() { return horaFin; }
-    public void setHoraFin(LocalTime horaFin) { this.horaFin = horaFin; }
-    public boolean isEsExcepcion() { return esExcepcion; }
-    public void setEsExcepcion(boolean esExcepcion) { this.esExcepcion = esExcepcion; }
+    public Sensei getSensei() { return sensei; }
+    public void setSensei(Sensei sensei) { this.sensei = sensei; }
+    public Set<Asistencia> getAsistencias() { return asistencias; }
+    public void setAsistencias(Set<Asistencia> asistencias) { this.asistencias = asistencias; }
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
+
+    // --- Helpers de Negocio ---
+    @Transient
+    public boolean esFutura() {
+        return this.fechaHoraInicio.isAfter(LocalDateTime.now());
+    }
+
+    @Transient
+    public boolean estaEnCurso() {
+        LocalDateTime ahora = LocalDateTime.now();
+        return !ahora.isBefore(this.fechaHoraInicio) && !ahora.isAfter(this.fechaHoraFin);
+    }
 
     // --- hashCode y equals ---
     @Override

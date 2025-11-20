@@ -54,6 +54,12 @@ public class Asistencia implements Serializable {
     @Column(name = "notas")
     private String notas;
 
+    @Column(name = "latitud")
+    private Double latitud;
+
+    @Column(name = "longitud")
+    private Double longitud;
+
     // --- Constructores ---
     public Asistencia() {}
 
@@ -71,6 +77,10 @@ public class Asistencia implements Serializable {
     public void setFechaHoraMarcacion(LocalDateTime fechaHoraMarcacion) { this.fechaHoraMarcacion = fechaHoraMarcacion; }
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }
+    public Double getLatitud() { return latitud; }
+    public void setLatitud(Double latitud) { this.latitud = latitud; }
+    public Double getLongitud() { return longitud; }
+    public void setLongitud(Double longitud) { this.longitud = longitud; }
 
     // --- hashCode y equals ---
     @Override
