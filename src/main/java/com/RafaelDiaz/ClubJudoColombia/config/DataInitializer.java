@@ -1,324 +1,107 @@
 package com.RafaelDiaz.ClubJudoColombia.config;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
-// --- Servicios Refactorizados ---
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService; // Refactorizado
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet; // --- Importar ---
+import java.time.*;
+import java.util.*;
 
 @Component
-public class DataInitializer implements CommandLineRunner {
+public class DataInitializer {
 
-    // --- Repositorios y Servicios Inyectados (Completos) ---
-    private final RolRepository rolRepository;
     private final UsuarioService usuarioService;
+    private final PlanEntrenamientoService planService;
+    private final RolRepository rolRepository;
     private final SenseiRepository senseiRepository;
     private final JudokaRepository judokaRepository;
-    private final GrupoEntrenamientoRepository grupoEntrenamientoRepository;
-    private final SesionProgramadaRepository sesionProgramadaRepository;
-    private final PlanEntrenamientoService planEntrenamientoService;
-    private final PruebaEstandarRepository pruebaEstandarRepository; // Refactorizado
-    private final MetricaRepository metricaRepository;
-    private final ResultadoPruebaService resultadoPruebaService; // Refactorizado
-    private final TareaDiariaRepository tareaDiariaRepository; // Nuevo
+    private final GrupoEntrenamientoRepository grupoRepository;
+    private final TareaDiariaRepository tareaDiariaRepository;
     private final TraduccionRepository traduccionRepository;
-    /**
-     * --- CONSTRUCTOR ACTUALIZADO ---
-     */
-    public DataInitializer(RolRepository rolRepository,
-                           UsuarioService usuarioService,
+    private final PruebaEstandarRepository pruebaEstandarRepository;
+    private final MetricaRepository metricaRepository;
+    private final ResultadoPruebaRepository resultadoPruebaRepository;
+    private final EjecucionTareaRepository ejecucionTareaRepository;
+    private final SesionProgramadaRepository sesionRepository;
+    private final AsistenciaRepository asistenciaRepository;
+
+    public DataInitializer(UsuarioService usuarioService,
+                           PlanEntrenamientoService planService,
+                           RolRepository rolRepository,
                            SenseiRepository senseiRepository,
                            JudokaRepository judokaRepository,
-                           GrupoEntrenamientoRepository grupoEntrenamientoRepository,
-                           SesionProgramadaRepository sesionProgramadaRepository,
-                           PlanEntrenamientoService planEntrenamientoService,
-                           PruebaEstandarRepository pruebaEstandarRepository, // Refactorizado
+                           GrupoEntrenamientoRepository grupoRepository,
+                           TareaDiariaRepository tareaDiariaRepository,
+                           TraduccionRepository traduccionRepository,
+                           PruebaEstandarRepository pruebaEstandarRepository,
                            MetricaRepository metricaRepository,
-                           ResultadoPruebaService resultadoPruebaService, // Refactorizado
-                           TareaDiariaRepository tareaDiariaRepository, TraduccionRepository traduccionRepository // Nuevo
-    ) {
-        this.rolRepository = rolRepository;
+                           ResultadoPruebaRepository resultadoPruebaRepository,
+                           EjecucionTareaRepository ejecucionTareaRepository,
+                           SesionProgramadaRepository sesionRepository,
+                           AsistenciaRepository asistenciaRepository) {
         this.usuarioService = usuarioService;
+        this.planService = planService;
+        this.rolRepository = rolRepository;
         this.senseiRepository = senseiRepository;
         this.judokaRepository = judokaRepository;
-        this.grupoEntrenamientoRepository = grupoEntrenamientoRepository;
-        this.sesionProgramadaRepository = sesionProgramadaRepository;
-        this.planEntrenamientoService = planEntrenamientoService;
-        this.pruebaEstandarRepository = pruebaEstandarRepository; // Refactorizado
-        this.metricaRepository = metricaRepository;
-        this.resultadoPruebaService = resultadoPruebaService; // Refactorizado
-        this.tareaDiariaRepository = tareaDiariaRepository; // Nuevo
+        this.grupoRepository = grupoRepository;
+        this.tareaDiariaRepository = tareaDiariaRepository;
         this.traduccionRepository = traduccionRepository;
+        this.pruebaEstandarRepository = pruebaEstandarRepository;
+        this.metricaRepository = metricaRepository;
+        this.resultadoPruebaRepository = resultadoPruebaRepository;
+        this.ejecucionTareaRepository = ejecucionTareaRepository;
+        this.sesionRepository = sesionRepository;
+        this.asistenciaRepository = asistenciaRepository;
     }
 
-    @Override
+    @Bean
     @Transactional
-    public void run(String... args) throws Exception {
-        // Los roles y la biblioteca de pruebas vienen de Flyway (V1-V14).
-
-        Sensei senseiDePrueba = crearSenseiDePrueba();
-        Judoka judokaDePrueba = crearJudokaYGrupoDePrueba();
-        generarCalendarioSesiones(senseiDePrueba);
-
-        crearTraduccionesDias();
-        crearResultadosDePrueba(senseiDePrueba, judokaDePrueba); // Flujo 1: Evaluación (Sensei)
-        crearPlanDeTareasDiarias(senseiDePrueba, judokaDePrueba); // Flujo 2: Tareas (Judoka)
-    }
-
-    private Sensei crearSenseiDePrueba() {
-        // ... (Sin cambios) ...
-        System.out.println("--- Verificando Sensei de prueba ---");
-        if (usuarioService.findByUsername("sensei.admin").isPresent()) {
-            System.out.println("... Sensei 'sensei.admin' ya existe.");
-            Usuario usuario = usuarioService.findByUsername("sensei.admin").get();
-            return senseiRepository.findByUsuario(usuario).orElseThrow();
-        }
-        System.out.println(">>> Creando Sensei 'sensei.admin'...");
-        Rol rolSensei = rolRepository.findByNombre("ROLE_SENSEI").orElseThrow();
-        Usuario usuarioSensei = new Usuario("sensei.admin", "password123", "Sensei", "Admin");
-        usuarioSensei.setRoles(Set.of(rolSensei));
-        usuarioService.saveUsuario(usuarioSensei, "password123");
-        Sensei perfilSensei = new Sensei();
-        perfilSensei.setUsuario(usuarioSensei);
-        perfilSensei.setGrado(GradoCinturon.NEGRO_4_DAN);
-        perfilSensei.setAnosPractica(45);
-        perfilSensei.setBiografia("Sensei principal del club.");
-        return senseiRepository.save(perfilSensei);
-    }
-
-    private Judoka crearJudokaYGrupoDePrueba() {
-        // ... (Sin cambios, sigue devolviendo el Judoka) ...
-        System.out.println("--- Verificando Judoka y Grupo de prueba ---");
-        Judoka judokaPrueba;
-        if (usuarioService.findByUsername("judoka.prueba").isEmpty()) {
-            System.out.println(">>> Creando Judoka 'judoka.prueba'...");
-            Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow();
-            Usuario usuarioJudoka = new Usuario("judoka.prueba", "password123", "Judoka", "De Prueba");
-            usuarioJudoka.setRoles(Set.of(rolJudoka));
-            usuarioService.saveUsuario(usuarioJudoka, "password123");
-            Judoka perfilJudoka = new Judoka();
-            perfilJudoka.setUsuario(usuarioJudoka);
-            perfilJudoka.setFechaNacimiento(LocalDate.of(2010, 5, 15)); // (Edad 15)
-            perfilJudoka.setSexo(Sexo.MASCULINO);
-            perfilJudoka.setGrado(GradoCinturon.VERDE);
-            perfilJudoka.setPeso(60.0);
-            perfilJudoka.setEstatura(165.0);
-            perfilJudoka.setNombreAcudiente("Acudiente de Prueba");
-            perfilJudoka.setTelefonoAcudiente("3001234567");
-            judokaPrueba = judokaRepository.save(perfilJudoka);
-        } else {
-            System.out.println("... Judoka 'judoka.prueba' ya existe.");
-            Usuario usuario = usuarioService.findByUsername("judoka.prueba").get();
-            judokaPrueba = judokaRepository.findByUsuario(usuario).orElseThrow();
-        }
-        if (grupoEntrenamientoRepository.findByNombre("Equipo Sub-15").isEmpty()) {
-            System.out.println(">>> Creando 'Equipo Sub-15'...");
-            GrupoEntrenamiento grupo = new GrupoEntrenamiento();
-            grupo.setNombre("Equipo Sub-15");
-            grupo.setDescripcion("Grupo de prueba para menores de 15 años.");
-            grupo.getJudokas().add(judokaPrueba);
-            grupoEntrenamientoRepository.save(grupo);
-        } else {
-            System.out.println("... 'Equipo Sub-15' ya existe.");
-        }
-        return judokaPrueba;
-    }
-
-    private void generarCalendarioSesiones(Sensei sensei) {
-        // ... (Sin cambios) ...
-        System.out.println("--- Verificando calendario de sesiones ---");
-        if (sesionProgramadaRepository.count() > 0) {
-            System.out.println("... El calendario ya tiene sesiones programadas.");
-            return;
-        }
-        System.out.println("--- Generando calendario de sesiones regulares ---");
-        LocalDate fechaInicio = LocalDate.now();
-        LocalDate fechaFin = LocalDate.of(2025, 12, 12);
-        LocalTime inicioMayores = LocalTime.of(16, 0);
-        LocalTime finMayores = LocalTime.of(17, 30);
-        LocalTime inicioMenores = LocalTime.of(18, 0);
-        LocalTime finMenores = LocalTime.of(19, 30);
-        for (LocalDate fecha = fechaInicio; !fecha.isAfter(fechaFin); fecha = fecha.plusDays(1)) {
-            DayOfWeek dia = fecha.getDayOfWeek();
-            if (dia == DayOfWeek.MONDAY || dia == DayOfWeek.WEDNESDAY || dia == DayOfWeek.FRIDAY) {
-                // ... (Lógica de crear sesiones) ...
-            }
-        }
-        System.out.println("--- Generación de calendario completada ---");
-    }
-
-    /**
-     * --- MÉTODO REFACTORIZADO ---
-     * Flujo 1: Crea un Plan de EVALUACIÓN y los RESULTADOS (del Sensei)
-     * para que el "Poder de Combate" tenga datos.
-     */
-    private void crearResultadosDePrueba(Sensei sensei, Judoka judoka) {
-        System.out.println("--- Verificando resultados de pruebas (Flujo 1) ---");
-
-        PruebaEstandar pruebaReferencia = pruebaEstandarRepository.findByNombreKey("ejercicio.salto_horizontal_proesp.nombre").orElse(null);
-        if (pruebaReferencia == null) {
-            System.out.println("... Biblioteca de pruebas aún no cargada. Omitiendo resultados.");
-            return;
-        }
-        if (!resultadoPruebaService.getHistorialDeResultados(judoka, pruebaReferencia).isEmpty()) {
-            System.out.println("... El Judoka de prueba ya tiene resultados de pruebas.");
-            return;
-        }
-
-        System.out.println(">>> Creando Plan de Evaluación Inicial y resultados ficticios...");
-
-        GrupoEntrenamiento grupo = grupoEntrenamientoRepository.findByNombre("Equipo Sub-15").orElseThrow();
-        Set<GrupoEntrenamiento> gruposDelPlan = new HashSet<>(Set.of(grupo));
-
-        PlanEntrenamiento plan = planEntrenamientoService.crearPlanEntrenamiento(
-                "Evaluación Inicial 2025 (Pruebas Sensei)",
-                sensei,
-                gruposDelPlan
-        );
-
-        List<String> clavesPruebasClave = List.of(
-                "ejercicio.salto_horizontal_proesp.nombre",
-                "ejercicio.lanzamiento_balon.nombre",
-                "ejercicio.abdominales_1min.nombre",
-                "ejercicio.carrera_6min.nombre",
-                "ejercicio.agilidad_4x4.nombre",
-                "ejercicio.carrera_20m.nombre",
-                "ejercicio.sjft.nombre"
-        );
-        Map<String, Double> valoresFicticios = Map.of(
-                "ejercicio.salto_horizontal_proesp.nombre", 190.0,
-                "ejercicio.lanzamiento_balon.nombre", 440.0,
-                "ejercicio.abdominales_1min.nombre", 45.0,
-                "ejercicio.carrera_6min.nombre", 1130.0,
-                "ejercicio.agilidad_4x4.nombre", 6.0,
-                "ejercicio.carrera_20m.nombre", 3.5,
-                "ejercicio.sjft.nombre", 14.0
-        );
-
-        // BUCLE 1: Crear Tareas (EjercicioPlanificado) vinculadas a Pruebas
-        for (String clave : clavesPruebasClave) {
-            PruebaEstandar prueba = pruebaEstandarRepository.findByNombreKey(clave).orElseThrow();
-            EjercicioPlanificado tarea = new EjercicioPlanificado();
-            tarea.setPruebaEstandar(prueba); // <-- Vincula a la PRUEBA
-            plan.addEjercicio(tarea);
-        }
-
-        PlanEntrenamiento planGuardado = planEntrenamientoService.guardarPlan(plan);
-
-        // BUCLE 2: Crear Resultados de Prueba (los datos del Sensei)
-        for (EjercicioPlanificado tareaGuardada : planGuardado.getEjerciciosPlanificados()) {
-            String clave = tareaGuardada.getPruebaEstandar().getNombreKey();
-
-            Metrica metricaARegistrar;
-            if (clave.equals("ejercicio.sjft.nombre")) {
-                metricaARegistrar = metricaRepository.findByNombreKey("metrica.sjft_indice.nombre").orElseThrow();
-            } else {
-                metricaARegistrar = tareaGuardada.getPruebaEstandar().getMetricas().stream().findFirst().orElseThrow();
+    public CommandLineRunner init() {
+        return args -> {
+            if (judokaRepository.count() > 5) {
+                System.out.println("Datos ya creados. Saltando inicialización.");
+                return;
             }
 
-            ResultadoPrueba resultado = new ResultadoPrueba(); // <-- Objeto ResultadoPrueba
-            resultado.setJudoka(judoka);
-            resultado.setEjercicioPlanificado(tareaGuardada);
-            resultado.setMetrica(metricaARegistrar);
-            resultado.setValor(valoresFicticios.get(clave));
-            resultado.setNotasJudoka("Resultado base (Sensei) generado por el sistema.");
+            System.out.println("CREANDO DATOS REALES DEL CLUB JUDO COLOMBIA 2025");
 
-            resultadoPruebaService.registrarResultado(resultado); // Usa el servicio de Pruebas
-        }
+            crearRoles();
+            crearTraduccionesDias();
 
-        System.out.println(">>> Resultados ficticios de pruebas creados.");
+            Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
+            Sensei toshiro = crearSensei("toshiro", "Toshiro", "Diago", "123456", GradoCinturon.NEGRO_5_DAN);
+
+            List<Judoka> judokas = crearJudokas();
+            crearGruposYAsignar(judokas);
+            crearTareasCadetes(kiuzo);
+
+            PlanEntrenamiento planSemanal = crearPlanSemanal(kiuzo);
+            PlanEntrenamiento planEval = crearPlanEvaluacion(kiuzo);
+
+            programarSesiones(kiuzo);
+            generarHistoriaReal(judokas, planEval);
+            generarEjecuciones(planSemanal);
+            generarAsistencias();
+
+            System.out.println("¡CLUB JUDO COLOMBIA 100% LISTO!");
+        };
     }
 
-    /**
-     * --- ¡NUEVO MÉTODO AÑADIDO! ---
-     * Flujo 2: Crea Tareas Diarias y un Plan de Acondicionamiento (para el Judoka).
-     */
-    /**
-     * --- ¡MÉTODO ACTUALIZADO! ---
-     * Flujo 2: Crea Tareas Diarias y un Plan de Acondicionamiento (para el Judoka).
-     * (Ahora asigna los días de la semana a las tareas).
-     */
-    /**
-     * --- ¡MÉTODO ACTUALIZADO! ---
-     * Flujo 2: Crea Tareas Diarias y un Plan de Acondicionamiento (para el Judoka).
-     * (Ahora asigna los días de la semana a las tareas).
-     */
-    private void crearPlanDeTareasDiarias(Sensei sensei, Judoka judoka) {
-        System.out.println("--- Verificando tareas diarias (Flujo 2) ---");
-
-        if (tareaDiariaRepository.count() > 0) {
-            System.out.println("... Tareas diarias ya existen.");
-            return;
-        }
-
-        System.out.println(">>> Creando Tareas Diarias y Plan de Acondicionamiento...");
-
-        // 1. Crear Tareas Diarias en la biblioteca
-        TareaDiaria flexiones = new TareaDiaria();
-        flexiones.setNombre("Flexiones de Brazo");
-        flexiones.setDescripcion("Realizar flexiones de pecho estándar.");
-        flexiones.setMetaTexto("4 series x 15 repeticiones");
-        flexiones.setSenseiCreador(sensei);
-        tareaDiariaRepository.save(flexiones);
-
-        TareaDiaria saltos = new TareaDiaria();
-        saltos.setNombre("Saltos Largos");
-        saltos.setDescripcion("Saltos horizontales con ambas piernas.");
-        saltos.setMetaTexto("4 series x 10 saltos");
-        saltos.setSenseiCreador(sensei);
-        tareaDiariaRepository.save(saltos);
-
-        // 2. Crear un Plan de Acondicionamiento
-        GrupoEntrenamiento grupo = grupoEntrenamientoRepository.findByNombre("Equipo Sub-15").orElseThrow();
-        Set<GrupoEntrenamiento> gruposDelPlan = new HashSet<>(Set.of(grupo));
-
-        PlanEntrenamiento planAcond = planEntrenamientoService.crearPlanEntrenamiento(
-                "Rutina Acondicionamiento Semana 1",
-                sensei,
-                gruposDelPlan
-        );
-
-        // --- ¡LÓGICA DE DÍAS AÑADIDA! ---
-        Set<DayOfWeek> diasAlternos = Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY);
-        Set<DayOfWeek> diasMartesJueves = Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY);
-
-        // 3. Vincular las tareas al plan CON DÍAS
-        EjercicioPlanificado tareaPlan1 = new EjercicioPlanificado();
-        tareaPlan1.setTareaDiaria(flexiones); // <-- Vincula a la TAREA
-        tareaPlan1.setDiasAsignados(diasAlternos); // <-- Asigna L-M-V
-        planAcond.addEjercicio(tareaPlan1);
-
-        EjercicioPlanificado tareaPlan2 = new EjercicioPlanificado();
-        tareaPlan2.setTareaDiaria(saltos); // <-- Vincula a la TAREA
-        tareaPlan2.setDiasAsignados(diasMartesJueves); // <-- Asigna M-J
-        planAcond.addEjercicio(tareaPlan2);
-
-        planEntrenamientoService.guardarPlan(planAcond);
-
-        System.out.println(">>> Plan de Acondicionamiento creado.");
+    private void crearRoles() {
+        List.of("ROLE_SENSEI", "ROLE_JUDOKA", "ROLE_COMPETIDOR", "ROLE_ADMIN", "ROLE_MECENAS")
+                .forEach(nombre -> rolRepository.findByNombre(nombre)
+                        .orElseGet(() -> rolRepository.save(new Rol(nombre))));
     }
+
     private void crearTraduccionesDias() {
-        // Verificamos si ya existen para no duplicar
-        if (traduccionRepository.findByClaveAndIdioma("MONDAY", "es").isPresent()) {
-            return; // Ya existen
-        }
-
-        System.out.println(">>> Poblando traducciones de días de la semana...");
-
+        if (traduccionRepository.findByClaveAndIdioma("MONDAY", "es").isPresent()) return;
         traduccionRepository.saveAll(List.of(
                 new Traduccion("MONDAY", "es", "Lunes"),
                 new Traduccion("TUESDAY", "es", "Martes"),
@@ -326,12 +109,224 @@ public class DataInitializer implements CommandLineRunner {
                 new Traduccion("THURSDAY", "es", "Jueves"),
                 new Traduccion("FRIDAY", "es", "Viernes"),
                 new Traduccion("SATURDAY", "es", "Sábado"),
-                new Traduccion("SUNDAY", "es", "Domingo"),
-
-                // (Traducciones de Estados de Plan, por si acaso)
-                new Traduccion("PENDIENTE", "es", "Pendiente"),
-                new Traduccion("EN_PROGRESO", "es", "En Progreso"),
-                new Traduccion("COMPLETADO", "es", "Completado")
+                new Traduccion("SUNDAY", "es", "Domingo")
         ));
+    }
+
+    private Sensei crearSensei(String user, String nom, String ape, String pass, GradoCinturon grado) {
+        Usuario u = new Usuario();
+        u.setUsername(user);
+        u.setNombre(nom);
+        u.setApellido(ape);
+        u.setActivo(true);
+        u = usuarioService.saveUsuario(u, pass);
+        u.getRoles().addAll(Set.of(
+                rolRepository.findByNombre("ROLE_SENSEI").orElseThrow(),
+                rolRepository.findByNombre("ROLE_ADMIN").orElseThrow()
+        ));
+
+        Sensei s = new Sensei();
+        s.setUsuario(u);
+        s.setGrado(grado);
+        s.setAnosPractica(30);
+        return senseiRepository.save(s);
+    }
+
+    private List<Judoka> crearJudokas() {
+        List<Judoka> lista = new ArrayList<>();
+        lista.add(judoka("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López"));
+        lista.add(judoka("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez"));
+        lista.add(judoka("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null));
+        lista.add(judoka("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null));
+        lista.add(judoka("danna.ortega", "Danna", "Ortega", 2000, 9, 8, Sexo.FEMENINO, GradoCinturon.NEGRO_1_DAN, true, null));
+        return judokaRepository.saveAll(lista);
+    }
+
+    private Judoka judoka(String user, String nom, String ape, int año, int mes, int dia, Sexo sexo, GradoCinturon grado, boolean comp, String acudiente) {
+        Usuario u = new Usuario();
+        u.setUsername(user);
+        u.setNombre(nom);
+        u.setApellido(ape);
+        u.setActivo(true);
+        u = usuarioService.saveUsuario(u, "123456");
+        u.getRoles().add(rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow());
+        if (comp) u.getRoles().add(rolRepository.findByNombre("ROLE_COMPETIDOR").orElseThrow());
+
+        Judoka j = new Judoka();
+        j.setUsuario(u);
+        j.setFechaNacimiento(LocalDate.of(año, mes, dia));
+        j.setSexo(sexo);
+        j.setGrado(grado);
+        j.setEsCompetidorActivo(comp);
+        j.setNombreAcudiente(acudiente);
+        return j;
+    }
+
+    private void crearGruposYAsignar(List<Judoka> judokas) {
+        // Creamos los grupos
+        GrupoEntrenamiento cadetes = grupo("Judokas Cadetes", "15-17 años");
+        GrupoEntrenamiento campeonato = grupo("Equipo Campeonato San Vicente", "Élite");
+
+        // === AHORA SÍ: ASIGNAMOS DESDE EL LADO OWNER (GrupoEntrenamiento) ===
+        cadetes.getJudokas().addAll(List.of(
+                judokas.get(0), // María
+                judokas.get(1), // Juan Camilo
+                judokas.get(2)  // Laura
+        ));
+
+        campeonato.getJudokas().addAll(List.of(
+                judokas.get(1), // Juan Camilo
+                judokas.get(3), // Daniel
+                judokas.get(4)  // Danna
+        ));
+
+        // Guardamos los grupos (y se persiste la tabla judoka_grupos automáticamente)
+        grupoRepository.saveAll(List.of(cadetes, campeonato));
+    }
+
+    private GrupoEntrenamiento grupo(String nombre, String desc) {
+        GrupoEntrenamiento g = new GrupoEntrenamiento();
+        g.setNombre(nombre);
+        g.setDescripcion(desc);
+        g.setJudokas(new HashSet<>()); // Importante: inicializar el Set
+        return g;
+    }
+
+    private void crearTareasCadetes(Sensei sensei) {
+        tareaDiariaRepository.saveAll(List.of(
+                t("Press Banca", "4x5 @65-70% 1RM", sensei),
+                t("Power Clean", "4x3 @60-70% 1RM", sensei),
+                t("Sentadilla Trasera", "4x5 @70-75% 1RM", sensei),
+                t("Dominadas con Toalla / Gi", "4x6-8", sensei),
+                t("Plancha Frontal", "3x40-50s", sensei)
+        ));
+    }
+
+    private TareaDiaria t(String nombre, String meta, Sensei s) {
+        TareaDiaria td = new TareaDiaria();
+        td.setNombre(nombre);
+        td.setMetaTexto(meta);
+        td.setSenseiCreador(s);
+        return td;
+    }
+
+    private PlanEntrenamiento crearPlanSemanal(Sensei sensei) {
+        GrupoEntrenamiento cadetes = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
+
+        PlanEntrenamiento plan = planService.crearPlanEntrenamiento(
+                "Acondicionamiento Cadetes 2025-2026",
+                sensei,
+                Set.of(cadetes)
+        );
+
+        plan.setEstado(EstadoPlan.EN_PROGRESO);
+        plan.setFechaAsignacion(LocalDate.now());
+
+        TareaDiaria press = tareaDiariaRepository.findAll().stream()
+                .filter(t -> t.getNombre().contains("Press Banca"))
+                .findFirst()
+                .orElseThrow();
+
+        EjercicioPlanificado ep = new EjercicioPlanificado();
+        ep.setTareaDiaria(press);
+        ep.setDiasAsignados(Set.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY));
+
+        // ESTAS DOS LÍNEAS SON LA CLAVE
+        ep.setPlanEntrenamiento(plan);                    // ← ¡¡ESTO FALTABA!!
+        plan.getEjerciciosPlanificados().add(ep);         // ← Esto solo mantiene el orden
+
+        return planService.guardarPlan(plan);
+    }
+    private PlanEntrenamiento crearPlanEvaluacion(Sensei sensei) {
+        GrupoEntrenamiento cadetes = grupoRepository.findByNombre("Judokas Cadetes")
+                .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
+
+        PlanEntrenamiento plan = planService.crearPlanEntrenamiento(
+                "Evaluación Física – Diciembre 2025",
+                sensei,
+                Set.of(cadetes)
+        );
+
+        plan.setTipoSesion(TipoSesion.EVALUACION);
+        plan.setEstado(EstadoPlan.EN_PROGRESO);
+        plan.setFechaAsignacion(LocalDate.now());
+
+        return planService.guardarPlan(plan);
+    }
+
+    private void programarSesiones(Sensei sensei) {
+        GrupoEntrenamiento g = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
+        LocalDateTime inicio = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0);
+        for (int i = 0; i < 10; i++) {
+            SesionProgramada s = new SesionProgramada();
+            s.setNombre("Entrenamiento Cadetes");
+            s.setTipoSesion(TipoSesion.ENTRENAMIENTO);
+            s.setFechaHoraInicio(inicio.plusDays(i * 2));
+            s.setFechaHoraFin(inicio.plusDays(i * 2).plusHours(2));
+            s.setGrupo(g);
+            s.setSensei(sensei);
+            sesionRepository.save(s);
+        }
+    }
+
+    private void generarHistoriaReal(List<Judoka> judokas, PlanEntrenamiento planEval) {
+        if (judokas.isEmpty()) return;
+
+        Judoka maria = judokas.get(0);
+
+        // Aseguramos que haya al menos un ejercicio planificado
+        EjercicioPlanificado ep = planEval.getEjerciciosPlanificados().stream()
+                .findFirst()
+                .orElseGet(() -> {
+                    EjercicioPlanificado nuevo = new EjercicioPlanificado();
+                    nuevo.setPlanEntrenamiento(planEval);  // ← ¡¡AQUÍ TAMBIÉN!!
+                    planEval.getEjerciciosPlanificados().add(nuevo);
+                    return nuevo;
+                });
+
+        Metrica metrica = metricaRepository.findAll().stream()
+                .findFirst()
+                .orElseGet(() -> {
+                    Metrica m = new Metrica();
+                    m.setNombreKey("temp.sjft_total");
+                    m.setUnidad("reps");
+                    return metricaRepository.save(m);
+                });
+
+        LocalDateTime base = LocalDateTime.now().minusMonths(6);
+        for (int i = 0; i < 6; i++) {
+            ResultadoPrueba r = new ResultadoPrueba();
+            r.setJudoka(maria);
+            r.setEjercicioPlanificado(ep);
+            r.setMetrica(metrica);
+            r.setValor(24.0 + i * 1.5);
+            r.setFechaRegistro(base.plusMonths(i));
+            resultadoPruebaRepository.save(r);
+        }
+    }
+
+    private void generarEjecuciones(PlanEntrenamiento plan) {
+        // 100% seguro y simple
+        Judoka j = judokaRepository.findAll().get(0);
+        EjercicioPlanificado ep = plan.getEjerciciosPlanificados().get(0);
+        for (int i = 0; i < 20; i++) {
+            EjecucionTarea e = new EjecucionTarea();
+            e.setJudoka(j);
+            e.setEjercicioPlanificado(ep);
+            e.setCompletado(true);
+            e.setFechaRegistro(LocalDateTime.now().minusDays(i));
+            ejecucionTareaRepository.save(e);
+        }
+    }
+
+    private void generarAsistencias() {
+        SesionProgramada s = sesionRepository.findAll().get(0);
+        Judoka j = judokaRepository.findAll().get(0);
+        Asistencia a = new Asistencia();
+        a.setJudoka(j);
+        a.setSesion(s);
+        a.setPresente(true);
+        a.setFechaHoraMarcacion(s.getFechaHoraInicio().plusMinutes(5));
+        asistenciaRepository.save(a);
     }
 }

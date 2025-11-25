@@ -1,0 +1,52 @@
+judoka-dashboard {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  min-height: 100vh;
+}
+
+.dashboard-title {
+  background: linear-gradient(90deg, #c62828, #b71c1c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 2.5rem;
+}
+
+.kpi-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  padding: 2rem;
+  background: white;
+}
+
+.charts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  background: white;
+}
+
+.cta-button {
+  margin: 2rem auto;
+  display: block;
+  font-size: 1.3rem !important;
+}
+
+.empty-state-box {
+  text-align: center;
+  padding: 3rem;
+  border: 2px dashed #c62828;
+  border-radius: 12px;
+  background: #fff8f8;
+  max-width: 700px;
+  margin: 2rem auto;
+}
+
+.radar-chart {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}

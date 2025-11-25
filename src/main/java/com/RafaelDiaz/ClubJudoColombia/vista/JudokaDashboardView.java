@@ -1,311 +1,231 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-// --- IMPORTS CORRECTOS PARA APEXCHARTS (Limpios y Específicos) ---
+import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
+import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.KpiCard;
 import com.github.appreciated.apexcharts.ApexCharts;
 import com.github.appreciated.apexcharts.ApexChartsBuilder;
 import com.github.appreciated.apexcharts.config.builder.*;
 import com.github.appreciated.apexcharts.config.chart.Type;
 import com.github.appreciated.apexcharts.config.chart.builder.ZoomBuilder;
 import com.github.appreciated.apexcharts.config.plotoptions.builder.RadarBuilder;
-import com.github.appreciated.apexcharts.config.plotoptions.radar.builder.PolygonsBuilder;
 import com.github.appreciated.apexcharts.config.stroke.Curve;
 import com.github.appreciated.apexcharts.config.xaxis.XAxisType;
-import com.github.appreciated.apexcharts.config.yaxis.builder.TitleBuilder;
 import com.github.appreciated.apexcharts.helper.Series;
-// (Quitamos 'Fill' que no se usa)
-
-// --- IMPORTS REFACTORIZADOS ---
-import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.ResultadoPrueba;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
-// --- FIN DE IMPORTS REFACTORIZADOS ---
-
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.H4;
-import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Route("dashboard-judoka")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
 public class JudokaDashboardView extends VerticalLayout {
 
-    // --- Servicios (Actualizados) ---
     private final SecurityService securityService;
     private final ResultadoPruebaService resultadoPruebaService;
     private final TraduccionService traduccionService;
     private final PruebaEstandarRepository pruebaEstandarRepository;
 
-    // --- Componentes de UI ---
-    private H3 poderDeCombateLabel;
-    private VerticalLayout panelGraficos;
-
-    // --- Estado ---
     private Judoka judokaActual;
+    private Div panelKpis;
+    private Div panelGraficos;
 
+    @Autowired
     public JudokaDashboardView(SecurityService securityService,
-                               TraduccionService traduccionService,
                                ResultadoPruebaService resultadoPruebaService,
+                               TraduccionService traduccionService,
                                PruebaEstandarRepository pruebaEstandarRepository) {
         this.securityService = securityService;
         this.resultadoPruebaService = resultadoPruebaService;
         this.traduccionService = traduccionService;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
 
-        setSizeFull();
+        initJudoka();
+        buildUI();
+        cargarDatos();
+    }
 
+    private void initJudoka() {
         this.judokaActual = securityService.getAuthenticatedJudoka()
-                .orElseThrow(() -> new RuntimeException("Error de seguridad: No se pudo encontrar el perfil del Judoka logueado."));
+                .orElseThrow(() -> new RuntimeException("Judoka no autenticado"));
+    }
 
-        add(new H1("Mi Dashboard - " + judokaActual.getUsuario().getNombre()));
+    private void buildUI() {
+        setSizeFull();
+        setPadding(false);
+        setSpacing(false);
+        addClassName("judoka-dashboard");
 
-        poderDeCombateLabel = new H3();
-        add(poderDeCombateLabel);
+        // === CABECERA ===
+        H1 titulo = new H1("Mi Dashboard – " + judokaActual.getUsuario().getNombre());
+        titulo.addClassName("dashboard-title");
 
-        Button btnCargarTareas = new Button("Ir a Mis Tareas Diarias",
+        // === KPIS ===
+        panelKpis = new Div();
+        panelKpis.addClassName("kpi-container");
+
+        // === GRÁFICOS ===
+        panelGraficos = new Div();
+        panelGraficos.addClassName("charts-container");
+
+        // === BOTÓN ACCESO RÁPIDO ===
+        Button btnTareas = new Button("Ir a Mis Tareas Diarias →", VaadinIcon.ARROW_RIGHT.create(),
                 e -> UI.getCurrent().navigate("mis-planes"));
-        btnCargarTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        add(btnCargarTareas);
+        btnTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
+        btnTareas.addClassName("cta-button");
 
-        panelGraficos = new VerticalLayout();
-        panelGraficos.setWidthFull();
-        add(panelGraficos);
-
-        // Cargar los gráficos (o el estado vacío)
-        mostrarGraficosDelDashboard();
+        add(titulo, panelKpis, panelGraficos, btnTareas);
     }
 
-    private void actualizarPoderDeCombate() {
-        Double pcScore = resultadoPruebaService.calcularPoderDeCombate(judokaActual);
-        if (poderDeCombateLabel == null) {
-            poderDeCombateLabel = new H3();
-        }
-        poderDeCombateLabel.setText(String.format("Poder de Combate: %.0f PC", pcScore));
-        poderDeCombateLabel.getStyle().set("color", "#1E90FF");
-    }
-
-    /**
-     * --- MÉTODO CON LÓGICA DE ESTADO VACÍO CORREGIDA ---
-     */
-    private void mostrarGraficosDelDashboard() {
+    private void cargarDatos() {
+        panelKpis.removeAll();
         panelGraficos.removeAll();
 
-        // 1. Obtenemos los componentes del PC.
-        Map<String, Double> componentesPC = resultadoPruebaService.getPoderDeCombateComponentes(judokaActual);
+        Double poderDeCombate = resultadoPruebaService.calcularPoderDeCombate(judokaActual);
+        Map<String, Double> componentes = resultadoPruebaService.getPoderDeCombateComponentes(judokaActual);
+        boolean sinDatos = componentes.values().stream().allMatch(v -> Math.abs(v - 1.0) < 0.001);
 
-        // 2. Verificamos si TODOS los puntajes son 1.0 (el puntaje base por defecto)
-        // Si todos son 1.0, significa que NO HAY DATOS en la BD.
-        boolean sinDatos = componentesPC.values().stream().allMatch(puntaje -> puntaje == 1.0);
-
-        // --- LÓGICA DE ESTADO VACÍO CORREGIDA ---
-        if (sinDatos) {
-            // El Judoka es nuevo Y el DataInitializer falló o fue comentado
-            panelGraficos.add(crearComponenteEstadoVacio());
-        } else {
-            // El Judoka tiene datos (ficticios o reales), mostramos los gráficos
-
-            // --- 1. Gráfico de Radar (Poder de Combate) ---
-            panelGraficos.add(crearGraficoRadar(componentesPC));
-
-            // --- 2. Curva de Mejora (Salto Horizontal) ---
-            PruebaEstandar pruebaBase = pruebaEstandarRepository
-                    .findByNombreKey("ejercicio.salto_horizontal_proesp.nombre")
-                    .orElse(null);
-            if (pruebaBase != null) {
-                panelGraficos.add(crearGraficoHistorial(
-                        pruebaBase,
-                        judokaActual,
-                        "Historial: Salto Horizontal"
-                ));
-            }
-
-            // --- 3. Curva de Mejora (SJFT) ---
-            PruebaEstandar sjft = pruebaEstandarRepository
-                    .findByNombreKey("ejercicio.sjft.nombre")
-                    .orElse(null);
-
-            if (sjft != null) {
-                panelGraficos.add(crearGraficoHistorial(
-                        sjft,
-                        judokaActual,
-                        "Historial: Special Judo Fitness Test (Índice)"
-                ));
-            }
-        }
-
-        // Actualizamos el PC (mostrará el valor base o el real)
-        actualizarPoderDeCombate();
-    }
-
-    /**
-     * --- MÉTODO DE ESTADO VACÍO (CORREGIDO) ---
-     */
-    private VerticalLayout crearComponenteEstadoVacio() {
-        H4 titulo = new H4("¡Bienvenido a tu Dashboard de Rendimiento!");
-        Paragraph explicacion = new Paragraph(
-                "Tu 'Poder de Combate' y tus gráficos de rendimiento aparecerán aquí " +
-                        "automáticamente tan pronto como tu Sensei registre los resultados de " +
-                        "tu primera Evaluación Estándar (Flujo 1)."
+        // === KPIS ===
+        panelKpis.add(
+                new KpiCard("Poder de Combate Total", String.format("%.0f PC", poderDeCombate), new Icon(VaadinIcon.FIRE)),
+                new KpiCard("Planes Activos", resultadoPruebaService.contarPlanesActivos(judokaActual), new Icon(VaadinIcon.CALENDAR)),
+                new KpiCard("Tareas Completadas Hoy", ejecucionesHoy(), new Icon(VaadinIcon.CHECK_CIRCLE)),
+                new KpiCard("Próxima Evaluación", diasHastaProximaEvaluacion(), new Icon(VaadinIcon.CLOCK))
         );
 
-        // (Enlace ficticio - reemplaza con tu video tutorial)
-        Anchor videoLink = new Anchor("https://www.youtube.com/watch?v=0yKhlncICFs",
-                "Ver video-tutorial (1 min) sobre cómo funciona el Poder de Combate");
-        videoLink.setTarget("_blank"); // <-- Usamos el método setTarget()
-        videoLink.getStyle().set("font-style", "italic");
-
-        Button irATareas = new Button("Mientras tanto, ve a tus Tareas Diarias",
-                new Icon(VaadinIcon.ARROW_RIGHT),
-                e -> UI.getCurrent().navigate("mis-planes"));
-        irATareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        irATareas.getStyle().set("margin-top", "15px");
-
-        VerticalLayout layout = new VerticalLayout(titulo, explicacion, videoLink, irATareas);
-        layout.setAlignItems(Alignment.CENTER);
-        layout.getStyle().set("border", "1px dashed #9E9E9E").set("border-radius", "5px");
-        layout.setPadding(true);
-        return layout;
+        // === ESTADO VACÍO O GRÁFICOS REALES ===
+        if (sinDatos) {
+            panelGraficos.add(crearEstadoVacio());
+        } else {
+            panelGraficos.add(crearGraficoRadar(componentes));
+            panelGraficos.add(crearGraficoSaltoHorizontal());
+            panelGraficos.add(crearGraficoSJFT());
+        }
     }
 
-    /**
-     * --- GRÁFICO DE RADAR (SINTAXIS 100% CORREGIDA) ---
-     */
+    private long ejecucionesHoy() {
+        return resultadoPruebaService.contarEjecucionesTareaHoy(judokaActual);
+    }
+
+    private String diasHastaProximaEvaluacion() {
+        return resultadoPruebaService.proximaEvaluacionEnDias(judokaActual)
+                .map(d -> d == 0 ? "¡Hoy!" : "En " + d + " días")
+                .orElse("Sin programar");
+    }
+
+    private VerticalLayout crearEstadoVacio() {
+        H3 titulo = new H3("¡Bienvenido a tu Dashboard de Rendimiento!");
+        Paragraph p = new Paragraph(
+                "Aquí verás tu Poder de Combate y evolución tan pronto como tu Sensei registre tu primera evaluación física."
+        );
+        Anchor video = new Anchor("https://www.youtube.com/watch?v=0yKhlncICFs", "Ver video explicativo (1 min)");
+        video.setTarget("_blank");
+
+        Button irTareas = new Button("Mientras tanto → Mis Tareas Diarias", VaadinIcon.ARROW_RIGHT.create(),
+                e -> UI.getCurrent().navigate("mis-planes"));
+        irTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        VerticalLayout box = new VerticalLayout(titulo, p, video, irTareas);
+        box.setAlignItems(FlexComponent.Alignment.CENTER);
+        box.addClassName("empty-state-box");
+        return box;
+    }
+
     private ApexCharts crearGraficoRadar(Map<String, Double> data) {
+        String[] categorias = data.keySet().toArray(new String[0]);
+        Double[] valores = data.values().toArray(new Double[0]);
 
-        String[] etiquetas = data.keySet().toArray(new String[0]);
-        Double[] puntajes = data.values().toArray(new Double[0]);
-        Series<Double> series = new Series<>("Puntaje (1-5)", puntajes);
-
-        ApexCharts radarChart = ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get()
-                        .withType(Type.RADAR)
-                        .withHeight("400px")
-                        .build())
-                .withTitle(TitleSubtitleBuilder.get()
-                        .withText("Perfil de Poder de Combate")
-                        .build())
-                .withSeries(series)
-                .withXaxis(XAxisBuilder.get()
-                        .withCategories(etiquetas)
-                        .build())
-                .withYaxis(YAxisBuilder.get()
-                        .withMin(0.0)
-                        .withMax(5.0)
-                        .withTickAmount(5.0)  // Usa 5 (Integer); si da error, cambia a 5.0 (Double)
-                        .build())
-                .withPlotOptions(PlotOptionsBuilder.get()
-                        .withRadar(RadarBuilder.get()
-                                .build())  // Configuración básica de radar (sin polygons aquí)
-                        .build())
+        ApexCharts chart = ApexChartsBuilder.get()
+                .withChart(ChartBuilder.get().withType(Type.RADAR).withHeight("450px").build())
+                .withTitle(TitleSubtitleBuilder.get().withText("Perfil de Poder de Combate").build())
+                .withSeries(new Series<>("Puntaje", valores))
+                .withXaxis(XAxisBuilder.get().withCategories(categorias).build())
+                .withYaxis(YAxisBuilder.get().withMin(0).withMax(5).withTickAmount(5.0).build())
+                .withPlotOptions(PlotOptionsBuilder.get().withRadar(RadarBuilder.get().build()).build())
                 .build();
 
-        // Workaround para configurar polygons en versión 24.0.1 (usando updateOptions vía JS)
-        radarChart.addAttachListener(event -> {
-            radarChart.getElement().executeJs(
-                    "this.apexchart.updateOptions({" +
-                            "plotOptions: {" +
-                            "radar: {" +
-                            "polygons: {" +
-                            "strokeColors: ['grey']," +
-                            "fill: {" +
-                            "colors: ['#FAFAFA']" +
-                            "}" +
-                            "}" +
-                            "}" +
-                            "}" +
-                            "}, false, true);"
-            );
-        });
+        // Estilo bonito del polígono (workaround JS)
+        chart.getElement().executeJs(
+                "this.apexchart.updateOptions({plotOptions:{radar:{polygons:{strokeColors:['#e0e0e0'],fill:{colors:['#fff']}}}}}, false, true);"
+        );
 
-        return radarChart;
+        chart.addClassName("radar-chart");
+        return chart;
     }
 
-    /**
-     * --- GRÁFICO DE LÍNEA (LÓGICA CORREGIDA) ---
-     */
-    private ApexCharts crearGraficoHistorial(PruebaEstandar prueba, Judoka judoka, String titulo) {
-        List<ResultadoPrueba> historial = resultadoPruebaService.getHistorialDeResultados(judoka, prueba);
+    private ApexCharts crearGraficoSaltoHorizontal() {
+        return crearGraficoHistorial(
+                "ejercicio.salto_horizontal_proesp.nombre",
+                "Evolución: Salto Horizontal (cm)",
+                "#d32f2f"
+        );
+    }
 
-        // Si el historial está vacío, muestra el mensaje "Sin Datos".
-        if (historial.isEmpty()) {
-            return ApexChartsBuilder.get()
-                    .withChart(ChartBuilder.get().withHeight("100px").build())
-                    .withTitle(TitleSubtitleBuilder.get().withText(titulo + " (Sin Datos)").build())
-                    .build();
+    private ApexCharts crearGraficoSJFT() {
+        return crearGraficoHistorial(
+                "ejercicio.sjft.nombre",
+                "Special Judo Fitness Test – Índice",
+                "#1976d2"
+        );
+    }
+
+    private ApexCharts crearGraficoHistorial(String nombreKeyPrueba, String titulo, String color) {
+        Optional<PruebaEstandar> opt = pruebaEstandarRepository.findByNombreKey(nombreKeyPrueba);
+        if (opt.isEmpty()) return new ApexCharts(); // vacío
+
+        List<Map<String, Object>> datos = resultadoPruebaService.getHistorialParaGrafico(judokaActual, opt.get());
+
+        if (datos.isEmpty()) {
+            return crearChartSinDatos(titulo);
         }
 
-        // NO filtramos los datos ficticios, los mostramos.
-        Map<String, List<ResultadoPrueba>> resultadosPorMetrica = historial.stream()
-                .collect(Collectors.groupingBy(res -> traduccionService.get(res.getMetrica().getNombreKey())));
+        List<String> fechas = datos.stream()
+                .map(m -> (String) m.get("fecha"))
+                .collect(Collectors.toList());
 
-        if (prueba.getNombreKey().equals("ejercicio.sjft.nombre")) {
-            resultadosPorMetrica.keySet().removeIf(key -> !key.contains("Índice"));
-        }
+        List<Series<Double>> series = datos.stream()
+                .filter(m -> m.containsKey("metrica") && m.containsKey("valor"))
+                .collect(Collectors.groupingBy(m -> (String) m.get("metrica")))
+                .entrySet().stream()
+                .map(e -> new Series<>(e.getKey(), e.getValue().stream()
+                        .mapToDouble(m -> (Double) m.get("valor"))
+                        .boxed()
+                        .toArray(Double[]::new)))
+                .collect(Collectors.toList());
 
-        List<Series<Double>> series = new ArrayList<>();
-        List<String> fechas = new ArrayList<>();
-
-        if (!resultadosPorMetrica.isEmpty()) {
-            List<ResultadoPrueba> primeraSerieDatos = resultadosPorMetrica.values().stream().findFirst().orElse(Collections.emptyList());
-
-            fechas = primeraSerieDatos.stream()
-                    .map(res -> res.getFechaRegistro().format(DateTimeFormatter.ISO_LOCAL_DATE))
-                    .collect(Collectors.toList());
-
-            series = resultadosPorMetrica.entrySet().stream()
-                    .map(entry -> {
-                        String nombreMetrica = entry.getKey();
-                        List<Double> valores = entry.getValue().stream()
-                                .map(ResultadoPrueba::getValor)
-                                .collect(Collectors.toList());
-                        return new Series<>(nombreMetrica, valores.toArray(new Double[0]));
-                    })
-                    .collect(Collectors.toList());
-        }
-
-        ApexCharts lineChart = ApexChartsBuilder.get()
+        return ApexChartsBuilder.get()
                 .withChart(ChartBuilder.get()
                         .withType(Type.LINE)
-                        .withHeight("300px")
+                        .withHeight("320px")
                         .withZoom(ZoomBuilder.get().withEnabled(true).build())
                         .build())
-                .withStroke(StrokeBuilder.get()
-                        .withCurve(Curve.SMOOTH)
-                        .build())
-                .withTitle(TitleSubtitleBuilder.get()
-                        .withText(titulo)
-                        .build())
+                .withStroke(StrokeBuilder.get().withCurve(Curve.SMOOTH).build())
+                .withTitle(TitleSubtitleBuilder.get().withText(titulo).build())
                 .withSeries(series.toArray(new Series[0]))
-                .withXaxis(XAxisBuilder.get()
-                        .withType(XAxisType.CATEGORIES)
-                        .withCategories(fechas)
-                        .build())
-                .withYaxis(YAxisBuilder.get()
-                        .withTitle(TitleBuilder.get()
-                                .withText("Valor")
-                                .build())
-                        .build())
+                .withXaxis(XAxisBuilder.get().withType(XAxisType.CATEGORIES).withCategories(fechas).build())
                 .build();
+    }
 
-        return lineChart;
+    private ApexCharts crearChartSinDatos(String titulo) {
+        return ApexChartsBuilder.get()
+                .withChart(ChartBuilder.get().withHeight("150px").build())
+                .withTitle(TitleSubtitleBuilder.get().withText(titulo + " – Sin datos aún").build())
+                .build();
     }
 }
