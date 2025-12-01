@@ -1,6 +1,5 @@
 package com.RafaelDiaz.ClubJudoColombia.util;
 
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
@@ -17,6 +16,9 @@ public final class FestivosColombia {
         return nombreFestivo(fecha).isPresent();
     }
 
+    /**
+     * Devuelve la CLAVE de traducción del festivo (ej: "festivo.navidad").
+     */
     public static Optional<String> nombreFestivo(LocalDate fecha) {
         Map<LocalDate, String> festivos = festivosPorAnio(fecha.getYear());
         return Optional.ofNullable(festivos.get(fecha));
@@ -25,48 +27,47 @@ public final class FestivosColombia {
     public static Map<LocalDate, String> festivosPorAnio(int year) {
         Map<LocalDate, String> res = new LinkedHashMap<>();
 
-        // Fijos (no se mueven)
-        put(res, LocalDate.of(year, Month.JANUARY, 1), "Año Nuevo");
-        put(res, LocalDate.of(year, Month.MAY, 1), "Día del Trabajo");
-        put(res, LocalDate.of(year, Month.JULY, 20), "Independencia de Colombia");
-        put(res, LocalDate.of(year, Month.AUGUST, 7), "Batalla de Boyacá");
-        put(res, LocalDate.of(year, Month.DECEMBER, 8), "Inmaculada Concepción");
-        put(res, LocalDate.of(year, Month.DECEMBER, 25), "Navidad");
+        // Fijos
+        put(res, LocalDate.of(year, Month.JANUARY, 1), "festivo.ano_nuevo");
+        put(res, LocalDate.of(year, Month.MAY, 1), "festivo.dia_trabajo");
+        put(res, LocalDate.of(year, Month.JULY, 20), "festivo.independencia");
+        put(res, LocalDate.of(year, Month.AUGUST, 7), "festivo.batalla_boyaca");
+        put(res, LocalDate.of(year, Month.DECEMBER, 8), "festivo.inmaculada");
+        put(res, LocalDate.of(year, Month.DECEMBER, 25), "festivo.navidad");
 
-        // Pascua y festivos relacionados
+        // Pascua
         LocalDate pascua = pascuaOccidental(year);
-        put(res, pascua.minusDays(3), "Jueves Santo");
-        put(res, pascua.minusDays(2), "Viernes Santo");
+        put(res, pascua.minusDays(3), "festivo.jueves_santo");
+        put(res, pascua.minusDays(2), "festivo.viernes_santo");
 
-        // Ley Emiliani (se traslada al lunes siguiente si no cae en lunes)
-        trasladarALunes(res, LocalDate.of(year, Month.JANUARY, 6), "Epifanía del Señor");
-        trasladarALunes(res, LocalDate.of(year, Month.MARCH, 19), "San José");
-        trasladarALunes(res, LocalDate.of(year, Month.JUNE, 29), "San Pedro y San Pablo");
-        trasladarALunes(res, LocalDate.of(year, Month.AUGUST, 15), "Asunción de la Virgen");
-        trasladarALunes(res, LocalDate.of(year, Month.OCTOBER, 12), "Día de la Raza");
-        trasladarALunes(res, LocalDate.of(year, Month.NOVEMBER, 1), "Todos los Santos");
-        trasladarALunes(res, LocalDate.of(year, Month.NOVEMBER, 11), "Independencia de Cartagena");
+        // Emiliani (Traslado a Lunes)
+        trasladarALunes(res, LocalDate.of(year, Month.JANUARY, 6), "festivo.reyes_magos");
+        trasladarALunes(res, LocalDate.of(year, Month.MARCH, 19), "festivo.san_jose");
+        trasladarALunes(res, LocalDate.of(year, Month.JUNE, 29), "festivo.san_pedro");
+        trasladarALunes(res, LocalDate.of(year, Month.AUGUST, 15), "festivo.asuncion");
+        trasladarALunes(res, LocalDate.of(year, Month.OCTOBER, 12), "festivo.dia_raza");
+        trasladarALunes(res, LocalDate.of(year, Month.NOVEMBER, 1), "festivo.todos_santos");
+        trasladarALunes(res, LocalDate.of(year, Month.NOVEMBER, 11), "festivo.independencia_cartagena");
 
-        // Festivos móviles basados en Pascua (con traslado a lunes)
-        trasladarALunes(res, pascua.plusDays(39), "Ascensión del Señor");    // Jueves -> lunes siguiente
-        trasladarALunes(res, pascua.plusDays(60), "Corpus Christi");         // Jueves -> lunes siguiente
-        trasladarALunes(res, pascua.plusDays(68), "Sagrado Corazón de Jesús"); // Domingo -> lunes siguiente
+        // Móviles Pascua
+        trasladarALunes(res, pascua.plusDays(39), "festivo.ascension");
+        trasladarALunes(res, pascua.plusDays(60), "festivo.corpus_christi");
+        trasladarALunes(res, pascua.plusDays(68), "festivo.sagrado_corazon");
 
         return res;
     }
 
-    private static void trasladarALunes(Map<LocalDate, String> mapa, LocalDate fecha, String nombre) {
+    private static void trasladarALunes(Map<LocalDate, String> mapa, LocalDate fecha, String clave) {
         LocalDate observancia = (fecha.getDayOfWeek() == DayOfWeek.MONDAY)
                 ? fecha
                 : fecha.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
-        put(mapa, observancia, nombre);
+        put(mapa, observancia, clave);
     }
 
-    private static void put(Map<LocalDate, String> mapa, LocalDate fecha, String nombre) {
-        mapa.put(fecha, nombre);
+    private static void put(Map<LocalDate, String> mapa, LocalDate fecha, String clave) {
+        mapa.put(fecha, clave);
     }
 
-    // Algoritmo de Pascua occidental (Meeus/Jones/Butcher)
     private static LocalDate pascuaOccidental(int year) {
         int a = year % 19;
         int b = year / 100;
@@ -80,7 +81,7 @@ public final class FestivosColombia {
         int k = c % 4;
         int l = (32 + 2 * e + 2 * i - h - k) % 7;
         int m = (a + 11 * h + 22 * l) / 451;
-        int month = (h + l - 7 * m + 114) / 31;      // 3=Marzo, 4=Abril
+        int month = (h + l - 7 * m + 114) / 31;
         int day = ((h + l - 7 * m + 114) % 31) + 1;
         return LocalDate.of(year, month, day);
     }

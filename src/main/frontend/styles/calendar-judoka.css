@@ -1,0 +1,109 @@
+.judoka-calendar-container {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--judo-sombra-card);
+    margin-bottom: 20px;
+}
+
+/* Cabecera (Mes y Botones) */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.calendar-month-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--judo-navy);
+    text-transform: capitalize;
+}
+
+/* Grid de Días */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 días */
+    gap: 8px;
+}
+
+/* Nombres de días (L M M J V S D) */
+.day-name {
+    text-align: center;
+    font-weight: 700;
+    color: var(--judo-gris-texto);
+    font-size: 0.8rem;
+    padding-bottom: 5px;
+}
+
+/* Celda de Día */
+.day-cell {
+    aspect-ratio: 1 / 1; /* Cuadrado perfecto */
+    border-radius: 12px;
+    background-color: var(--judo-gris-fondo);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    position: relative;
+    cursor: default;
+    transition: background-color 0.2s;
+}
+
+.day-cell.today {
+    border: 2px solid var(--judo-coral);
+    background-color: #fff5f5;
+}
+
+.day-cell:hover {
+    background-color: #eceff1;
+}
+
+/* Puntos de Eventos */
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    cursor: pointer;
+}
+
+.event-dot.futura { background-color: var(--judo-coral); }
+.event-dot.asistio { background-color: var(--judo-success); }
+.event-dot.falto { background-color: var(--judo-gris-texto); opacity: 0.5; }
+
+/* Contenedor de puntos (si hay varios eventos en un día) */
+.events-wrapper {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 4px;
+}
+/* ... estilos anteriores ... */
+
+/* Días Festivos */
+.day-cell.holiday {
+    background-color: #FFFDE7; /* Amarillo muy pálido (Crema) */
+    color: var(--judo-navy);
+}
+
+/* Indicador de Festivo (Estrellita o Icono) */
+.holiday-indicator {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 0.7rem;
+    color: #FBC02D; /* Oro */
+    cursor: help;
+}
+
+/* Ajuste para que el "Hoy" siga destacando sobre el festivo */
+.day-cell.today.holiday {
+    background-color: #FFF3E0; /* Mezcla entre rojo de hoy y amarillo festivo */
+    border-color: var(--judo-coral);
+}

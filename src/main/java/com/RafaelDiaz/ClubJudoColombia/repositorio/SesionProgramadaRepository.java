@@ -57,4 +57,19 @@ public interface SesionProgramadaRepository extends JpaRepository<SesionPrograma
     @Override
     @EntityGraph("SesionProgramada.completo")
     Optional<SesionProgramada> findById(Long id);
+
+    // Búsqueda eficiente para el calendario: Sesiones de una lista de grupos en un rango de fechas
+    // CORRECCIÓN: JOIN FETCH para traer Sensei y Usuario de una vez y evitar LazyInitException
+    @Query("SELECT s FROM SesionProgramada s " +
+            "JOIN FETCH s.sensei sen " +     // Cargar Sensei
+            "JOIN FETCH sen.usuario u " +    // Cargar Usuario del Sensei
+            "WHERE s.grupo IN :grupos " +
+            "AND s.fechaHoraInicio BETWEEN :inicio AND :fin " +
+            "ORDER BY s.fechaHoraInicio ASC")
+    List<SesionProgramada> findByGruposAndFechaBetween(
+            @Param("grupos")
+            java.util.Collection
+                    <com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento> grupos,
+            @Param("inicio") java.time.LocalDateTime inicio,
+            @Param("fin") java.time.LocalDateTime fin);
 }

@@ -91,7 +91,6 @@ public class SesionProgramadaService {
         logger.debug("Conteo resultante: {}", count);
         return count;
     }
-
     /**
      * Guarda una sesión con validaciones de negocio.
      * Previene solapamiento y duración mínima.

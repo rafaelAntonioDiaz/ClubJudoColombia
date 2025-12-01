@@ -3,6 +3,8 @@ package com.RafaelDiaz.ClubJudoColombia.config;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
+import com.RafaelDiaz.ClubJudoColombia.servicio.ChatService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import org.springframework.boot.CommandLineRunner;
@@ -29,8 +31,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private final EjecucionTareaRepository ejecucionTareaRepository;
     private final SesionProgramadaRepository sesionRepository;
     private final AsistenciaRepository asistenciaRepository;
-    // Inyectamos el repositorio directo para evitar problemas de cascada en ejercicios
+    private final InsigniaRepository insigniaRepository;      // <--- NUEVO
+    private final JudokaInsigniaRepository judokaInsigniaRepository;
     private final EjercicioPlanificadoRepository ejercicioRepository;
+    private MensajeChatRepository mensajeChatRepository;
+    private ChatService chatService;
 
     public DataInitializer(UsuarioService usuarioService,
                            PlanEntrenamientoService planService,
@@ -46,7 +51,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                            EjecucionTareaRepository ejecucionTareaRepository,
                            SesionProgramadaRepository sesionRepository,
                            AsistenciaRepository asistenciaRepository,
-                           EjercicioPlanificadoRepository ejercicioRepository) {
+                           EjercicioPlanificadoRepository ejercicioRepository,
+                           MensajeChatRepository mensajeChatRepository,
+                           ChatService chatService,
+                           JudokaInsigniaRepository judokaInsigniaRepository,
+                           InsigniaRepository insigniaRepository) {
         this.usuarioService = usuarioService;
         this.planService = planService;
         this.rolRepository = rolRepository;
@@ -62,6 +71,10 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         this.sesionRepository = sesionRepository;
         this.asistenciaRepository = asistenciaRepository;
         this.ejercicioRepository = ejercicioRepository;
+        this.mensajeChatRepository = mensajeChatRepository;
+        this.chatService = chatService;
+        this.insigniaRepository = insigniaRepository;
+        this.judokaInsigniaRepository = judokaInsigniaRepository;
     }
 
     // 2. Método run transaccional: Mantiene la sesión abierta todo el tiempo
@@ -85,6 +98,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         validarRolesExistentes();
 
         // 2. Traducciones
+        crearTraduccionesFestivos();
         crearTraduccionesDias();
 
         // 3. Usuarios
@@ -115,7 +129,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         // Generar historial completo para gráficos
         generarDatosHistoricosCompletos(judokas);
-
+        crearChatInicial();
+        otorgarInsigniasDemo(judokas);
+        crearTraduccionesGamificacion();
         System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
     }
 
@@ -477,5 +493,124 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                     // Guardado directo y robusto
                     return ejercicioRepository.save(nuevo);
                 });
+    }
+    private void crearChatInicial() {
+        if (mensajeChatRepository.count() > 0) return;
+
+        System.out.println(">>> INICIALIZANDO CHAT...");
+        Usuario kiuzo = usuarioService.findByUsername("kiuzo").orElseThrow();
+        Usuario maria = usuarioService.findByUsername("maria.lopez").orElseThrow();
+
+        chatService.enviarMensaje(kiuzo, "¡Bienvenidos al Chat Oficial del Club!");
+        chatService.enviarMensaje(kiuzo, "Aquí publicaremos anuncios importantes sobre los torneos.");
+        chatService.enviarMensaje(maria, "¡Entendido Sensei! ¿A qué hora es el pesaje el sábado?");
+    }
+    private void crearTraduccionesFestivos() {
+        if (traduccionRepository.findByClaveAndIdioma("festivo.navidad", "es").isPresent()) return;
+
+        System.out.println(">>> CARGANDO FESTIVOS...");
+        traduccionRepository.saveAll(List.of(
+                new Traduccion("festivo.ano_nuevo", "es", "Año Nuevo"),
+                new Traduccion("festivo.reyes_magos", "es", "Epifanía del Señor (Reyes Magos)"),
+                new Traduccion("festivo.san_jose", "es", "Día de San José"),
+                new Traduccion("festivo.jueves_santo", "es", "Jueves Santo"),
+                new Traduccion("festivo.viernes_santo", "es", "Viernes Santo"),
+                new Traduccion("festivo.dia_trabajo", "es", "Día del Trabajo"),
+                new Traduccion("festivo.ascension", "es", "Ascensión del Señor"),
+                new Traduccion("festivo.corpus_christi", "es", "Corpus Christi"),
+                new Traduccion("festivo.sagrado_corazon", "es", "Sagrado Corazón de Jesús"),
+                new Traduccion("festivo.san_pedro", "es", "San Pedro y San Pablo"),
+                new Traduccion("festivo.independencia", "es", "Independencia de Colombia"),
+                new Traduccion("festivo.batalla_boyaca", "es", "Batalla de Boyacá"),
+                new Traduccion("festivo.asuncion", "es", "Asunción de la Virgen"),
+                new Traduccion("festivo.dia_raza", "es", "Día de la Raza"),
+                new Traduccion("festivo.todos_santos", "es", "Todos los Santos"),
+                new Traduccion("festivo.independencia_cartagena", "es", "Independencia de Cartagena"),
+                new Traduccion("festivo.inmaculada", "es", "Inmaculada Concepción"),
+                new Traduccion("festivo.navidad", "es", "Navidad")
+        ));
+    }
+    private void otorgarInsigniasDemo(List<Judoka> judokas) {
+        // 1. Buscar a María
+        Judoka maria = judokas.stream()
+                .filter(j -> j.getUsuario().getUsername().equals("maria.lopez"))
+                .findFirst().orElse(null);
+
+        if (maria == null) return;
+
+        // 2. Definir qué medallas le damos (Una de cada categoría para que se vea equilibrado)
+        List<String> clavesGanadas = List.of(
+                "SHIN_INICIO",     // "Primer Paso" (Mente)
+                "TAI_HERCULES",    // "Hércules" (Cuerpo - tiene sentido con sus stats físicos)
+                "GI_TECNICO"       // "Técnica Pura" (Técnica)
+        );
+
+        System.out.println(">>> OTORGANDO INSIGNIAS A MARÍA...");
+
+        for (String clave : clavesGanadas) {
+            // Buscamos la insignia en el catálogo
+            Insignia insignia = insigniaRepository.findByClave(clave).orElse(null);
+
+            if (insignia != null) {
+                // Creamos la relación (El logro)
+                JudokaInsignia logro = new JudokaInsignia();
+                logro.setJudoka(maria);
+                logro.setInsignia(insignia);
+                logro.setFechaObtencion(LocalDateTime.now().minusDays(new Random().nextInt(30))); // Ganada hace días
+
+                judokaInsigniaRepository.save(logro);
+                System.out.println("   -> Ganó: " + insignia.getNombre());
+            }
+        }
+    }
+    private void crearTraduccionesGamificacion() {
+        if (traduccionRepository.findByClaveAndIdioma("widget.mido.titulo", "es").isPresent()) return;
+
+        System.out.println(">>> CARGANDO TRADUCCIONES DE GAMIFICACIÓN...");
+        List<Traduccion> lista = new ArrayList<>();
+
+        // Títulos del Widget
+        lista.add(new Traduccion("widget.mido.titulo", "es", "Mi Do (El Camino)"));
+        lista.add(new Traduccion("widget.mido.shin", "es", "SHIN (Mente)"));
+        lista.add(new Traduccion("widget.mido.gi", "es", "GI (Técnica)"));
+        lista.add(new Traduccion("widget.mido.tai", "es", "TAI (Cuerpo)"));
+
+        // Estados del Dialog
+        lista.add(new Traduccion("badge.estado.desbloqueada", "es", "¡Insignia Desbloqueada!"));
+        lista.add(new Traduccion("badge.estado.bloqueada", "es", "Insignia Bloqueada"));
+        lista.add(new Traduccion("badge.label.obtenida", "es", "Obtenida el"));
+        lista.add(new Traduccion("badge.label.pendiente", "es", "Aún no la tienes. ¡Sigue entrenando!"));
+        lista.add(new Traduccion("btn.cerrar", "es", "Entendido"));
+
+        // --- INSIGNIAS (Claves derivadas de: "badge." + CLAVE_SQL.lower + ".nombre/desc") ---
+
+        // SHIN
+        lista.add(new Traduccion("badge.shin_inicio.nombre", "es", "Primer Paso"));
+        lista.add(new Traduccion("badge.shin_inicio.desc", "es", "Completaste tu primer entrenamiento. El viaje comienza."));
+
+        lista.add(new Traduccion("badge.shin_constancia.nombre", "es", "Espíritu Indomable"));
+        lista.add(new Traduccion("badge.shin_constancia.desc", "es", "10 Asistencias consecutivas sin faltar."));
+
+        lista.add(new Traduccion("badge.shin_compromiso.nombre", "es", "Guardián del Dojo"));
+        lista.add(new Traduccion("badge.shin_compromiso.desc", "es", "50 Asistencias totales acumuladas."));
+
+        // GI
+        lista.add(new Traduccion("badge.gi_cinturon.nombre", "es", "Nuevo Horizonte"));
+        lista.add(new Traduccion("badge.gi_cinturon.desc", "es", "Has ascendido de grado (Cinturón)."));
+
+        lista.add(new Traduccion("badge.gi_tecnico.nombre", "es", "Técnica Pura"));
+        lista.add(new Traduccion("badge.gi_tecnico.desc", "es", "Evaluación técnica sobresaliente."));
+
+        // TAI
+        lista.add(new Traduccion("badge.tai_hercules.nombre", "es", "Hércules"));
+        lista.add(new Traduccion("badge.tai_hercules.desc", "es", "Superaste 40 flexiones en un minuto."));
+
+        lista.add(new Traduccion("badge.tai_velocidad.nombre", "es", "Relámpago"));
+        lista.add(new Traduccion("badge.tai_velocidad.desc", "es", "Corriste 20m en menos de 3.5 segundos."));
+
+        lista.add(new Traduccion("badge.tai_resistencia.nombre", "es", "Pulmones de Acero"));
+        lista.add(new Traduccion("badge.tai_resistencia.desc", "es", "Índice SJFT Excelente."));
+
+        traduccionRepository.saveAll(lista);
     }
 }
