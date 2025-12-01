@@ -63,7 +63,7 @@ public class PlanEntrenamiento implements Serializable {
 
     public PlanEntrenamiento() {
         this.fechaAsignacion = LocalDate.now();
-        this.estado = EstadoPlan.PENDIENTE;
+        this.estado = EstadoPlan.ACTIVO;
     }
 
     // ✅ CORREGIDO: Getters y Setters completos incluyendo tipoSesion

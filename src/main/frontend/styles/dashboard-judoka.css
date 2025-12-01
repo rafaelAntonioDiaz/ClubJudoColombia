@@ -1,0 +1,133 @@
+/* ============================================================
+   ESTILOS CLEAN PARA JUDOKA DASHBOARD
+   ============================================================ */
+
+.judoka-dashboard-content {
+    background-color: var(--judo-gris-fondo);
+    padding: var(--lumo-space-m);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.dashboard-page-title {
+    color: var(--judo-negro);
+    margin-bottom: var(--lumo-space-l);
+    font-size: 1.75rem;
+}
+
+/* === SECCIÓN KPIS (Tarjetas Flotantes) === */
+.dashboard-kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lumo-space-m);
+    margin-bottom: var(--lumo-space-xl);
+}
+
+/* Estilo de cada KPI individual */
+.kpi-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    border-radius: 16px;
+    padding: 20px;
+    flex: 1 1 220px; /* Responsive */
+    box-shadow: var(--judo-sombra-card);
+    border-bottom: 4px solid var(--judo-coral); /* Detalle de color */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+}
+
+.kpi-icon-container {
+    background-color: var(--judo-coral-suave);
+    color: var(--judo-coral);
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--judo-navy);
+    line-height: 1.2;
+}
+
+.kpi-label {
+    font-size: 0.85rem;
+    color: var(--judo-gris-texto);
+    font-weight: 500;
+}
+
+/* === SECCIÓN GRÁFICOS === */
+.dashboard-charts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--lumo-space-l);
+}
+
+@media (min-width: 900px) {
+    .dashboard-charts {
+        grid-template-columns: 1.2fr 0.8fr; /* El radar ocupa más espacio */
+    }
+
+    /* El gráfico de radar necesita altura para verse bien */
+    .radar-chart-container {
+        grid-row: span 2; /* Si tienes 3 gráficos, el radar puede ser alto a la izquierda */
+    }
+}
+
+/* === TARJETAS DE GRÁFICOS === */
+.chart-card {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: var(--judo-sombra-card);
+    border: 1px solid rgba(0,0,0,0.03);
+
+    /* --- PROPIEDADES CLAVE PARA QUE SE VEA EL GRÁFICO --- */
+    min-height: 400px;  /* Forzamos altura mínima */
+    height: 100%;       /* Ocupar toda la altura de la celda del grid */
+    display: flex;      /* Flexbox para centrar contenido */
+    flex-direction: column;
+    justify-content: center; /* Centrar verticalmente */
+    overflow: hidden;   /* Evitar desbordes */
+}
+
+/* Título interno del gráfico */
+.chart-card h3 {
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--judo-navy);
+    border-left: 4px solid var(--judo-coral);
+    padding-left: 10px;
+}
+
+/* Asegurar que el componente web de ApexCharts ocupe el espacio */
+apex-charts {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 350px !important;
+    flex-grow: 1;
+}
+/* === OPTIMIZACIÓN DE ESPACIO PARA EL RADAR === */
+/* Esta clase ya la estamos usando en Java, ahora le damos poder */
+.radar-chart-container {
+    padding: 0 !important; /* Eliminamos el "colchón" blanco */
+    overflow: visible !important; /* Permitir que las etiquetas usen los bordes */
+    align-items: center;
+    justify-content: center;
+}
+
+/* Forzamos al gráfico a usar el 100% del ancho disponible */
+.radar-chart-container apex-charts {
+    margin: 0 auto; /* Centrado */
+    transform: scale(1.1); /* Pequeño truco: Zoom del 10% para llenar más visualmente */
+}

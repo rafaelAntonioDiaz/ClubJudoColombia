@@ -46,11 +46,11 @@ public class EjercicioPlanificado implements Serializable {
     @Column(name = "orden")
     private Integer orden;
 
-    // Días de la semana asignados ---
+    // Días de la semana que se hace el ejercicio
     @ElementCollection(targetClass = DayOfWeek.class, fetch = FetchType.EAGER)
     @CollectionTable(name = "plan_tarea_dias", joinColumns = @JoinColumn(name = "id_ejercicio_plan"))
-    @Enumerated(EnumType.STRING)
-    @Column(name = "dia_semana")
+    @Column(name = "dia_semana",length = 20)
+    @Enumerated(EnumType.STRING) // <--- ESTO ES CLAVE: Guarda "MONDAY", "TUESDAY", etc.
     private Set<DayOfWeek> diasAsignados = new HashSet<>();
     /**
      * Un EjercicioPlanificado (tipo Prueba) tendrá MUCHOS ResultadosPrueba.

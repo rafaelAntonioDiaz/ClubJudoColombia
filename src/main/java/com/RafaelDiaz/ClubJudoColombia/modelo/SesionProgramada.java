@@ -44,15 +44,15 @@ public class SesionProgramada implements Serializable {
     @Column(name = "nombre", nullable = false, length = 255)
     private String nombre;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipoSesion", nullable = false, length = 50)
-    private TipoSesion tipoSesion;
-
-    @Column(name = "fechaHoraInicio", nullable = false)
+    @Column(name = "fecha_hora_inicio", nullable = false) // Corrección para V6
     private LocalDateTime fechaHoraInicio;
 
-    @Column(name = "fechaHoraFin", nullable = false)
+    @Column(name = "fecha_hora_fin", nullable = false)   // Corrección para V6
     private LocalDateTime fechaHoraFin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_sesion", nullable = false)      // Corrección para V5/V6
+    private TipoSesion tipoSesion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_grupo", nullable = false)

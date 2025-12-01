@@ -7,35 +7,43 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.KpiCard;
+import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
 import com.github.appreciated.apexcharts.ApexCharts;
 import com.github.appreciated.apexcharts.ApexChartsBuilder;
 import com.github.appreciated.apexcharts.config.builder.*;
 import com.github.appreciated.apexcharts.config.chart.Type;
 import com.github.appreciated.apexcharts.config.chart.builder.ZoomBuilder;
 import com.github.appreciated.apexcharts.config.plotoptions.builder.RadarBuilder;
+import com.github.appreciated.apexcharts.config.plotoptions.radar.builder.PolygonsBuilder;
 import com.github.appreciated.apexcharts.config.stroke.Curve;
 import com.github.appreciated.apexcharts.config.xaxis.XAxisType;
+import com.github.appreciated.apexcharts.config.xaxis.builder.LabelsBuilder;
+import com.github.appreciated.apexcharts.config.xaxis.labels.builder.StyleBuilder;
 import com.github.appreciated.apexcharts.helper.Series;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Route("dashboard-judoka")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
-public class JudokaDashboardView extends VerticalLayout {
+@PageTitle("Dashboard | Club Judo Colombia")
+@CssImport("./styles/dashboard-judoka.css")
+public class JudokaDashboardView extends JudokaLayout {
 
     private final SecurityService securityService;
     private final ResultadoPruebaService resultadoPruebaService;
@@ -43,161 +51,186 @@ public class JudokaDashboardView extends VerticalLayout {
     private final PruebaEstandarRepository pruebaEstandarRepository;
 
     private Judoka judokaActual;
-    private Div panelKpis;
-    private Div panelGraficos;
+    private Div kpiContainer;
+    private Div chartsGrid;
 
     @Autowired
     public JudokaDashboardView(SecurityService securityService,
                                ResultadoPruebaService resultadoPruebaService,
                                TraduccionService traduccionService,
-                               PruebaEstandarRepository pruebaEstandarRepository) {
+                               PruebaEstandarRepository pruebaEstandarRepository,
+                               AccessAnnotationChecker accessChecker) {
+        super(securityService, accessChecker);
         this.securityService = securityService;
         this.resultadoPruebaService = resultadoPruebaService;
         this.traduccionService = traduccionService;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
 
         initJudoka();
-        buildUI();
+        buildDashboard();
         cargarDatos();
     }
 
     private void initJudoka() {
         this.judokaActual = securityService.getAuthenticatedJudoka()
-                .orElseThrow(() -> new RuntimeException("Judoka no autenticado"));
+                .orElseThrow(() -> new RuntimeException("Error: Judoka no autenticado."));
     }
 
-    private void buildUI() {
-        setSizeFull();
-        setPadding(false);
-        setSpacing(false);
-        addClassName("judoka-dashboard");
+    private void buildDashboard() {
+        Div mainContent = new Div();
+        mainContent.addClassName("judoka-dashboard-content");
 
-        // === CABECERA ===
-        H1 titulo = new H1("Mi Dashboard – " + judokaActual.getUsuario().getNombre());
-        titulo.addClassName("dashboard-title");
+        H2 titulo = new H2("Hola, " + judokaActual.getUsuario().getNombre());
+        titulo.addClassName("dashboard-page-title");
 
-        // === KPIS ===
-        panelKpis = new Div();
-        panelKpis.addClassName("kpi-container");
+        Button btnTareas = new Button("Ir a Mis Tareas", new Icon(VaadinIcon.ARROW_RIGHT));
+        btnTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        btnTareas.addClickListener(e -> UI.getCurrent().navigate("mis-planes"));
 
-        // === GRÁFICOS ===
-        panelGraficos = new Div();
-        panelGraficos.addClassName("charts-container");
+        Div headerWrapper = new Div(titulo, btnTareas);
+        headerWrapper.getStyle().set("display", "flex");
+        headerWrapper.getStyle().set("justify-content", "space-between");
+        headerWrapper.getStyle().set("align-items", "center");
+        headerWrapper.getStyle().set("flex-wrap", "wrap");
+        headerWrapper.getStyle().set("gap", "1rem");
+        headerWrapper.getStyle().set("margin-bottom", "1.5rem");
 
-        // === BOTÓN ACCESO RÁPIDO ===
-        Button btnTareas = new Button("Ir a Mis Tareas Diarias →", VaadinIcon.ARROW_RIGHT.create(),
-                e -> UI.getCurrent().navigate("mis-planes"));
-        btnTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        btnTareas.addClassName("cta-button");
+        kpiContainer = new Div();
+        kpiContainer.addClassName("dashboard-kpis");
 
-        add(titulo, panelKpis, panelGraficos, btnTareas);
+        chartsGrid = new Div();
+        chartsGrid.addClassName("dashboard-charts");
+
+        mainContent.add(headerWrapper, kpiContainer, chartsGrid);
+        setContent(mainContent);
     }
 
     private void cargarDatos() {
-        panelKpis.removeAll();
-        panelGraficos.removeAll();
+        kpiContainer.removeAll();
+        chartsGrid.removeAll();
 
         Double poderDeCombate = resultadoPruebaService.calcularPoderDeCombate(judokaActual);
         Map<String, Double> componentes = resultadoPruebaService.getPoderDeCombateComponentes(judokaActual);
-        boolean sinDatos = componentes.values().stream().allMatch(v -> Math.abs(v - 1.0) < 0.001);
 
-        // === KPIS ===
-        panelKpis.add(
-                new KpiCard("Poder de Combate Total", String.format("%.0f PC", poderDeCombate), new Icon(VaadinIcon.FIRE)),
-                new KpiCard("Planes Activos", resultadoPruebaService.contarPlanesActivos(judokaActual), new Icon(VaadinIcon.CALENDAR)),
-                new KpiCard("Tareas Completadas Hoy", ejecucionesHoy(), new Icon(VaadinIcon.CHECK_CIRCLE)),
-                new KpiCard("Próxima Evaluación", diasHastaProximaEvaluacion(), new Icon(VaadinIcon.CLOCK))
+        boolean sinDatos = componentes.isEmpty();
+
+        // 1. KPIs
+        kpiContainer.add(
+                new KpiCard("Poder de Combate", String.format("%.0f PC", poderDeCombate), new Icon(VaadinIcon.FIRE)),
+                new KpiCard("Planes Activos", String.valueOf(resultadoPruebaService.contarPlanesActivos(judokaActual)), new Icon(VaadinIcon.CALENDAR)),
+                new KpiCard("Tareas Hoy", String.valueOf(ejecucionesHoy()), new Icon(VaadinIcon.CHECK_CIRCLE)),
+                new KpiCard("Próxima Eval.", diasHastaProximaEvaluacion(), new Icon(VaadinIcon.CLOCK))
         );
 
-        // === ESTADO VACÍO O GRÁFICOS REALES ===
+        // 2. Gráficos
         if (sinDatos) {
-            panelGraficos.add(crearEstadoVacio());
+            chartsGrid.add(crearEstadoVacio());
         } else {
-            panelGraficos.add(crearGraficoRadar(componentes));
-            panelGraficos.add(crearGraficoSaltoHorizontal());
-            panelGraficos.add(crearGraficoSJFT());
+            // A. Gráfico Radar
+            ApexCharts radarChart = crearGraficoRadar(componentes);
+            chartsGrid.add(wrapInCard(radarChart, "radar-chart-container"));
+
+            // B. Gráficos Lineales
+            List<String> clavesPruebas = List.of(
+                    "ejercicio.salto_horizontal_proesp.nombre",
+                    "ejercicio.lanzamiento_balon.nombre",
+                    "ejercicio.abdominales_1min.nombre",
+                    "ejercicio.carrera_6min.nombre",
+                    "ejercicio.agilidad_4x4.nombre",
+                    "ejercicio.carrera_20m.nombre",
+                    "ejercicio.sjft.nombre"
+            );
+
+            for (String clave : clavesPruebas) {
+                Optional<PruebaEstandar> pruebaOpt = pruebaEstandarRepository.findByNombreKey(clave);
+
+                if (pruebaOpt.isPresent()) {
+                    String titulo = traduccionService.get(clave);
+                    ApexCharts chart = crearGraficoHistorial(pruebaOpt.get(), titulo);
+                    chartsGrid.add(wrapInCard(chart, ""));
+                }
+            }
+
+            UI.getCurrent().getPage().executeJs("setTimeout(() => window.dispatchEvent(new Event('resize')), 500);");
         }
     }
 
-    private long ejecucionesHoy() {
-        return resultadoPruebaService.contarEjecucionesTareaHoy(judokaActual);
+    private Div wrapInCard(Component chart, String extraClass) {
+        Div card = new Div(chart);
+        card.addClassName("chart-card");
+        if (extraClass != null && !extraClass.isEmpty()) {
+            card.addClassName(extraClass);
+            // Si es el radar, dejamos que el gráfico dicte la altura (500px)
+        }
+
+        if (chart instanceof ApexCharts) {
+            ((ApexCharts) chart).setWidth("100%");
+            // NO forzamos altura fija aquí para el radar, él ya trae 500px.
+            // Para los lineales sí podemos dejar un default si quieres.
+        }
+        return card;
     }
-
-    private String diasHastaProximaEvaluacion() {
-        return resultadoPruebaService.proximaEvaluacionEnDias(judokaActual)
-                .map(d -> d == 0 ? "¡Hoy!" : "En " + d + " días")
-                .orElse("Sin programar");
-    }
-
-    private VerticalLayout crearEstadoVacio() {
-        H3 titulo = new H3("¡Bienvenido a tu Dashboard de Rendimiento!");
-        Paragraph p = new Paragraph(
-                "Aquí verás tu Poder de Combate y evolución tan pronto como tu Sensei registre tu primera evaluación física."
-        );
-        Anchor video = new Anchor("https://www.youtube.com/watch?v=0yKhlncICFs", "Ver video explicativo (1 min)");
-        video.setTarget("_blank");
-
-        Button irTareas = new Button("Mientras tanto → Mis Tareas Diarias", VaadinIcon.ARROW_RIGHT.create(),
-                e -> UI.getCurrent().navigate("mis-planes"));
-        irTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        VerticalLayout box = new VerticalLayout(titulo, p, video, irTareas);
-        box.setAlignItems(FlexComponent.Alignment.CENTER);
-        box.addClassName("empty-state-box");
-        return box;
-    }
-
+    // --- GRÁFICO RADAR: Ejes Negros, Red Gris, Textos Negros ---
+// --- GRÁFICO RADAR OPTIMIZADO (Más grande, menos margen) ---
     private ApexCharts crearGraficoRadar(Map<String, Double> data) {
         String[] categorias = data.keySet().toArray(new String[0]);
         Double[] valores = data.values().toArray(new Double[0]);
 
-        ApexCharts chart = ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get().withType(Type.RADAR).withHeight("450px").build())
-                .withTitle(TitleSubtitleBuilder.get().withText("Perfil de Poder de Combate").build())
-                .withSeries(new Series<>("Puntaje", valores))
-                .withXaxis(XAxisBuilder.get().withCategories(categorias).build())
-                .withYaxis(YAxisBuilder.get().withMin(0).withMax(5).withTickAmount(5.0).build())
-                .withPlotOptions(PlotOptionsBuilder.get().withRadar(RadarBuilder.get().build()).build())
+        // Lista de colores negros para las etiquetas
+        List<String> coloresEtiquetas = Collections.nCopies(categorias.length, "#000000");
+
+        return ApexChartsBuilder.get()
+                .withChart(ChartBuilder.get()
+                        .withType(Type.RADAR)
+                        .withHeight("500px") // <-- AUMENTADO A 500PX PARA LLENAR
+                        .withForeColor("#000000")
+                        // Eliminamos márgenes internos del SVG
+                        // (Nota: Si tu versión de wrapper no soporta 'withToolbar',
+                        // solo borra la línea, pero el height es clave).
+                        .build())
+                .withColors("#FF6B6B", "#2C3E50")
+                .withFill(FillBuilder.get()
+                        .withOpacity(0.2)
+                        .build())
+                .withStroke(StrokeBuilder.get()
+                        .withWidth(2.0)
+                        .build())
+                .withPlotOptions(PlotOptionsBuilder.get()
+                        .withRadar(RadarBuilder.get()
+                                .withSize(150.0) // <-- FORZAMOS TAMAÑO DEL POLÍGONO (Default es ~100-120)
+                                .withPolygons(PolygonsBuilder.get()
+                                        .withStrokeColor(Collections.singletonList("#000000")) // Red Negra
+                                        .withConnectorColors(Collections.singletonList("#000000")) // Ejes Negros
+                                        .build())
+                                .build())
+                        .build())
+                .withMarkers(MarkersBuilder.get()
+                        .withSize(5.0, 5.0)
+                        .build())
+                .withSeries(new Series<>("Nivel Actual", valores))
+                .withXaxis(XAxisBuilder.get()
+                        .withCategories(categorias)
+                        .withLabels(LabelsBuilder.get()
+                                .withStyle(StyleBuilder.get()
+                                        .withColors(coloresEtiquetas)
+                                        .withFontSize("13px") // Texto un poco más grande y legible
+                                        .withFontFamily("Inter, sans-serif")
+                                        .build())
+                                .build())
+                        .build())
+                .withYaxis(YAxisBuilder.get()
+                        .withMin(0).withMax(5)
+                        .withTickAmount(5.0)
+                        .withShow(false)
+                        .build())
                 .build();
-
-        // Estilo bonito del polígono (workaround JS)
-        chart.getElement().executeJs(
-                "this.apexchart.updateOptions({plotOptions:{radar:{polygons:{strokeColors:['#e0e0e0'],fill:{colors:['#fff']}}}}}, false, true);"
-        );
-
-        chart.addClassName("radar-chart");
-        return chart;
     }
+    private ApexCharts crearGraficoHistorial(PruebaEstandar prueba, String titulo) {
+        List<Map<String, Object>> datos = resultadoPruebaService.getHistorialParaGrafico(judokaActual, prueba);
 
-    private ApexCharts crearGraficoSaltoHorizontal() {
-        return crearGraficoHistorial(
-                "ejercicio.salto_horizontal_proesp.nombre",
-                "Evolución: Salto Horizontal (cm)",
-                "#d32f2f"
-        );
-    }
+        if (datos.isEmpty()) return crearChartSinDatos(titulo);
 
-    private ApexCharts crearGraficoSJFT() {
-        return crearGraficoHistorial(
-                "ejercicio.sjft.nombre",
-                "Special Judo Fitness Test – Índice",
-                "#1976d2"
-        );
-    }
-
-    private ApexCharts crearGraficoHistorial(String nombreKeyPrueba, String titulo, String color) {
-        Optional<PruebaEstandar> opt = pruebaEstandarRepository.findByNombreKey(nombreKeyPrueba);
-        if (opt.isEmpty()) return new ApexCharts(); // vacío
-
-        List<Map<String, Object>> datos = resultadoPruebaService.getHistorialParaGrafico(judokaActual, opt.get());
-
-        if (datos.isEmpty()) {
-            return crearChartSinDatos(titulo);
-        }
-
-        List<String> fechas = datos.stream()
-                .map(m -> (String) m.get("fecha"))
-                .collect(Collectors.toList());
+        List<String> fechas = datos.stream().map(m -> (String) m.get("fecha")).collect(Collectors.toList());
 
         List<Series<Double>> series = datos.stream()
                 .filter(m -> m.containsKey("metrica") && m.containsKey("valor"))
@@ -212,20 +245,45 @@ public class JudokaDashboardView extends VerticalLayout {
         return ApexChartsBuilder.get()
                 .withChart(ChartBuilder.get()
                         .withType(Type.LINE)
-                        .withHeight("320px")
-                        .withZoom(ZoomBuilder.get().withEnabled(true).build())
+                        .withHeight("350px")
+                        .withZoom(ZoomBuilder.get().withEnabled(false).build())
+                        .withForeColor("#000000") // Ejes Negros
                         .build())
-                .withStroke(StrokeBuilder.get().withCurve(Curve.SMOOTH).build())
-                .withTitle(TitleSubtitleBuilder.get().withText(titulo).build())
+                .withStroke(StrokeBuilder.get()
+                        .withCurve(Curve.SMOOTH)
+                        .withWidth(3.0)
+                        .build())
+                // Paleta Dual: Coral y Navy (para el gráfico combinado)
+                .withColors("#FF6B6B", "#2C3E50")
+                .withTitle(TitleSubtitleBuilder.get()
+                        .withText(titulo)
+                        .withAlign(com.github.appreciated.apexcharts.config.subtitle.Align.LEFT)
+                        .build())
                 .withSeries(series.toArray(new Series[0]))
-                .withXaxis(XAxisBuilder.get().withType(XAxisType.CATEGORIES).withCategories(fechas).build())
+                .withXaxis(XAxisBuilder.get()
+                        .withType(XAxisType.CATEGORIES)
+                        .withCategories(fechas)
+                        .build())
                 .build();
     }
 
     private ApexCharts crearChartSinDatos(String titulo) {
         return ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get().withHeight("150px").build())
-                .withTitle(TitleSubtitleBuilder.get().withText(titulo + " – Sin datos aún").build())
+                .withChart(ChartBuilder.get().withHeight("350px").withForeColor("#000000").build())
+                .withTitle(TitleSubtitleBuilder.get().withText(titulo + " (Sin datos)").build())
                 .build();
+    }
+
+    private long ejecucionesHoy() { return resultadoPruebaService.contarEjecucionesTareaHoy(judokaActual); }
+    private String diasHastaProximaEvaluacion() {
+        return resultadoPruebaService.proximaEvaluacionEnDias(judokaActual).map(d -> d == 0 ? "¡Hoy!" : d + " días").orElse("-");
+    }
+    private VerticalLayout crearEstadoVacio() {
+        H3 titulo = new H3("Aún no tienes estadísticas");
+        Paragraph p = new Paragraph("Completa tu primera evaluación para desbloquear tu Perfil de Combate.");
+        VerticalLayout box = new VerticalLayout(titulo, p);
+        box.setAlignItems(FlexComponent.Alignment.CENTER);
+        box.addClassName("empty-state-card");
+        return box;
     }
 }

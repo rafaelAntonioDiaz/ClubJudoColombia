@@ -47,7 +47,7 @@ public class PlanEntrenamientoService {
         plan.setSensei(sensei);
         plan.setGruposAsignados(grupos);
         plan.setFechaAsignacion(LocalDate.now());
-        plan.setEstado(EstadoPlan.PENDIENTE);
+        plan.setEstado(EstadoPlan.ACTIVO);
         return planEntrenamientoRepository.save(plan);
     }
 
@@ -95,6 +95,15 @@ public class PlanEntrenamientoService {
         });
 
         return planOpt;
+    }
+
+    /**
+     * Obtiene todos los planes registrados en el sistema.
+     * Útil para administración o inicialización de datos.
+     */
+    @Transactional(readOnly = true)
+    public List<PlanEntrenamiento> listarPlanes() {
+        return planEntrenamientoRepository.findAll();
     }
 
     /**

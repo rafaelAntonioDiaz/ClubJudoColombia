@@ -26,7 +26,7 @@ SET @METRICA_AGILIDAD_4X4 = (SELECT id_metrica FROM metricas WHERE nombre_key = 
 SET @METRICA_CARRERA_20M = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.velocidad_20m.nombre');
 
 -- ---
--- Helper: Asignar IDs de pruebas_estandar a variables
+-- Helper: Asignar IDs de ejercicios a variables
 -- ---
 SET @EJERCICIO_ANTROPO = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.medicion_antropo.nombre');
 SET @EJERCICIO_SALTO_H_CBJ = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.salto_horizontal.nombre');
@@ -40,7 +40,6 @@ SET @EJERCICIO_LANZ_BALON = (SELECT id_ejercicio FROM pruebas_estandar WHERE nom
 SET @EJERCICIO_SALTO_H_PROESP = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.salto_horizontal_proesp.nombre');
 SET @EJERCICIO_AGILIDAD_4X4 = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.agilidad_4x4.nombre');
 SET @EJERCICIO_CARRERA_20M = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.carrera_20m.nombre');
-
 
 -- ###############################################
 -- ## Sección 1: Manual CBJ (Judo Específico) ##

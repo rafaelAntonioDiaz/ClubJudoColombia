@@ -1,0 +1,109 @@
+/* ============================================================
+   ESTILOS PARA "MIS PLANES" (CHECKLIST & GAMIFICACIÓN)
+   src/main/frontend/styles/plan-judoka.css
+   ============================================================ */
+
+.plan-view-container {
+    background-color: var(--judo-gris-fondo);
+    padding: var(--lumo-space-m);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+/* === BARRA DE PROGRESO GAMIFICADA === */
+.progress-section {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--judo-sombra-suave);
+    text-align: center;
+}
+
+.progress-label {
+    font-weight: 700;
+    color: var(--judo-navy);
+    margin-bottom: 10px;
+    display: block;
+}
+
+vaadin-progress-bar {
+    height: 12px;
+    border-radius: 6px;
+    --lumo-primary-color: var(--judo-success); /* Verde al completar */
+}
+
+/* === CONTENEDOR DE TARJETAS === */
+.tasks-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-bottom: 40px; /* Espacio para scroll */
+}
+
+/* === TARJETA DE TAREA INDIVIDUAL === */
+.task-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--judo-sombra-suave);
+    border-left: 6px solid var(--judo-coral); /* Borde de estado */
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Estado Completado */
+.task-card.completed {
+    border-left-color: var(--judo-success);
+    background: #F9FFF9; /* Verde muy pálido */
+    opacity: 0.8;
+}
+
+/* Título de la Tarea */
+.task-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--judo-navy);
+    margin: 0;
+}
+
+/* Meta (Reps/Series) */
+.task-meta {
+    font-size: 0.9rem;
+    color: var(--judo-gris-texto);
+    background: var(--judo-gris-fondo);
+    padding: 5px 10px;
+    border-radius: 8px;
+    display: inline-block;
+    font-weight: 600;
+}
+
+/* === BOTÓN DE ACCIÓN GRANDE === */
+.btn-completar {
+    width: 100%;
+    height: 50px;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+}
+
+.btn-completar[disabled] {
+    background-color: var(--lumo-contrast-10pct) !important;
+    color: var(--lumo-success-color) !important;
+    box-shadow: none;
+}
+
+/* Icono de Video */
+.video-link {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: var(--judo-coral);
+    cursor: pointer;
+}

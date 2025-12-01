@@ -12,4 +12,6 @@ public interface SenseiRepository extends JpaRepository<Sensei, Long> {
 
     // Método para buscar un perfil de Sensei usando su cuenta de Usuario
     Optional<Sensei> findByUsuario(Usuario usuario);
+    // Busca al Sensei navegando por la propiedad 'usuario' hasta su campo 'username'
+    Optional<Sensei> findByUsuario_Username(String username);
 }

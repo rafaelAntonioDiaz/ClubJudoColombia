@@ -31,7 +31,7 @@ public class SecurityService {
     /**
      * Obtiene el UserDetails del usuario actualmente logueado.
      */
-    private Optional<UserDetails> getAuthenticatedUserDetails() {
+    public Optional<UserDetails> getAuthenticatedUserDetails() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() ||
                 !(authentication.getPrincipal() instanceof UserDetails)) {

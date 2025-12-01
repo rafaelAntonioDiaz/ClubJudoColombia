@@ -6,7 +6,6 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +13,7 @@ import java.time.*;
 import java.util.*;
 
 @Component
-public class DataInitializer {
+public class DataInitializer implements CommandLineRunner { // 1. Implementamos la interfaz
 
     private final UsuarioService usuarioService;
     private final PlanEntrenamientoService planService;
@@ -30,6 +29,8 @@ public class DataInitializer {
     private final EjecucionTareaRepository ejecucionTareaRepository;
     private final SesionProgramadaRepository sesionRepository;
     private final AsistenciaRepository asistenciaRepository;
+    // Inyectamos el repositorio directo para evitar problemas de cascada en ejercicios
+    private final EjercicioPlanificadoRepository ejercicioRepository;
 
     public DataInitializer(UsuarioService usuarioService,
                            PlanEntrenamientoService planService,
@@ -44,7 +45,8 @@ public class DataInitializer {
                            ResultadoPruebaRepository resultadoPruebaRepository,
                            EjecucionTareaRepository ejecucionTareaRepository,
                            SesionProgramadaRepository sesionRepository,
-                           AsistenciaRepository asistenciaRepository) {
+                           AsistenciaRepository asistenciaRepository,
+                           EjercicioPlanificadoRepository ejercicioRepository) {
         this.usuarioService = usuarioService;
         this.planService = planService;
         this.rolRepository = rolRepository;
@@ -59,45 +61,70 @@ public class DataInitializer {
         this.ejecucionTareaRepository = ejecucionTareaRepository;
         this.sesionRepository = sesionRepository;
         this.asistenciaRepository = asistenciaRepository;
+        this.ejercicioRepository = ejercicioRepository;
     }
 
-    @Bean
+    // 2. Método run transaccional: Mantiene la sesión abierta todo el tiempo
+    @Override
     @Transactional
-    public CommandLineRunner init() {
-        return args -> {
-            if (judokaRepository.count() > 5) {
-                System.out.println("Datos ya creados. Saltando inicialización.");
-                return;
-            }
+    public void run(String... args) throws Exception {
+        // Verificación simple para no duplicar datos
+        if (judokaRepository.count() > 0) {
+            System.out.println(">>> BASE DE DATOS YA POBLADA. SALTANDO INITIALIZER.");
+            return;
+        }
 
-            System.out.println("CREANDO DATOS REALES DEL CLUB JUDO COLOMBIA 2025");
+        System.out.println(">>> INICIANDO CARGA DE DATOS MAESTROS - CLUB JUDO COLOMBIA");
+// DIAGNÓSTICO DE PRUEBAS EXISTENTES
+        System.out.println("--- LISTADO DE PRUEBAS EN BD ---");
+        pruebaEstandarRepository.findAll().forEach(p ->
+                System.out.println("ID: " + p.getId() + " | Key: " + p.getNombreKey())
+        );
+        System.out.println("--------------------------------");
+        // 1. Validar Roles
+        validarRolesExistentes();
 
-            crearRoles();
-            crearTraduccionesDias();
+        // 2. Traducciones
+        crearTraduccionesDias();
 
-            Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
-            Sensei toshiro = crearSensei("toshiro", "Toshiro", "Diago", "123456", GradoCinturon.NEGRO_5_DAN);
+        // 3. Usuarios
+        Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
+        crearSensei("toshiro", "Toshiro", "Diago", "123456", GradoCinturon.NEGRO_5_DAN);
 
-            List<Judoka> judokas = crearJudokas();
-            crearGruposYAsignar(judokas);
-            crearTareasCadetes(kiuzo);
+        List<Judoka> judokas = crearJudokas();
 
-            PlanEntrenamiento planSemanal = crearPlanSemanal(kiuzo);
-            PlanEntrenamiento planEval = crearPlanEvaluacion(kiuzo);
+        // 4. Grupos
+        crearGruposYAsignar(judokas);
 
-            programarSesiones(kiuzo);
-            generarHistoriaReal(judokas, planEval);
-            generarEjecuciones(planSemanal);
-            generarAsistencias();
+        // 5. Tareas
+        crearTareasAcondicionamiento(kiuzo);
 
-            System.out.println("¡CLUB JUDO COLOMBIA 100% LISTO!");
-        };
+        // 6. PLAN 1
+        PlanEntrenamiento planFisico = crearPlanAcondicionamiento(kiuzo);
+
+        // 7. PLAN 2
+        PlanEntrenamiento planEvaluacion = crearPlanEvaluacion(kiuzo);
+
+        // 8. Sesiones
+        programarSesiones(kiuzo);
+
+        // 9. Historial
+        generarResultadosEvaluacion(judokas, planEvaluacion);
+        generarEjecucionesTareas(judokas, planFisico);
+        generarAsistencias(judokas);
+
+        // Generar historial completo para gráficos
+        generarDatosHistoricosCompletos(judokas);
+
+        System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
     }
 
-    private void crearRoles() {
-        List.of("ROLE_SENSEI", "ROLE_JUDOKA", "ROLE_COMPETIDOR", "ROLE_ADMIN", "ROLE_MECENAS")
-                .forEach(nombre -> rolRepository.findByNombre(nombre)
-                        .orElseGet(() -> rolRepository.save(new Rol(nombre))));
+    // --- MÉTODOS PRIVADOS (Igual que antes, con pequeñas mejoras de seguridad) ---
+
+    private void validarRolesExistentes() {
+        if (rolRepository.findByNombre("ROLE_SENSEI").isEmpty()) {
+            throw new RuntimeException("ERROR CRÍTICO: Roles no encontrados.");
+        }
     }
 
     private void crearTraduccionesDias() {
@@ -114,219 +141,341 @@ public class DataInitializer {
     }
 
     private Sensei crearSensei(String user, String nom, String ape, String pass, GradoCinturon grado) {
-        Usuario u = new Usuario();
-        u.setUsername(user);
-        u.setNombre(nom);
-        u.setApellido(ape);
+        Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
+        u.getRoles().add(rolRepository.findByNombre("ROLE_SENSEI").orElseThrow());
+        u.getRoles().add(rolRepository.findByNombre("ROLE_ADMIN").orElseThrow());
         u = usuarioService.saveUsuario(u, pass);
-        u.getRoles().addAll(Set.of(
-                rolRepository.findByNombre("ROLE_SENSEI").orElseThrow(),
-                rolRepository.findByNombre("ROLE_ADMIN").orElseThrow()
-        ));
 
         Sensei s = new Sensei();
         s.setUsuario(u);
         s.setGrado(grado);
-        s.setAnosPractica(30);
+        s.setAnosPractica(25);
         return senseiRepository.save(s);
     }
 
     private List<Judoka> crearJudokas() {
         List<Judoka> lista = new ArrayList<>();
-        lista.add(judoka("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López"));
-        lista.add(judoka("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez"));
-        lista.add(judoka("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null));
-        lista.add(judoka("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null));
-        lista.add(judoka("danna.ortega", "Danna", "Ortega", 2000, 9, 8, Sexo.FEMENINO, GradoCinturon.NEGRO_1_DAN, true, null));
+        lista.add(crearJudokaIndividual("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López"));
+        lista.add(crearJudokaIndividual("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez"));
+        lista.add(crearJudokaIndividual("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null));
+        lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null));
         return judokaRepository.saveAll(lista);
     }
 
-    private Judoka judoka(String user, String nom, String ape, int año, int mes, int dia, Sexo sexo, GradoCinturon grado, boolean comp, String acudiente) {
-        Usuario u = new Usuario();
-        u.setUsername(user);
-        u.setNombre(nom);
-        u.setApellido(ape);
+    private Judoka crearJudokaIndividual(String user, String nom, String ape, int anio, int mes, int dia, Sexo sexo, GradoCinturon grado, boolean competidor, String acudiente) {
+        Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
-        u = usuarioService.saveUsuario(u, "123456");
         u.getRoles().add(rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow());
-        if (comp) u.getRoles().add(rolRepository.findByNombre("ROLE_COMPETIDOR").orElseThrow());
+        if (competidor) u.getRoles().add(rolRepository.findByNombre("ROLE_COMPETIDOR").orElseThrow());
+        u = usuarioService.saveUsuario(u, "123456");
 
         Judoka j = new Judoka();
         j.setUsuario(u);
-        j.setFechaNacimiento(LocalDate.of(año, mes, dia));
+        j.setFechaNacimiento(LocalDate.of(anio, mes, dia));
         j.setSexo(sexo);
         j.setGrado(grado);
-        j.setEsCompetidorActivo(comp);
+        j.setEsCompetidorActivo(competidor);
         j.setNombreAcudiente(acudiente);
-        return j;
+        j.setPeso(sexo == Sexo.MASCULINO ? 73.0 : 57.0);
+        j.setEstatura(sexo == Sexo.MASCULINO ? 175.0 : 160.0);
+        return j; // El usuario ya se guarda por cascada/servicio
     }
 
     private void crearGruposYAsignar(List<Judoka> judokas) {
-        // Creamos los grupos
-        GrupoEntrenamiento cadetes = grupo("Judokas Cadetes", "15-17 años");
-        GrupoEntrenamiento campeonato = grupo("Equipo Campeonato San Vicente", "Élite");
+        GrupoEntrenamiento cadetes = new GrupoEntrenamiento();
+        cadetes.setNombre("Judokas Cadetes");
+        cadetes.setDescripcion("Grupo enfocado en desarrollo técnico sub-18");
+        cadetes.setJudokas(new HashSet<>());
+        cadetes.getJudokas().add(judokas.get(0));
+        cadetes.getJudokas().add(judokas.get(1));
 
-        // === AHORA SÍ: ASIGNAMOS DESDE EL LADO OWNER (GrupoEntrenamiento) ===
-        cadetes.getJudokas().addAll(List.of(
-                judokas.get(0), // María
-                judokas.get(1), // Juan Camilo
-                judokas.get(2)  // Laura
-        ));
+        GrupoEntrenamiento mayores = new GrupoEntrenamiento();
+        mayores.setNombre("Selección Mayores");
+        mayores.setDescripcion("Equipo de competencia Élite");
+        mayores.setJudokas(new HashSet<>());
+        mayores.getJudokas().add(judokas.get(3));
 
-        campeonato.getJudokas().addAll(List.of(
-                judokas.get(1), // Juan Camilo
-                judokas.get(3), // Daniel
-                judokas.get(4)  // Danna
-        ));
-
-        // Guardamos los grupos (y se persiste la tabla judoka_grupos automáticamente)
-        grupoRepository.saveAll(List.of(cadetes, campeonato));
+        grupoRepository.saveAll(List.of(cadetes, mayores));
     }
 
-    private GrupoEntrenamiento grupo(String nombre, String desc) {
-        GrupoEntrenamiento g = new GrupoEntrenamiento();
-        g.setNombre(nombre);
-        g.setDescripcion(desc);
-        g.setJudokas(new HashSet<>()); // Importante: inicializar el Set
-        return g;
-    }
+    private void crearTareasAcondicionamiento(Sensei sensei) {
+        if(tareaDiariaRepository.count() > 0) return;
 
-    private void crearTareasCadetes(Sensei sensei) {
+        // Creamos un "Menú" variado de ejercicios
         tareaDiariaRepository.saveAll(List.of(
-                t("Press Banca", "4x5 @65-70% 1RM", sensei),
-                t("Power Clean", "4x3 @60-70% 1RM", sensei),
-                t("Sentadilla Trasera", "4x5 @70-75% 1RM", sensei),
-                t("Dominadas con Toalla / Gi", "4x6-8", sensei),
-                t("Plancha Frontal", "3x40-50s", sensei)
+                new TareaDiaria("Calentamiento Articular", "10 min movilidad", sensei),
+                new TareaDiaria("Trote Suave", "15 min zona 2", sensei),
+                new TareaDiaria("Uchikomi Sombra", "50 entradas (Der/Izq)", sensei),
+                new TareaDiaria("Flexiones de Pecho", "4 series x 15 reps", sensei),
+                new TareaDiaria("Sentadillas con Salto", "4 series x 20 reps", sensei),
+                new TareaDiaria("Uchikomi Gomas", "100 repeticiones velocidad", sensei),
+                new TareaDiaria("Burpees", "3 series al fallo", sensei),
+                new TareaDiaria("Abdominales en V", "3 series x 30", sensei),
+                new TareaDiaria("Estiramiento Final", "15 min estático", sensei)
         ));
     }
 
-    private TareaDiaria t(String nombre, String meta, Sensei s) {
-        TareaDiaria td = new TareaDiaria();
-        td.setNombre(nombre);
-        td.setMetaTexto(meta);
-        td.setSenseiCreador(s);
-        return td;
-    }
+    private PlanEntrenamiento crearPlanAcondicionamiento(Sensei sensei) {
+        GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
 
-    private PlanEntrenamiento crearPlanSemanal(Sensei sensei) {
-        GrupoEntrenamiento cadetes = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
-
-        PlanEntrenamiento plan = planService.crearPlanEntrenamiento(
-                "Acondicionamiento Cadetes 2025-2026",
-                sensei,
-                Set.of(cadetes)
-        );
-
-        plan.setEstado(EstadoPlan.EN_PROGRESO);
+        PlanEntrenamiento plan = new PlanEntrenamiento();
+        plan.setNombre("Programa Intensivo - Pretemporada 2025");
+        plan.setSensei(sensei);
         plan.setFechaAsignacion(LocalDate.now());
+        plan.setEstado(EstadoPlan.ACTIVO);
+        plan.setTipoSesion(TipoSesion.ACONDICIONAMIENTO);
+        plan.getGruposAsignados().add(grupo);
 
-        TareaDiaria press = tareaDiariaRepository.findAll().stream()
-                .filter(t -> t.getNombre().contains("Press Banca"))
-                .findFirst()
-                .orElseThrow();
+        // Guardamos el plan primero para tener ID
+        plan = planService.guardarPlan(plan);
 
-        EjercicioPlanificado ep = new EjercicioPlanificado();
-        ep.setTareaDiaria(press);
-        ep.setDiasAsignados(Set.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY));
+        // Recuperamos todas las tareas creadas arriba
+        List<TareaDiaria> tareasDisponibles = tareaDiariaRepository.findAll();
 
-        // ESTAS DOS LÍNEAS SON LA CLAVE
-        ep.setPlanEntrenamiento(plan);                    // ← ¡¡ESTO FALTABA!!
-        plan.getEjerciciosPlanificados().add(ep);         // ← Esto solo mantiene el orden
+        int orden = 1;
+        for (TareaDiaria tarea : tareasDisponibles) {
+            EjercicioPlanificado ej = new EjercicioPlanificado();
+            ej.setPlanEntrenamiento(plan);
+            ej.setTareaDiaria(tarea);
+            ej.setOrden(orden++);
+            ej.setNotasSensei("¡Enfócate en la técnica, no solo velocidad!");
+
+            // --- TRUCO PARA DEMO ---
+            // Asignamos la tarea a TODOS los días de la semana.
+            // Así, entres el día que entres, verás el dashboard lleno.
+            ej.getDiasAsignados().addAll(Arrays.asList(DayOfWeek.values()));
+
+            plan.addEjercicio(ej);
+        }
 
         return planService.guardarPlan(plan);
     }
     private PlanEntrenamiento crearPlanEvaluacion(Sensei sensei) {
-        GrupoEntrenamiento cadetes = grupoRepository.findByNombre("Judokas Cadetes")
-                .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
-
-        PlanEntrenamiento plan = planService.crearPlanEntrenamiento(
-                "Evaluación Física – Diciembre 2025",
-                sensei,
-                Set.of(cadetes)
-        );
-
-        plan.setTipoSesion(TipoSesion.EVALUACION);
-        plan.setEstado(EstadoPlan.EN_PROGRESO);
+        GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
+        PlanEntrenamiento plan = new PlanEntrenamiento();
+        plan.setNombre("Test SJFT - Trimestre 1");
+        plan.setSensei(sensei);
         plan.setFechaAsignacion(LocalDate.now());
+        plan.setEstado(EstadoPlan.ACTIVO);
+        plan.setTipoSesion(TipoSesion.EVALUACION);
+        plan.getGruposAsignados().add(grupo);
+        plan = planService.guardarPlan(plan);
 
+        PruebaEstandar sjft = pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre")
+                .or(() -> pruebaEstandarRepository.findByNombreKey("ejercicio.sjft"))
+                .orElseThrow(() -> new RuntimeException("Error: Datos V2 no encontrados (SJFT)"));
+
+        EjercicioPlanificado ej = new EjercicioPlanificado();
+        ej.setPlanEntrenamiento(plan);
+        ej.setPruebaEstandar(sjft);
+        ej.setOrden(1);
+        ej.setNotasSensei("Máximo esfuerzo requerido");
+        ej.getDiasAsignados().add(DayOfWeek.SATURDAY);
+
+        plan.addEjercicio(ej);
         return planService.guardarPlan(plan);
     }
 
     private void programarSesiones(Sensei sensei) {
-        GrupoEntrenamiento g = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
-        LocalDateTime inicio = LocalDateTime.now().plusDays(1).withHour(17).withMinute(0);
-        for (int i = 0; i < 10; i++) {
+        GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
+        LocalDateTime base = LocalDateTime.now().plusDays(1).withHour(18).withMinute(0);
+        List<SesionProgramada> sesiones = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
             SesionProgramada s = new SesionProgramada();
-            s.setNombre("Entrenamiento Cadetes");
-            s.setTipoSesion(TipoSesion.ENTRENAMIENTO);
-            s.setFechaHoraInicio(inicio.plusDays(i * 2));
-            s.setFechaHoraFin(inicio.plusDays(i * 2).plusHours(2));
-            s.setGrupo(g);
+            s.setNombre("Clase Técnica #" + (i + 1));
+            s.setTipoSesion(TipoSesion.TECNICA);
+            s.setFechaHoraInicio(base.plusDays(i * 7));
+            s.setFechaHoraFin(base.plusDays(i * 7).plusHours(2));
+            s.setGrupo(grupo);
             s.setSensei(sensei);
-            sesionRepository.save(s);
+            sesiones.add(s);
         }
+        sesionRepository.saveAll(sesiones);
     }
 
-    private void generarHistoriaReal(List<Judoka> judokas, PlanEntrenamiento planEval) {
-        if (judokas.isEmpty()) return;
+    private void generarResultadosEvaluacion(List<Judoka> judokas, PlanEntrenamiento planEval) {
+        if (planEval.getEjerciciosPlanificados().isEmpty()) return;
+        EjercicioPlanificado ejSjft = planEval.getEjerciciosPlanificados().get(0);
 
+        Metrica metricaTotal = metricaRepository.findByNombreKey("metrica.sjft_proyecciones_total.nombre")
+                .or(() -> metricaRepository.findByNombreKey("metrica.sjft_proyecciones_total"))
+                .orElse(null);
+
+        if (metricaTotal == null) return;
+
+        List<ResultadoPrueba> resultados = new ArrayList<>();
+        LocalDateTime fechaEval = LocalDateTime.now().minusDays(5);
+
+        for (Judoka j : judokas) {
+            if (j.getUsuario().getUsername().equals("maria.lopez") || j.getUsuario().getUsername().equals("juan.gomez")) {
+                ResultadoPrueba res = new ResultadoPrueba();
+                res.setJudoka(j);
+                res.setEjercicioPlanificado(ejSjft);
+                res.setMetrica(metricaTotal);
+                res.setValor(j.getSexo() == Sexo.FEMENINO ? 26.0 : 29.0);
+                res.setFechaRegistro(fechaEval);
+                res.setNumeroIntento(1);
+                res.setNotasJudoka("Me sentí bien de aire");
+                resultados.add(res);
+            }
+        }
+        resultadoPruebaRepository.saveAll(resultados);
+    }
+
+    private void generarEjecucionesTareas(List<Judoka> judokas, PlanEntrenamiento planFisico) {
+        if (planFisico.getEjerciciosPlanificados().isEmpty()) return;
+        EjercicioPlanificado tareaBurpees = planFisico.getEjerciciosPlanificados().get(0);
         Judoka maria = judokas.get(0);
 
-        // Aseguramos que haya al menos un ejercicio planificado
-        EjercicioPlanificado ep = planEval.getEjerciciosPlanificados().stream()
+        EjecucionTarea ejecucion = new EjecucionTarea();
+        ejecucion.setJudoka(maria);
+        ejecucion.setEjercicioPlanificado(tareaBurpees);
+        ejecucion.setCompletado(true);
+        ejecucion.setFechaRegistro(LocalDateTime.now().minusDays(1));
+        ejecucionTareaRepository.save(ejecucion);
+    }
+
+    private void generarAsistencias(List<Judoka> judokas) {
+        List<SesionProgramada> sesiones = sesionRepository.findAll();
+        if (sesiones.isEmpty()) return;
+        SesionProgramada sesion = sesiones.get(0);
+        Judoka maria = judokas.get(0);
+
+        Asistencia asistencia = new Asistencia();
+        asistencia.setJudoka(maria);
+        asistencia.setSesion(sesion);
+        asistencia.setPresente(true);
+        asistencia.setFechaHoraMarcacion(sesion.getFechaHoraInicio().plusMinutes(5));
+        asistenciaRepository.save(asistencia);
+    }
+
+    // --- EL MÉTODO QUE DA VIDA AL DASHBOARD ---
+    private void generarDatosHistoricosCompletos(List<Judoka> judokas) {
+        System.out.println("--- INICIANDO GENERACIÓN DE HISTÓRICO (CORREGIDO) ---");
+
+        Judoka maria = judokas.stream()
+                .filter(j -> j.getUsuario().getUsername().equals("maria.lopez"))
+                .findFirst().orElse(null);
+
+        if (maria == null) {
+            System.err.println("ERROR CRÍTICO: No encontré a 'maria.lopez'.");
+            return;
+        }
+
+        // Validar edad de María para tu tranquilidad
+        int edadMaria = Period.between(maria.getFechaNacimiento(), LocalDate.now()).getYears();
+        System.out.println("-> Judoka: " + maria.getUsuario().getNombre() + " | Edad calculada: " + edadMaria + " años.");
+
+        // --- MAPEO EXPLÍCITO: PRUEBA -> MÉTRICA ---
+        // Esto conecta exactamente con lo que definiste en V2__Poblar_Datos...sql
+        Map<String, String> mapaPruebaMetrica = Map.of(
+                "ejercicio.salto_horizontal_proesp", "metrica.distancia.nombre",
+                "ejercicio.lanzamiento_balon",       "metrica.lanzamiento_balon.nombre",
+                "ejercicio.abdominales_1min",        "metrica.abdominales_1min.nombre",
+                "ejercicio.carrera_6min",            "metrica.distancia_6min.nombre",
+                "ejercicio.agilidad_4x4",            "metrica.agilidad_4x4.nombre",
+                "ejercicio.carrera_20m",             "metrica.velocidad_20m.nombre",
+                "ejercicio.sjft",                    "metrica.sjft_indice.nombre" // Ojo: SJFT tiene muchas, usamos Indice para el radar
+        );
+
+        List<LocalDateTime> fechas = List.of(
+                LocalDateTime.now().minusMonths(3),
+                LocalDateTime.now().minusMonths(1),
+                LocalDateTime.now()
+        );
+
+        List<ResultadoPrueba> resultadosParaGuardar = new ArrayList<>();
+        Random random = new Random();
+
+        for (Map.Entry<String, String> entry : mapaPruebaMetrica.entrySet()) {
+            String clavePrueba = entry.getKey();
+            String claveMetrica = entry.getValue();
+
+            // 1. Buscar Prueba
+            PruebaEstandar prueba = pruebaEstandarRepository.findByNombreKey(clavePrueba)
+                    .or(() -> pruebaEstandarRepository.findByNombreKey(clavePrueba + ".nombre"))
+                    .orElse(null);
+
+            if (prueba == null) {
+                System.err.println("   [X] Prueba NO encontrada: " + clavePrueba);
+                continue;
+            }
+
+            // 2. Buscar Métrica EXACTA (Ya no adivinamos)
+            Metrica metrica = metricaRepository.findByNombreKey(claveMetrica)
+                    .orElse(null);
+
+            if (metrica == null) {
+                System.err.println("   [X] Métrica NO encontrada: " + claveMetrica);
+                continue;
+            }
+
+            System.out.println("   [OK] Generando datos para: " + clavePrueba + " usando métrica: " + claveMetrica);
+
+            // 3. Obtener ejercicio dummy
+            EjercicioPlanificado ejercicioDummy = obtenerOCrearEjercicioDummy(prueba);
+
+            // 4. Generar valores simulados (ajustados para que den 'BUENO' o 'EXCELENTE')
+            // Salto ~150cm, Abdominales ~30, Carrera ~1000m, etc.
+            double valorBase = calcularValorBaseLogico(clavePrueba);
+
+            for (int i = 0; i < fechas.size(); i++) {
+                ResultadoPrueba res = new ResultadoPrueba();
+                res.setJudoka(maria);
+                res.setMetrica(metrica);
+                res.setEjercicioPlanificado(ejercicioDummy);
+                res.setFechaRegistro(fechas.get(i));
+                res.setNumeroIntento(1);
+
+                // Simulamos mejora: valor base + un poquito
+                // Ojo: En carrera 20m y agilidad, MENOS es MEJOR.
+                boolean esTiempo = clavePrueba.contains("carrera_20m") || clavePrueba.contains("agilidad");
+                double mejora = (i * 1.5);
+                res.setValor(esTiempo ? valorBase - (mejora/10.0) : valorBase + mejora);
+
+                res.setNotasJudoka("Carga inicial automática");
+                resultadosParaGuardar.add(res);
+            }
+        }
+        resultadoPruebaRepository.saveAll(resultadosParaGuardar);
+        System.out.println(">>> HISTORIAL GENERADO CORRECTAMENTE (" + resultadosParaGuardar.size() + " registros).");
+    }
+
+    // Helper para dar valores que tengan sentido en la gráfica
+    private double calcularValorBaseLogico(String clave) {
+        if (clave.contains("salto")) return 160.0; // cm
+        if (clave.contains("lanzamiento")) return 300.0; // cm
+        if (clave.contains("abdominales")) return 35.0; // reps
+        if (clave.contains("carrera_6min")) return 1100.0; // metros
+        if (clave.contains("agilidad")) return 6.0; // segundos (menos es mejor)
+        if (clave.contains("carrera_20m")) return 3.5; // segundos (menos es mejor)
+        if (clave.contains("sjft")) return 12.0; // indice
+        return 10.0;
+    }    private EjercicioPlanificado obtenerOCrearEjercicioDummy(PruebaEstandar prueba) {
+        // 1. Buscamos al Sensei Kiuzo (Usando repo directo o servicio de usuario)
+        Usuario usuarioKiuzo = usuarioService.findByUsername("kiuzo").orElseThrow();
+        Sensei kiuzo = senseiRepository.findByUsuario(usuarioKiuzo).orElseThrow();
+
+        // 2. Buscamos planes
+        List<PlanEntrenamiento> planes = planService.buscarPlanesPorSensei(kiuzo);
+        if (planes.isEmpty()) throw new RuntimeException("No hay planes de Kiuzo");
+        PlanEntrenamiento plan = planes.get(0);
+
+        // 3. Buscar o crear ejercicio (usando comparación por ID para evitar LazyInit en equals)
+        return plan.getEjerciciosPlanificados().stream()
+                .filter(e -> e.getPruebaEstandar() != null &&
+                        e.getPruebaEstandar().getId().equals(prueba.getId()))
                 .findFirst()
                 .orElseGet(() -> {
                     EjercicioPlanificado nuevo = new EjercicioPlanificado();
-                    nuevo.setPlanEntrenamiento(planEval);  // ← ¡¡AQUÍ TAMBIÉN!!
-                    planEval.getEjerciciosPlanificados().add(nuevo);
-                    return nuevo;
+                    nuevo.setPlanEntrenamiento(plan);
+                    nuevo.setPruebaEstandar(prueba);
+                    nuevo.setOrden(99);
+                    nuevo.getDiasAsignados().add(DayOfWeek.SATURDAY);
+
+                    // Guardado directo y robusto
+                    return ejercicioRepository.save(nuevo);
                 });
-
-        Metrica metrica = metricaRepository.findAll().stream()
-                .findFirst()
-                .orElseGet(() -> {
-                    Metrica m = new Metrica();
-                    m.setNombreKey("temp.sjft_total");
-                    m.setUnidad("reps");
-                    return metricaRepository.save(m);
-                });
-
-        LocalDateTime base = LocalDateTime.now().minusMonths(6);
-        for (int i = 0; i < 6; i++) {
-            ResultadoPrueba r = new ResultadoPrueba();
-            r.setJudoka(maria);
-            r.setEjercicioPlanificado(ep);
-            r.setMetrica(metrica);
-            r.setValor(24.0 + i * 1.5);
-            r.setFechaRegistro(base.plusMonths(i));
-            resultadoPruebaRepository.save(r);
-        }
-    }
-
-    private void generarEjecuciones(PlanEntrenamiento plan) {
-        // 100% seguro y simple
-        Judoka j = judokaRepository.findAll().get(0);
-        EjercicioPlanificado ep = plan.getEjerciciosPlanificados().get(0);
-        for (int i = 0; i < 20; i++) {
-            EjecucionTarea e = new EjecucionTarea();
-            e.setJudoka(j);
-            e.setEjercicioPlanificado(ep);
-            e.setCompletado(true);
-            e.setFechaRegistro(LocalDateTime.now().minusDays(i));
-            ejecucionTareaRepository.save(e);
-        }
-    }
-
-    private void generarAsistencias() {
-        SesionProgramada s = sesionRepository.findAll().get(0);
-        Judoka j = judokaRepository.findAll().get(0);
-        Asistencia a = new Asistencia();
-        a.setJudoka(j);
-        a.setSesion(s);
-        a.setPresente(true);
-        a.setFechaHoraMarcacion(s.getFechaHoraInicio().plusMinutes(5));
-        asistenciaRepository.save(a);
     }
 }

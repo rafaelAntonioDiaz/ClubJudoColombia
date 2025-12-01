@@ -1,0 +1,32 @@
+/* ============================================================
+   COMPONENTES PERSONALIZADOS (Identidad Coral)
+   src/main/frontend/themes/my-theme/components.css
+   ============================================================ */
+
+/* Botón flotante con glow animado (Coral) */
+.sensei-grupos-btn-nuevo {
+    /* Usamos las variables definidas en styles.css */
+    background: var(--judo-coral) !important;
+    color: white !important;
+    animation: judo-pulse 2s infinite;
+    border: none;
+}
+
+@keyframes judo-pulse {
+    0% {
+        /* Sombra sólida inicial */
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+    }
+    70% {
+        /* Sombra expandida y transparente */
+        box-shadow: 0 0 0 15px rgba(255, 107, 107, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+    }
+}
+
+/* Clases de utilidad para textos */
+.text-coral { color: var(--judo-coral); }
+.text-navy { color: var(--judo-navy); }
+.text-muted { color: var(--judo-gris-texto); }

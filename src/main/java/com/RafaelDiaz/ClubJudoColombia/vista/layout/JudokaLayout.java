@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.layout;
 
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.vista.ComunidadView;
 import com.RafaelDiaz.ClubJudoColombia.vista.JudokaDashboardView;
 import com.RafaelDiaz.ClubJudoColombia.vista.JudokaPlanView;
 import com.vaadin.flow.component.Component;
@@ -90,9 +91,13 @@ public abstract class JudokaLayout extends AppLayout {
 
         // Ítems del menú (fácil de extender)
         agregarTab("Dashboard", VaadinIcon.DASHBOARD, JudokaDashboardView.class);
+        // ...
         agregarTab("Mis Planes", VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
-        agregarTab("Historial Evaluaciones", VaadinIcon.CHART_TIMELINE, "historial-evaluaciones");
-        agregarTab("Mi Progreso", VaadinIcon.TROPHY, "progreso-judoka");
+
+        agregarTab("Comunidad", VaadinIcon.USERS, ComunidadView.class);
+// --------------
+        agregarTab("Historial", VaadinIcon.CHART_TIMELINE, "historial-evaluaciones");
+// ...agregarTab("Mi Progreso", VaadinIcon.TROPHY, "progreso-judoka");
 
         VerticalLayout drawerContent = new VerticalLayout(menuTabs);
         drawerContent.setSizeFull();

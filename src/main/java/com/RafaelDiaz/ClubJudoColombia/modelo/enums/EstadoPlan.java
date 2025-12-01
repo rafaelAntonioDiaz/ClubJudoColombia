@@ -4,9 +4,9 @@ package com.RafaelDiaz.ClubJudoColombia.modelo.enums;
  * Define el estado de un Plan de Entrenamiento.
  */
 public enum EstadoPlan {
-    PENDIENTE("Pendiente"),
-    EN_PROGRESO("En Progreso"),
-    COMPLETADO("Completado");
+    ACTIVO("Activo"),
+    COMPLETADO("Completado"),
+    CANCELADO("Cancelado");
 
     private final String descripcion;
 
