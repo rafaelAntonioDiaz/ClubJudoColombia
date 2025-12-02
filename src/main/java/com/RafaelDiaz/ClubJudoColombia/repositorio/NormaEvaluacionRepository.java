@@ -43,4 +43,15 @@ public interface NormaEvaluacionRepository extends JpaRepository<NormaEvaluacion
             @Param("sexo") Sexo sexo,
             @Param("edad") int edad
     );
+
+    @Query("SELECT n FROM NormaEvaluacion n " +
+       "WHERE n.pruebaEstandar.id = :pruebaId " +
+       "AND n.sexo = :sexo " +
+       "AND :edad >= n.edadMin " +
+       "AND :edad <= n.edadMax")
+    List<NormaEvaluacion> findNormasPorCriteriosBasicos(
+        @Param("pruebaId") Long pruebaId,
+        @Param("sexo") Sexo sexo,
+        @Param("edad") int edad
+);
 }

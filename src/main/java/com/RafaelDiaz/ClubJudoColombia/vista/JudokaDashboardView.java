@@ -1,11 +1,12 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Insignia; // Importar
+import com.RafaelDiaz.ClubJudoColombia.modelo.Insignia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.JudokaInsignia; // Importar
+import com.RafaelDiaz.ClubJudoColombia.modelo.JudokaInsignia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.InsigniaRepository; // Nuevo Repo
-import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaInsigniaRepository; // Nuevo Repo
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.InsigniaRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaInsigniaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
@@ -13,10 +14,11 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.JudokaCalendar;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.KpiCard;
-import com.RafaelDiaz.ClubJudoColombia.vista.component.MiDoWidget; // Importar Widget
+import com.RafaelDiaz.ClubJudoColombia.vista.component.MiDoWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
 import com.github.appreciated.apexcharts.ApexCharts;
 import com.github.appreciated.apexcharts.ApexChartsBuilder;
+import com.github.appreciated.apexcharts.config.Legend;
 import com.github.appreciated.apexcharts.config.builder.*;
 import com.github.appreciated.apexcharts.config.chart.Type;
 import com.github.appreciated.apexcharts.config.chart.builder.ZoomBuilder;
@@ -52,12 +54,23 @@ import java.util.stream.Collectors;
 @CssImport("./styles/dashboard-judoka.css")
 public class JudokaDashboardView extends JudokaLayout {
 
+    private static final Map<ClasificacionRendimiento, String> COLOR_MAP = new EnumMap<>(ClasificacionRendimiento.class);
+
+    static {
+        COLOR_MAP.put(ClasificacionRendimiento.EXCELENTE, "#00E396");
+        COLOR_MAP.put(ClasificacionRendimiento.MUY_BIEN, "#775DD0");
+        COLOR_MAP.put(ClasificacionRendimiento.BUENO, "#008FFB");
+        COLOR_MAP.put(ClasificacionRendimiento.REGULAR, "#FEB019");
+        COLOR_MAP.put(ClasificacionRendimiento.RAZONABLE, "#FF4560");
+        COLOR_MAP.put(ClasificacionRendimiento.DEBIL, "#A52A2A");
+        COLOR_MAP.put(ClasificacionRendimiento.MUY_DEBIL, "#333333");
+    }
+
     private final SecurityService securityService;
     private final ResultadoPruebaService resultadoPruebaService;
     private final TraduccionService traduccionService;
     private final PruebaEstandarRepository pruebaEstandarRepository;
     private final SesionService sesionService;
-    // --- NUEVOS REPOSITORIOS PARA GAMIFICACIÓN ---
     private final InsigniaRepository insigniaRepository;
     private final JudokaInsigniaRepository judokaInsigniaRepository;
 
@@ -72,7 +85,6 @@ public class JudokaDashboardView extends JudokaLayout {
                                PruebaEstandarRepository pruebaEstandarRepository,
                                AccessAnnotationChecker accessChecker,
                                SesionService sesionService,
-                               // Inyección de nuevos repositorios
                                InsigniaRepository insigniaRepository,
                                JudokaInsigniaRepository judokaInsigniaRepository) {
         super(securityService, accessChecker);
@@ -113,16 +125,10 @@ public class JudokaDashboardView extends JudokaLayout {
         headerWrapper.getStyle().set("gap", "1rem");
         headerWrapper.getStyle().set("margin-bottom", "1.5rem");
 
-        // 1. CALENDARIO
         JudokaCalendar calendario = new JudokaCalendar(sesionService, traduccionService, judokaActual);
-
-        // 2. GAMIFICACIÓN (MI DO)
-        // --- AQUÍ CARGAMOS LOS DATOS QUE FALTABAN ---
         List<Insignia> todasLasInsignias = insigniaRepository.findAll();
         List<JudokaInsignia> misLogros = judokaInsigniaRepository.findByJudoka(judokaActual);
-
         MiDoWidget insignias = new MiDoWidget(todasLasInsignias, misLogros, traduccionService);
-        // ---------------------------------------------
 
         kpiContainer = new Div();
         kpiContainer.addClassName("dashboard-kpis");
@@ -130,20 +136,18 @@ public class JudokaDashboardView extends JudokaLayout {
         chartsGrid = new Div();
         chartsGrid.addClassName("dashboard-charts");
 
-        // Añadimos todo al layout en orden
         mainContent.add(headerWrapper, kpiContainer, calendario, insignias, chartsGrid);
         setContent(mainContent);
     }
 
     private void cargarDatos() {
-        // ... (Este método sigue IGUAL que antes, maneja KPIs y Gráficos)
         kpiContainer.removeAll();
         chartsGrid.removeAll();
 
         Double poderDeCombate = resultadoPruebaService.calcularPoderDeCombate(judokaActual);
         Map<String, Double> componentes = resultadoPruebaService.getPoderDeCombateComponentes(judokaActual);
 
-        boolean sinDatos = componentes.isEmpty();
+        boolean sinDatos = componentes.values().stream().allMatch(v -> v <= 1.0);
 
         kpiContainer.add(
                 new KpiCard("Poder de Combate", String.format("%.0f PC", poderDeCombate), new Icon(VaadinIcon.FIRE)),
@@ -168,20 +172,19 @@ public class JudokaDashboardView extends JudokaLayout {
                     "ejercicio.sjft.nombre"
             );
 
+            boolean isFirstChart = true;
             for (String clave : clavesPruebas) {
                 Optional<PruebaEstandar> pruebaOpt = pruebaEstandarRepository.findByNombreKey(clave);
                 if (pruebaOpt.isPresent()) {
                     String titulo = traduccionService.get(clave);
-                    ApexCharts chart = crearGraficoHistorial(pruebaOpt.get(), titulo);
+                    ApexCharts chart = crearGraficoHistorial(pruebaOpt.get(), titulo, isFirstChart);
                     chartsGrid.add(wrapInCard(chart, ""));
+                    isFirstChart = false;
                 }
             }
             UI.getCurrent().getPage().executeJs("setTimeout(() => window.dispatchEvent(new Event('resize')), 500);");
         }
     }
-
-    // ... (Resto de métodos auxiliares: wrapInCard, crearGraficoRadar, crearGraficoHistorial, etc.)
-    // COPIAR EL RESTO DE MÉTODOS PRIVADOS IGUAL QUE EN LA VERSIÓN ANTERIOR
 
     private Div wrapInCard(Component chart, String extraClass) {
         Div card = new Div(chart);
@@ -194,29 +197,112 @@ public class JudokaDashboardView extends JudokaLayout {
         return card;
     }
 
+    private Legend createLegend(boolean show) {
+        Legend legend = new Legend();
+        legend.setShow(show);
+        return legend;
+    }
+
     private ApexCharts crearGraficoRadar(Map<String, Double> data) {
         String[] categorias = data.keySet().toArray(new String[0]);
         Double[] valores = data.values().toArray(new Double[0]);
-        List<String> coloresEtiquetas = Collections.nCopies(categorias.length, "#000000");
         return ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get().withType(Type.RADAR).withHeight("500px").withForeColor("#000000").build())
-                .withColors("#FF6B6B", "#2C3E50")
+                .withChart(ChartBuilder.get().withType(Type.RADAR).withHeight("400px").withForeColor("#333").build())
+                .withTitle(TitleSubtitleBuilder.get()
+                        .withText("Perfil de Combate")
+                        .withAlign(com.github.appreciated.apexcharts.config.subtitle.Align.LEFT)
+                        .build())
+                .withColors("#4CAF50")
                 .withFill(FillBuilder.get().withOpacity(0.2).build())
                 .withStroke(StrokeBuilder.get().withWidth(2.0).build())
-                .withPlotOptions(PlotOptionsBuilder.get().withRadar(RadarBuilder.get().withSize(150.0).withPolygons(PolygonsBuilder.get().withStrokeColor(Collections.singletonList("#90A4AE")).withConnectorColors(Collections.singletonList("#000000")).build()).build()).build())
-                .withMarkers(MarkersBuilder.get().withSize(5.0, 5.0).build())
+                .withPlotOptions(PlotOptionsBuilder.get().withRadar(RadarBuilder.get()
+                        .withSize(140.0)
+                        .withPolygons(PolygonsBuilder.get()
+                                .withStrokeColor(Collections.singletonList("#e9e9e9")) // FIX: Pass a List
+                                .withConnectorColors(Collections.singletonList("#e9e9e9"))
+                                .build())
+                        .build()).build())
+                .withMarkers(MarkersBuilder.get().withSize(4.0, 6.0).build()) // FIX: Pass two arguments
                 .withSeries(new Series<>("Nivel Actual", valores))
-                .withXaxis(XAxisBuilder.get().withCategories(categorias).withLabels(LabelsBuilder.get().withStyle(StyleBuilder.get().withColors(coloresEtiquetas).withFontSize("13px").withFontFamily("Inter, sans-serif").build()).build()).build())
-                .withYaxis(YAxisBuilder.get().withMin(0).withMax(5).withTickAmount(5.0).withShow(false).build())
+                .withXaxis(XAxisBuilder.get()
+                        .withCategories(categorias)
+                        .withLabels(LabelsBuilder.get()
+                                .withStyle(StyleBuilder.get()
+                                        .withColors(Collections.nCopies(categorias.length, "#555"))
+                                        .withFontSize("13px")
+                                        .withFontFamily("Inter, sans-serif")
+                                        .build())
+                                .build())
+                        .build())
+                .withYaxis(YAxisBuilder.get()
+                        .withMin(0)
+                        .withMax(5)
+                        .withTickAmount(5.0)
+                        .withShow(true)
+                        .build())
                 .build();
     }
 
-    private ApexCharts crearGraficoHistorial(PruebaEstandar prueba, String titulo) {
+    private ApexCharts crearGraficoHistorial(PruebaEstandar prueba, String titulo, boolean showLegend) {
         List<Map<String, Object>> datos = resultadoPruebaService.getHistorialParaGrafico(judokaActual, prueba);
         if (datos.isEmpty()) return crearChartSinDatos(titulo);
-        List<String> fechas = datos.stream().map(m -> (String) m.get("fecha")).collect(Collectors.toList());
-        List<Series<Double>> series = datos.stream().filter(m -> m.containsKey("metrica") && m.containsKey("valor")).collect(Collectors.groupingBy(m -> (String) m.get("metrica"))).entrySet().stream().map(e -> new Series<>(e.getKey(), e.getValue().stream().mapToDouble(m -> (Double) m.get("valor")).boxed().toArray(Double[]::new))).collect(Collectors.toList());
-        return ApexChartsBuilder.get().withChart(ChartBuilder.get().withType(Type.LINE).withHeight("350px").withZoom(ZoomBuilder.get().withEnabled(false).build()).withForeColor("#000000").build()).withStroke(StrokeBuilder.get().withCurve(Curve.SMOOTH).withWidth(3.0).build()).withColors("#FF6B6B", "#2C3E50").withTitle(TitleSubtitleBuilder.get().withText(titulo).withAlign(com.github.appreciated.apexcharts.config.subtitle.Align.LEFT).build()).withSeries(series.toArray(new Series[0])).withXaxis(XAxisBuilder.get().withType(XAxisType.CATEGORIES).withCategories(fechas).build()).build();
+
+        Map<String, List<Map<String, Object>>> datosAgrupadosPorFecha = datos.stream()
+                .collect(Collectors.groupingBy(m -> (String) m.get("fecha")));
+        List<String> fechas = new ArrayList<>(datosAgrupadosPorFecha.keySet());
+        Collections.sort(fechas);
+
+        List<String> nombresDeMetricas = datos.stream().map(m -> (String) m.get("metrica")).distinct().collect(Collectors.toList());
+        List<Series> series = new ArrayList<>();
+        List<String> colors = new ArrayList<>();
+        List<Double> strokeDashArrayValues = new ArrayList<>();
+
+        String judokaColor = "#1A73E8"; // Primary color for judoka's data
+
+        for (String metrica : nombresDeMetricas) {
+            List<Double> valores = new ArrayList<>();
+            for (String fecha : fechas) {
+                Double valor = datosAgrupadosPorFecha.get(fecha).stream()
+                        .filter(m -> m.get("metrica").equals(metrica))
+                        .map(m -> (Double) m.get("valor"))
+                        .findFirst().orElse(null);
+                valores.add(valor);
+            }
+            series.add(new Series<>(metrica, valores.toArray(new Double[0])));
+            colors.add(judokaColor);
+            strokeDashArrayValues.add(0.0); // Solid line for judoka
+        }
+
+        List<Map<String, Object>> normas = resultadoPruebaService.getNormasParaGrafico(judokaActual, prueba);
+
+        for (Map<String, Object> norma : normas) {
+            Double[] valoresNorma = new Double[fechas.size()];
+            Arrays.fill(valoresNorma, (Double) norma.get("valor"));
+
+            String nombreNorma = (String) norma.get("nombre");
+            series.add(new Series<>(nombreNorma, valoresNorma));
+
+            // Find the enum by translated name to get the right color
+            ClasificacionRendimiento clasificacion = Arrays.stream(ClasificacionRendimiento.values())
+                    .filter(c -> traduccionService.get(c.getTraduccionKey()).equals(nombreNorma))
+                    .findFirst()
+                    .orElse(null);
+
+            colors.add(COLOR_MAP.getOrDefault(clasificacion, "#808080")); // Default to gray
+            strokeDashArrayValues.add(4.0); // Dashed line for benchmarks
+        }
+
+        return ApexChartsBuilder.get()
+                .withChart(ChartBuilder.get().withType(Type.LINE).withHeight("350px").withZoom(ZoomBuilder.get().withEnabled(false).build()).withForeColor("#333").build())
+                .withStroke(StrokeBuilder.get().withCurve(Curve.SMOOTH).withWidth(3.0).withDashArray(strokeDashArrayValues).build())
+                .withColors(colors.toArray(new String[0]))
+                .withTitle(TitleSubtitleBuilder.get().withText(titulo).withAlign(com.github.appreciated.apexcharts.config.subtitle.Align.LEFT).build())
+                .withSeries(series.toArray(new Series[0]))
+                .withLegend(createLegend(showLegend))
+                .withXaxis(XAxisBuilder.get().withType(XAxisType.CATEGORIES).withCategories(fechas).build())
+                .withMarkers(MarkersBuilder.get().withSize(5.0, 7.0).build()) // FIX: Pass two arguments
+                .withTooltip(TooltipBuilder.get().withShared(true).withIntersect(false).build())
+                .build();
     }
 
     private ApexCharts crearChartSinDatos(String titulo) {

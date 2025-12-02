@@ -54,5 +54,9 @@ public enum ClasificacionRendimiento {
     /**
      * Cubre la zona saludable (implícita)
      */
-    ZONA_SALUDABLE
+    ZONA_SALUDABLE;
+
+    public String getTraduccionKey() {
+        return "clasificacion." + this.name().toLowerCase();
+    }
 }

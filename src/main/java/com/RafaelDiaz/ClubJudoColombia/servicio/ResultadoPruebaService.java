@@ -3,10 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -226,4 +223,29 @@ public class ResultadoPruebaService {
                     return mapa;
                 })
                 .collect(Collectors.toList());
-    }}
+    }
+
+    /**
+     * NUEVO: Obtiene las normas de evaluación para un judoka y prueba específicos.
+     * Devuelve una lista de mapas para usar en las anotaciones del gráfico.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getNormasParaGrafico(Judoka judoka, PruebaEstandar prueba) {
+        List<NormaEvaluacion> normas = normaRepository.findNormasPorCriteriosBasicos(
+                prueba.getId(),
+                judoka.getSexo(),
+                judoka.getEdad()
+        );
+
+        return normas.stream()
+                .filter(n -> n.getValorMin() != null) // Solo las que tienen un umbral
+                .map(n -> {
+                    Map<String, Object> mapa = new HashMap<>();
+                    // Usamos la clave de traducción para el nombre de la clasificación
+                    mapa.put("nombre", traduccionService.get(n.getClasificacion().getTraduccionKey()));
+                    mapa.put("valor", n.getValorMin());
+                    return mapa;
+                })
+                .collect(Collectors.toList());
+    }
+}
