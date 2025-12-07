@@ -24,5 +24,8 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
             "JOIN sesiones_programadas sp ON a.id_sesion = sp.id_sesion " +
             "WHERE sp.id_sensei = :id_sensei " +
             "AND a.fecha_hora_marcacion >= :inicio", nativeQuery = true)
-    List<Object[]> countAsistenciasUltimos30Dias(@Param("id_sensei") Long senseiId, @Param("inicio") LocalDateTime inicio);
+    List<Object[]> countAsistenciasUltimos30Dias(
+            @Param("id_sensei") Long senseiId, @Param("inicio") LocalDateTime inicio);
+
+    long countByJudoka(com.RafaelDiaz.ClubJudoColombia.modelo.Judoka judoka);
 }

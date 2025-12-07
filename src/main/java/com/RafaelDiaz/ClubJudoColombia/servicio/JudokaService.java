@@ -1,48 +1,54 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario; // --- NUEVO IMPORT ---
+import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon; // Importar
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List; // --- NUEVO IMPORT ---
+import java.util.List;
 import java.util.Optional;
 
-/**
- * --- SERVICIO ACTUALIZADO ---
- * Maneja la lógica de negocio para la entidad Judoka.
- */
 @Service
 public class JudokaService {
 
     private final JudokaRepository judokaRepository;
+    private final GamificationService gamificationService; // <--- INYECCIÓN
 
-    public JudokaService(JudokaRepository judokaRepository) {
+    public JudokaService(JudokaRepository judokaRepository, GamificationService gamificationService) {
         this.judokaRepository = judokaRepository;
+        this.gamificationService = gamificationService;
     }
 
-    /**
-     * Busca un Judoka por su Usuario (usado por SecurityService).
-     */
+    // ... (findByUsuario y findAllJudokasWithUsuario se quedan igual) ...
     @Transactional(readOnly = true)
     public Optional<Judoka> findByUsuario(Usuario usuario) {
         return judokaRepository.findByUsuario(usuario);
     }
 
-    /**
-     * --- ¡NUEVO MÉTODO! ---
-     * Busca todos los Judokas y fuerza la inicialización (fetch)
-     * de sus Usuarios asociados para evitar LazyInitializationException en las vistas.
-     * @return Lista de Judokas con sus Usuarios cargados.
-     */
     @Transactional(readOnly = true)
     public List<Judoka> findAllJudokasWithUsuario() {
         List<Judoka> judokas = judokaRepository.findAll();
-        // --- ¡LA SOLUCIÓN! ---
-        // Forzamos a Hibernate a "despertar" el Usuario de cada Judoka
-        // mientras la sesión (@Transactional) sigue abierta.
         judokas.forEach(judoka -> judoka.getUsuario().getNombre());
         return judokas;
+    }
+
+    // --- NUEVO MÉTODO PARA ASCENDER (CON SENSOR GI) ---
+    @Transactional
+    public Judoka ascenderGrado(Judoka judoka, GradoCinturon nuevoGrado) {
+        judoka.setGrado(nuevoGrado);
+        Judoka guardado = judokaRepository.save(judoka);
+
+        // --- SENSOR DE GAMIFICACIÓN (GI) ---
+        gamificationService.verificarLogrosGrado(guardado);
+
+        return guardado;
+    }
+
+    // Método genérico guardar (si lo usas en otros lados)
+    @Transactional
+    public Judoka save(Judoka judoka) {
+        return judokaRepository.save(judoka);
     }
 }

@@ -54,6 +54,8 @@ public class Usuario implements Serializable {
     @Column(name = "apellido", nullable = false, length = 150)
     private String apellido;
 
+    @Column(name = "email", length = 150)
+    private String email;
     /**
      * Estado del usuario (activo, inactivo, pendiente de verificación).
      * Usamos un booleano para simplicidad (true = activo, false = inactivo).
@@ -143,8 +145,14 @@ public class Usuario implements Serializable {
     public void setApellido(String apellido) {
         this.apellido = apellido;
     }
-    // ... (junto a los otros Getters y Setters)
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
     public Set<Rol> getRoles() {
         return roles;
     }

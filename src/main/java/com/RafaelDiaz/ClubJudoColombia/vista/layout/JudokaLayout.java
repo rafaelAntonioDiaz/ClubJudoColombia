@@ -71,7 +71,8 @@ public abstract class JudokaLayout extends AppLayout {
         menuUsuario.addClassName("user-menu");
         var menuItem = menuUsuario.addItem(avatar);
         var subMenu = menuItem.getSubMenu();
-        subMenu.addItem("Mi Perfil", e -> getUI().ifPresent(ui -> ui.navigate("perfil-judoka")));
+        subMenu.addItem("Mi Perfil",
+                e -> getUI().ifPresent(ui -> ui.navigate("perfil-judoka")));
         subMenu.addItem("Cerrar Sesión", e -> logout());
 
         HorizontalLayout navbar = new HorizontalLayout(toggle, tituloApp, menuUsuario);

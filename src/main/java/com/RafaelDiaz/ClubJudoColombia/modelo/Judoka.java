@@ -5,15 +5,10 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.Period; // --- NUEVO IMPORT ---
+import java.time.Period;
 
-/**
- * --- RENOMBRADO ---
- * Entidad de Perfil que representa a un Judoka (antes Practicante).
- * Almacena los datos de negocio y se vincula a 'Usuario'.
- */
 @Entity
-@Table(name = "judokas") // --- RENOMBRADO ---
+@Table(name = "judokas")
 public class Judoka implements Serializable {
 
     @Id
@@ -25,6 +20,7 @@ public class Judoka implements Serializable {
     @JoinColumn(name = "id_usuario", referencedColumnName = "id_usuario", unique = true, nullable = false)
     private Usuario usuario;
 
+    // --- DATOS FÍSICOS ---
     @Column(name = "peso_kg")
     private Double peso;
 
@@ -38,6 +34,7 @@ public class Judoka implements Serializable {
     @Column(name = "sexo", nullable = false)
     private Sexo sexo;
 
+    // --- DATOS TÉCNICOS ---
     @Enumerated(EnumType.STRING)
     @Column(name = "grado_cinturon", nullable = false)
     private GradoCinturon grado;
@@ -52,120 +49,103 @@ public class Judoka implements Serializable {
     @Column(name = "es_competidor_activo", nullable = false)
     private boolean esCompetidorActivo = false;
 
-    // --- NUEVOS CAMPOS (Acudiente y Waiver) ---
+    // --- DATOS SALUD Y DOCUMENTOS (NUEVO) ---
+
+    @Column(name = "eps", length = 100)
+    private String eps;
 
     /**
-     * Nombre completo del acudiente o contacto de emergencia.
-     * Esencial si el judoka es menor de edad.
+     * Ruta relativa donde se guarda el certificado de afiliación.
+     * Ej: "documentos/eps/julian_eps.pdf"
      */
+    @Column(name = "ruta_certificado_eps")
+    private String rutaCertificadoEps;
+
+    // --- DATOS DE ACUDIENTE Y LEGAL ---
+
     @Column(name = "nombre_acudiente", length = 255)
     private String nombreAcudiente;
 
     /**
-     * Teléfono del acudiente o contacto de emergencia.
+     * Teléfono del acudiente (Funciona como teléfono de emergencia).
      */
     @Column(name = "telefono_acudiente", length = 20)
     private String telefonoAcudiente;
 
     /**
-     * Ruta al archivo (PDF/PNG) de la autorización firmada
-     * y la exoneración de responsabilidad (waiver).
-     * (Ej. "/almacenamiento/waivers/judoka_12.pdf")
-     * Este campo será 'null' si el judoka es mayor de edad.
+     * Ruta relativa donde se guarda el waiver firmado.
+     * Ej: "documentos/waivers/julian_waiver.pdf"
      */
     @Column(name = "ruta_autorizacion_waiver")
     private String rutaAutorizacionWaiver;
 
-    // --- Constructores ---
+    // --- CONSTRUCTORES ---
+    public Judoka() {}
 
-    public Judoka() {
-        // Constructor vacío requerido por JPA
-    }
-
-    // --- Getters y Setters (Incluyendo los nuevos) ---
-
-    // (Getters/Setters de campos antiguos...)
+    // --- GETTERS Y SETTERS ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+
     public Double getPeso() { return peso; }
     public void setPeso(Double peso) { this.peso = peso; }
+
     public Double getEstatura() { return estatura; }
     public void setEstatura(Double estatura) { this.estatura = estatura; }
+
     public LocalDate getFechaNacimiento() { return fechaNacimiento; }
     public void setFechaNacimiento(LocalDate fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
+
     public Sexo getSexo() { return sexo; }
     public void setSexo(Sexo sexo) { this.sexo = sexo; }
+
     public GradoCinturon getGrado() { return grado; }
+    // Alias para compatibilidad con DataInitializer
+    public void setGradoCinturon(GradoCinturon grado) { this.grado = grado; }
     public void setGrado(GradoCinturon grado) { this.grado = grado; }
+
     public String getPalmares() { return palmares; }
     public void setPalmares(String palmares) { this.palmares = palmares; }
+
     public String getOcupacionPrincipal() { return ocupacionPrincipal; }
     public void setOcupacionPrincipal(String ocupacionPrincipal) { this.ocupacionPrincipal = ocupacionPrincipal; }
+
     public boolean isEsCompetidorActivo() { return esCompetidorActivo; }
     public void setEsCompetidorActivo(boolean esCompetidorActivo) { this.esCompetidorActivo = esCompetidorActivo; }
 
+    // --- NUEVOS GETTERS/SETTERS ---
 
-    // --- Getters/Setters para los NUEVOS campos ---
+    public String getEps() { return eps; }
+    public void setEps(String eps) { this.eps = eps; }
 
-    public String getNombreAcudiente() {
-        return nombreAcudiente;
-    }
+    public String getRutaCertificadoEps() { return rutaCertificadoEps; }
+    public void setRutaCertificadoEps(String rutaCertificadoEps) { this.rutaCertificadoEps = rutaCertificadoEps; }
 
-    public void setNombreAcudiente(String nombreAcudiente) {
-        this.nombreAcudiente = nombreAcudiente;
-    }
+    public String getNombreAcudiente() { return nombreAcudiente; }
+    public void setNombreAcudiente(String nombreAcudiente) { this.nombreAcudiente = nombreAcudiente; }
 
-    public String getTelefonoAcudiente() {
-        return telefonoAcudiente;
-    }
+    public String getTelefonoAcudiente() { return telefonoAcudiente; }
+    public void setTelefonoAcudiente(String telefonoAcudiente) { this.telefonoAcudiente = telefonoAcudiente; }
 
-    public void setTelefonoAcudiente(String telefonoAcudiente) {
-        this.telefonoAcudiente = telefonoAcudiente;
-    }
+    public String getRutaAutorizacionWaiver() { return rutaAutorizacionWaiver; }
+    public void setRutaAutorizacionWaiver(String rutaAutorizacionWaiver) { this.rutaAutorizacionWaiver = rutaAutorizacionWaiver; }
 
-    public String getRutaAutorizacionWaiver() {
-        return rutaAutorizacionWaiver;
-    }
+    // --- LÓGICA DE NEGOCIO ---
 
-    public void setRutaAutorizacionWaiver(String rutaAutorizacionWaiver) {
-        this.rutaAutorizacionWaiver = rutaAutorizacionWaiver;
-    }
-
-    // --- Lógica de Negocio (Helpers) ---
-
-    /**
-     * --- NUEVO MÉTODO (Lógica de Negocio) ---
-     * Calcula dinámicamente si el judoka es menor de edad.
-     * En Colombia, la mayoría de edad es a los 18 años.
-     * No guardamos 'edad' en la BD, la calculamos.
-     *
-     * @return true si el judoka tiene menos de 18 años.
-     */
-    @Transient // Le dice a JPA que NO intente guardar esto en la BD.
+    @Transient
     public boolean esMenorDeEdad() {
-        if (this.fechaNacimiento == null) {
-            return false; // O lanzar excepción, según se prefiera
-        }
+        if (this.fechaNacimiento == null) return false;
         return Period.between(this.fechaNacimiento, LocalDate.now()).getYears() < 18;
     }
-    /**
-     * --- NUEVO MÉTODO (Lógica de Negocio) ---
-     * Calcula y devuelve la edad actual del judoka en años.
-     *
-     * @return la edad en años.
-     */
-    @Transient // Le dice a JPA que NO intente guardar esto en la BD.
+
+    @Transient
     public int getEdad() {
-        if (this.fechaNacimiento == null) {
-            return 0; // O lanzar una excepción
-        }
+        if (this.fechaNacimiento == null) return 0;
         return Period.between(this.fechaNacimiento, LocalDate.now()).getYears();
     }
-
-    // --- hashCode y equals (Renombrados) ---
 
     @Override
     public int hashCode() {
@@ -179,9 +159,7 @@ public class Judoka implements Serializable {
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
-
-        Judoka that = (Judoka) obj; // --- RENOMBRADO ---
-
+        Judoka that = (Judoka) obj;
         if (usuario != null && usuario.getId() != null) {
             return usuario.getId().equals(that.usuario != null ? that.usuario.getId() : null);
         }

@@ -47,4 +47,11 @@ public class Insignia {
     public void setIconoVaadin(String iconoVaadin) {
         this.iconoVaadin = iconoVaadin;
     }
+    public Integer getNivelRequerido() {
+        return nivelRequerido;
+    }
+
+    public void setNivelRequerido(Integer nivelRequerido) {
+        this.nivelRequerido = nivelRequerido;
+    }
 }

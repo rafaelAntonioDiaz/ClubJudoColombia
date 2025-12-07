@@ -268,10 +268,21 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     // ... Resto de métodos (crearGraficoRadar, localeChange, etc.) IGUALES ...
     @Override
     public void localeChange(LocaleChangeEvent event) {
-        tituloBienvenida.setText(getTranslation("dashboard.welcome", judokaActual.getUsuario().getNombre()));
+        // 1. Obtener nombre de forma segura (evitando NullPointer)
+        String nombre = (judokaActual != null && judokaActual.getUsuario() != null)
+                ? judokaActual.getUsuario().getNombre()
+                : "";
+
+        // 2. Usar getTranslation (que ahora usa MessageFormat)
+        tituloBienvenida.setText(getTranslation("dashboard.welcome", nombre));
+
         btnTareas.setText(getTranslation("dashboard.btn.tareas"));
+
+        // 3. Refrescar componentes hijos
         if (calendario != null) calendario.refresh();
         if (insigniasWidget != null) insigniasWidget.refresh();
+
+        // 4. Recargar datos (KPIs y Gráficos se traducen dentro de este método)
         cargarDatos();
     }
 

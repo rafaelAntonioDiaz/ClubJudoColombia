@@ -8,6 +8,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,8 @@ import java.util.*;
 @Component
 public class DataInitializer implements CommandLineRunner { // 1. Implementamos la interfaz
 
+    private final PasswordEncoder passwordEncoder;
+    private final UsuarioRepository usuarioRepository;
     private final UsuarioService usuarioService;
     private final PlanEntrenamientoService planService;
     private final RolRepository rolRepository;
@@ -37,7 +40,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private MensajeChatRepository mensajeChatRepository;
     private ChatService chatService;
 
-    public DataInitializer(UsuarioService usuarioService,
+    public DataInitializer(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository, UsuarioService usuarioService,
                            PlanEntrenamientoService planService,
                            RolRepository rolRepository,
                            SenseiRepository senseiRepository,
@@ -56,6 +59,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                            ChatService chatService,
                            JudokaInsigniaRepository judokaInsigniaRepository,
                            InsigniaRepository insigniaRepository) {
+        this.passwordEncoder = passwordEncoder;
+        this.usuarioRepository = usuarioRepository;
         this.usuarioService = usuarioService;
         this.planService = planService;
         this.rolRepository = rolRepository;
@@ -103,8 +108,10 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearTraduccionesDashboard();
 
         // 3. Usuarios
-        Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
-        crearSensei("toshiro", "Toshiro", "Diago", "123456", GradoCinturon.NEGRO_5_DAN);
+        Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune",
+                "123456", GradoCinturon.NEGRO_5_DAN);
+        crearSensei("toshiro", "Toshiro", "Diago",
+                "123456", GradoCinturon.NEGRO_5_DAN);
 
         List<Judoka> judokas = crearJudokas();
 
@@ -133,6 +140,12 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearChatInicial();
         otorgarInsigniasDemo(judokas);
         crearTraduccionesDashboard();
+        judokas = judokaRepository.findAll();
+
+        // 3. Generar Historia (Julián y actualización de María)
+        // Este método YA TIENE su propio chequeo
+        //  (if exists julian return), así que es seguro llamarlo siempre.
+        cargarDatosJulianYMaria(judokas);
         System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
     }
 
@@ -190,7 +203,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         // --- 1. DASHBOARD GENERAL (Bienvenida y Botones) ---
         agregarTraduccion(lista, "dashboard.welcome", "Hola, {0}", "Hello, {0}");
         agregarTraduccion(lista, "dashboard.btn.tareas", "Ir a Mis Tareas", "Go to My Tasks");
-
         // --- 2. KPIs (Indicadores Superiores) ---
         agregarTraduccion(lista, "kpi.poder_combate", "Poder de Combate", "Combat Power");
         agregarTraduccion(lista, "kpi.planes_activos", "Planes Activos", "Active Plans");
@@ -211,11 +223,21 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         // --- 5. GAMIFICACIÓN: WIDGET 'MI DO' ---
         // Títulos de Columnas
-        agregarTraduccion(lista, "widget.mido.titulo", "Mi Do (El Camino)", "My Do (The Way)");
-        agregarTraduccion(lista, "widget.mido.shin", "SHIN (Mente)", "SHIN (Mind)");
-        agregarTraduccion(lista, "widget.mido.gi", "GI (Técnica)", "GI (Technique)");
-        agregarTraduccion(lista, "widget.mido.tai", "TAI (Cuerpo)", "TAI (Body)");
-
+        agregarTraduccion(lista, "widget.mido.titulo",
+                "Mi Do (La Vía)", "My Do (The Way)");
+        agregarTraduccion(lista, "widget.mido.shin",
+                "SHIN (Mente Enfocada)", "SHIN (Focus Mind)");
+        agregarTraduccion(lista, "widget.mido.gi",
+                "GI (Técnica Impecable)", "GI (Perfect Technique)");
+        agregarTraduccion(lista, "widget.mido.tai",
+                "TAI (Cuerpo Poderoso)", "TAI (Strong Body)");
+        agregarTraduccion(lista, "widget.mido.btn_catalogo",
+                "Ver Catálogo", "View Catalog");
+        agregarTraduccion(lista, "widget.mido.catalogo_titulo",
+                "Salón de la Fama - Todas las Insignias", "Hall of Fame - All Badges");
+        agregarTraduccion(lista, "widget.mido.msg_inicio",
+                "¡Tu camino comienza! Aquí verás tus primeros objetivos.",
+                "Your journey begins! Here are your first goals.");
         // Estados del Diálogo de Insignia
         agregarTraduccion(lista, "badge.estado.desbloqueada", "¡Insignia Desbloqueada!", "Badge Unlocked!");
         agregarTraduccion(lista, "badge.estado.bloqueada", "Insignia Bloqueada", "Badge Locked");
@@ -254,12 +276,15 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         traduccionRepository.saveAll(lista);
     }
 
-    // --- MÉTODO HELPER (Asegúrate de tener este también en la clase) ---
-    private void agregarTraduccion(List<Traduccion> lista, String clave, String textoEs, String textoEn) {
+    // --- MÉTODO HELPER
+    //  (Asegúrate de tener este también en la clase) ---
+    private void agregarTraduccion(List<Traduccion> lista,
+                                   String clave, String textoEs, String textoEn) {
         lista.add(new Traduccion(clave, "es", textoEs));
         lista.add(new Traduccion(clave, "en", textoEn));
     }
-    private Sensei crearSensei(String user, String nom, String ape, String pass, GradoCinturon grado) {
+    private Sensei crearSensei(String user,
+                               String nom, String ape, String pass, GradoCinturon grado) {
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
         u.getRoles().add(rolRepository.findByNombre("ROLE_SENSEI").orElseThrow());
@@ -280,7 +305,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null));
         return judokaRepository.saveAll(lista);
     }
-    private Judoka crearJudokaIndividual(String user, String nom, String ape, int anio, int mes, int dia, Sexo sexo, GradoCinturon grado, boolean competidor, String acudiente) {
+    private Judoka crearJudokaIndividual(String user,
+                                         String nom, String ape,
+                                         int anio, int mes, int dia,
+                                         Sexo sexo, GradoCinturon grado,
+                                         boolean competidor, String acudiente) {
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
         u.getRoles().add(rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow());
@@ -409,7 +438,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         sesionRepository.saveAll(sesiones);
     }
 
-    private void generarResultadosEvaluacion(List<Judoka> judokas, PlanEntrenamiento planEval) {
+    private void generarResultadosEvaluacion(List<Judoka> judokas,
+                                             PlanEntrenamiento planEval) {
         if (planEval.getEjerciciosPlanificados().isEmpty()) return;
         EjercicioPlanificado ejSjft = planEval.getEjerciciosPlanificados().get(0);
 
@@ -438,7 +468,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         resultadoPruebaRepository.saveAll(resultados);
     }
 
-    private void generarEjecucionesTareas(List<Judoka> judokas, PlanEntrenamiento planFisico) {
+    private void generarEjecucionesTareas(List<Judoka> judokas,
+                                          PlanEntrenamiento planFisico) {
         if (planFisico.getEjerciciosPlanificados().isEmpty()) return;
         EjercicioPlanificado tareaBurpees = planFisico.getEjerciciosPlanificados().get(0);
         Judoka maria = judokas.get(0);
@@ -566,7 +597,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         if (clave.contains("carrera_20m")) return 3.5; // segundos (menos es mejor)
         if (clave.contains("sjft")) return 12.0; // indice
         return 10.0;
-    }    private EjercicioPlanificado obtenerOCrearEjercicioDummy(PruebaEstandar prueba) {
+    }
+    private EjercicioPlanificado obtenerOCrearEjercicioDummy(PruebaEstandar prueba) {
         // 1. Buscamos al Sensei Kiuzo (Usando repo directo o servicio de usuario)
         Usuario usuarioKiuzo = usuarioService.findByUsername("kiuzo").orElseThrow();
         Sensei kiuzo = senseiRepository.findByUsuario(usuarioKiuzo).orElseThrow();
@@ -638,4 +670,102 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         }
     }
 
-}
+    // -------------------------------------------------------------------------
+    //  DATOS DEMO: MARÍA (VETERANA) Y JULIÁN (PROMESA)
+    //  Refactorizado: Ambos con Acudiente/Contacto de Emergencia.
+    // -------------------------------------------------------------------------
+    private void cargarDatosJulianYMaria(List<Judoka> judokas) {
+        // Validación para no repetir
+        if (usuarioRepository.findByUsername("julian.bohorquez").isPresent()) return;
+
+        System.out.println(">>> CREANDO HISTORIA: MARÍA VETERANA Y JULIÁN PROMESA...");
+
+        // 1. MARÍA LÓPEZ
+        Judoka maria = judokas.stream()
+                .filter(j -> j.getUsuario().getUsername().equals("maria.lopez"))
+                .findFirst()
+                .orElse(null);
+
+        if (maria != null) {
+            maria.setGradoCinturon(GradoCinturon.AZUL);
+            maria.setEps("Sura");
+            maria.setNombreAcudiente("Jorge López (Hermano)");
+            maria.setTelefonoAcudiente("315 987 6543");
+            judokaRepository.save(maria);
+
+            // Insignias María...
+            insigniaRepository.findByClave("GI_CINTURON").ifPresent(insignia -> {
+                if (!judokaInsigniaRepository.existsByJudokaAndInsignia_Clave(
+                        maria, "GI_CINTURON")) {
+                    JudokaInsignia logro = new JudokaInsignia();
+                    logro.setJudoka(maria);
+                    logro.setInsignia(insignia);
+                    logro.setFechaObtencion(LocalDateTime.now().minusMonths(6));
+                    judokaInsigniaRepository.save(logro);
+                }
+            });
+
+            insigniaRepository.findByClave("SHIN_CONSTANCIA").
+                    ifPresent(insignia -> {
+                        if (!judokaInsigniaRepository.existsByJudokaAndInsignia_Clave(maria, "SHIN_CONSTANCIA")) {
+                            JudokaInsignia logro = new JudokaInsignia();
+                            logro.setJudoka(maria);
+                            logro.setInsignia(insignia);
+                            logro.setFechaObtencion(LocalDateTime.now().minusMonths(2));
+                            judokaInsigniaRepository.save(logro);
+                        }
+                    });
+        }
+
+        // 2. JULIÁN ANDRÉS
+        Usuario userJulian = new Usuario();
+        userJulian.setUsername("julian.bohorquez");
+        userJulian.setPasswordHash(passwordEncoder.encode("1234"));
+        userJulian.setNombre("Julián Andrés");
+        userJulian.setApellido("Bohórquez Díaz");
+        userJulian.setEmail("julian@judocolombia.com");
+        userJulian.setActivo(true);
+
+        Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
+                .orElseThrow(() -> new RuntimeException("ERROR CRÍTICO: No existe el rol ROLE_JUDOKA en la BD"));
+
+        // --- CORRECCIÓN: Usar HashSet para que la colección sea mutable ---
+        userJulian.setRoles(new HashSet<>(Set.of(rolJudoka)));
+
+        usuarioRepository.save(userJulian);
+
+        // B. Crear Perfil Judoka
+        Judoka julian = new Judoka();
+        julian.setUsuario(userJulian);
+        julian.setGradoCinturon(GradoCinturon.BLANCO);
+        julian.setFechaNacimiento(LocalDate.now().minusYears(10));
+        julian.setPeso(34.0);
+        julian.setEstatura(1.38);
+        julian.setSexo(Sexo.MASCULINO);
+        julian.setEps("Sanitas");
+        julian.setNombreAcudiente("Carlos Bohórquez (Padre)");
+        julian.setTelefonoAcudiente("300 123 4567");
+        julian.setRutaCertificadoEps("documentos/eps/julian_eps_2025.pdf");
+        julian.setRutaAutorizacionWaiver("documentos/waivers/julian_waiver_firmado.pdf");
+
+        judokaRepository.save(julian);
+
+        // C. Gamificación Inicial
+        insigniaRepository.findByClave("SHIN_INICIO").ifPresent(insignia -> {
+            JudokaInsignia logro = new JudokaInsignia();
+            logro.setJudoka(julian);
+            logro.setInsignia(insignia);
+            logro.setFechaObtencion(LocalDateTime.now().minusDays(5));
+            judokaInsigniaRepository.save(logro);
+        });
+
+        insigniaRepository.findByClave("TAI_VELOCIDAD").ifPresent(insignia -> {
+            JudokaInsignia logro = new JudokaInsignia();
+            logro.setJudoka(julian);
+            logro.setInsignia(insignia);
+            logro.setFechaObtencion(LocalDateTime.now().minusDays(1));
+            judokaInsigniaRepository.save(logro);
+        });
+
+        System.out.println("   -> Julián Andrés creado (User: julian.bohorquez / Pass: 1234).");
+    }}

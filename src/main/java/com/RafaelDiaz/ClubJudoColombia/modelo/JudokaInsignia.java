@@ -24,7 +24,6 @@ public class JudokaInsignia {
     }
 
 
-
     public void setJudoka(Judoka judoka) {
         this.judoka = judoka;
     }
