@@ -27,4 +27,5 @@ public interface ResultadoPruebaRepository extends JpaRepository<ResultadoPrueba
     @Query("SELECT COUNT(r) FROM ResultadoPrueba r WHERE r.judoka = :judoka AND r.fechaRegistro BETWEEN :inicio AND :fin")
     long countByJudokaAndFechaRegistroBetween(Judoka judoka, LocalDateTime inicio, LocalDateTime fin);
 
+    Optional<ResultadoPrueba> findTopByJudokaAndEjercicioPlanificado_PruebaEstandarOrderByFechaRegistroDesc(Judoka judoka, PruebaEstandar prueba);
 }

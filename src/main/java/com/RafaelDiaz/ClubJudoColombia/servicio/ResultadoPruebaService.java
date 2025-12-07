@@ -42,10 +42,6 @@ public class ResultadoPruebaService {
         this.ejecucionTareaRepository = ejecucionTareaRepository;
     }
 
-    // ==================================================================
-    // MÉTODOS EXISTENTES (ya los tenías – los mantengo limpios)
-    // ==================================================================
-
     @Transactional
     public ResultadoPrueba registrarResultado(ResultadoPrueba resultado) {
         return resultadoPruebaRepository.save(resultado);
@@ -167,10 +163,6 @@ public class ResultadoPruebaService {
         return pesoMaximo == 0 ? 1000.0 : 1000.0 + (puntajeTotal / pesoMaximo) * 4000.0;
     }
 
-    // ==================================================================
-    // NUEVOS MÉTODOS PARA EL DASHBOARD DEL JUDOKA (2025-11-20)
-    // ==================================================================
-
     /** KPI: Planes activos (PENDIENTE o EN_PROGRESO) */
     @Transactional(readOnly = true)
     public long contarPlanesActivos(Judoka judoka) {
@@ -179,7 +171,6 @@ public class ResultadoPruebaService {
                 List.of(EstadoPlan.ACTIVO)
         );
     }
-
 
     /** KPI: Tareas de acondicionamiento completadas hoy */
     @Transactional(readOnly = true)
@@ -231,21 +222,33 @@ public class ResultadoPruebaService {
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getNormasParaGrafico(Judoka judoka, PruebaEstandar prueba) {
-        List<NormaEvaluacion> normas = normaRepository.findNormasPorCriteriosBasicos(
-                prueba.getId(),
-                judoka.getSexo(),
-                judoka.getEdad()
-        );
+        Optional<ResultadoPrueba> ultimo = resultadoPruebaRepository
+                .findTopByJudokaAndEjercicioPlanificado_PruebaEstandarOrderByFechaRegistroDesc(judoka, prueba);
 
-        return normas.stream()
-                .filter(n -> n.getValorMin() != null) // Solo las que tienen un umbral
+        if (ultimo.isEmpty()) return Collections.emptyList();
+
+        Metrica metrica = ultimo.get().getMetrica();
+
+        // Buscamos todas las normas para esa métrica/edad/sexo
+        List<NormaEvaluacion> todasLasNormas = normaRepository.findNormasPorCriterios(
+                prueba, metrica, judoka.getSexo(), judoka.getEdad());
+
+        // FILTRO QUIRÚRGICO: Nos quedamos solo con la MEJOR norma
+        // Asumimos que la clasificación tiene un orden o buscamos "EXCELENTE"
+        return todasLasNormas.stream()
+                .filter(n -> n.getClasificacion() == ClasificacionRendimiento.EXCELENTE) // Solo la meta dorada
+                .findFirst()
                 .map(n -> {
-                    Map<String, Object> mapa = new HashMap<>();
-                    // Usamos la clave de traducción para el nombre de la clasificación
-                    mapa.put("nombre", traduccionService.get(n.getClasificacion().getTraduccionKey()));
-                    mapa.put("valor", n.getValorMin());
-                    return mapa;
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("nombre", "Meta (Excelente)"); // Texto fijo o traducible
+                    // Si es tiempo (carrera), el "mejor" es el valor mínimo (o máximo del rango excelente)
+                    // Ajusta esta lógica según si tu métrica es ascendente o descendente
+                    Double valorTarget = (n.getValorMin() != null) ? n.getValorMin() : n.getValorMax();
+                    map.put("valor", valorTarget);
+                    return map;
                 })
-                .collect(Collectors.toList());
+                .map(List::of) // Devolvemos lista de 1 elemento
+                .orElse(Collections.emptyList());
     }
+
 }

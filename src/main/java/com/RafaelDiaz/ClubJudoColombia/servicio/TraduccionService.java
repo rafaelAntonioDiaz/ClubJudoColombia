@@ -28,6 +28,7 @@ public class TraduccionService {
      * Obtiene el texto traducido.
      * Si no existe en BD, genera un texto "bonito" basado en la clave.
      */
+    @org.springframework.cache.annotation.Cacheable("traducciones")
     public String getTraduccion(String clave, String idioma) {
         // 1. Intentar buscar en la Base de Datos
         Optional<Traduccion> traduccion = traduccionRepository.findByClaveAndIdioma(clave, idioma);

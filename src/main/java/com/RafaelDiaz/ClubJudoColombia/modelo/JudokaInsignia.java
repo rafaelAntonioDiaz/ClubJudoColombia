@@ -19,6 +19,10 @@ public class JudokaInsignia {
 
     private LocalDateTime fechaObtencion = LocalDateTime.now();
 
+    public JudokaInsignia () {
+
+    }
+
 
 
     public void setJudoka(Judoka judoka) {

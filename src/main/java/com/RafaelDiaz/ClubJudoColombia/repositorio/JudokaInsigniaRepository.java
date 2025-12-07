@@ -11,4 +11,6 @@ import java.util.List;
 public interface JudokaInsigniaRepository extends JpaRepository<JudokaInsignia, Long> {
     // Busca todos los logros ganados por este judoka
     List<JudokaInsignia> findByJudoka(Judoka judoka);
+
+    boolean existsByJudokaAndInsignia_Clave(Judoka judoka, String claveInsignia);
 }

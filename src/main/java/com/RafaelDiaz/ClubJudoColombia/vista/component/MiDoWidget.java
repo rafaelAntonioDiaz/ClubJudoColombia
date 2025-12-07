@@ -3,7 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista.component;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Insignia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.JudokaInsignia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.CategoriaInsignia;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- IMPORTANTE
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -20,17 +20,19 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MiDoWidget extends VerticalLayout {
 
-    private final TraduccionService traduccionService; // <--- CAMPO NUEVO
+    private final TraduccionService traduccionService;
+    private final List<Insignia> todasLasInsignias;
+    private final List<JudokaInsignia> misLogros;
 
-    // CONSTRUCTOR ACTUALIZADO: Recibe el servicio de traducción
     public MiDoWidget(List<Insignia> todasLasInsignias,
                       List<JudokaInsignia> misLogros,
                       TraduccionService traduccionService) {
+        this.todasLasInsignias = todasLasInsignias;
+        this.misLogros = misLogros;
         this.traduccionService = traduccionService;
 
         addClassName("card-blanca");
@@ -38,13 +40,21 @@ public class MiDoWidget extends VerticalLayout {
         setSpacing(true);
         setWidthFull();
 
+        refresh(); // Construir UI inicial
+    }
+
+    /**
+     * Reconstruye la interfaz (útil para cambio de idioma)
+     */
+    public void refresh() {
+        removeAll();
+
         // Cabecera
         HorizontalLayout header = new HorizontalLayout();
         header.setAlignItems(Alignment.CENTER);
         Icon doIcon = VaadinIcon.ADJUST.create();
         doIcon.setColor("var(--judo-navy)");
 
-        // Traducción del título del widget
         header.add(doIcon, new H3(traduccionService.get("widget.mido.titulo")));
         add(header);
 
@@ -60,7 +70,6 @@ public class MiDoWidget extends VerticalLayout {
                         (a, b) -> a
                 ));
 
-        // Pasamos las claves de traducción para las columnas
         viasLayout.add(crearColumnaVia(traduccionService.get("widget.mido.shin"),
                 CategoriaInsignia.SHIN, "#E57373", todasLasInsignias, mapaLogros));
 
@@ -73,10 +82,12 @@ public class MiDoWidget extends VerticalLayout {
         add(viasLayout);
     }
 
-    // ... (crearColumnaVia sigue igual, solo recibe el título ya traducido) ...
+    // ... (Resto de métodos privados: crearColumnaVia, crearMedallaInteractiva, mostrarDetalleInsignia) ...
+    // Copia los métodos privados EXACTAMENTE como estaban en la versión anterior.
+    // Asegúrate de usar traduccionService.get() dentro de mostrarDetalleInsignia para los textos del diálogo.
+
     private VerticalLayout crearColumnaVia(String titulo, CategoriaInsignia cat, String color,
                                            List<Insignia> todas, Map<Long, JudokaInsignia> mapaLogros) {
-        // ... código de layout igual ...
         VerticalLayout col = new VerticalLayout();
         col.setPadding(false);
         col.setSpacing(true);
@@ -96,7 +107,7 @@ public class MiDoWidget extends VerticalLayout {
                 .collect(Collectors.toList());
 
         for (Insignia ins : insigniasDeCategoria) {
-            JudokaInsignia logroObtenido = mapaLogros.get(ins.getIdInsignia()); // Asumiendo getIdInsignia()
+            JudokaInsignia logroObtenido = mapaLogros.get(ins.getIdInsignia());
             grid.add(crearMedallaInteractiva(ins, logroObtenido, color));
         }
         col.add(grid);
@@ -106,15 +117,10 @@ public class MiDoWidget extends VerticalLayout {
     private Div crearMedallaInteractiva(Insignia ins, JudokaInsignia logro, String colorTema) {
         boolean desbloqueada = (logro != null);
         Div medalla = new Div();
-        // ... (Estilos visuales iguales) ...
         medalla.getStyle().set("display", "flex").set("align-items", "center").set("justify-content", "center").set("width", "45px").set("height", "45px").set("border-radius", "50%").set("background-color", desbloqueada ? colorTema : "#f5f5f5").set("color", desbloqueada ? "white" : "#bdbdbd").set("cursor", "pointer").set("transition", "all 0.3s ease").set("box-shadow", desbloqueada ? "0 4px 6px rgba(0,0,0,0.1)" : "none");
 
-        // --- TRADUCCIÓN DEL NOMBRE ---
-        // Clave: badge.[clave_insignia].nombre -> ej: badge.shin_inicio.nombre
         String claveNombre = "badge." + ins.getClave().toLowerCase() + ".nombre";
         String nombreTraducido = traduccionService.get(claveNombre);
-
-        // Si la traducción falla y devuelve la clave formateada, usamos el nombre de la BD como fallback
         if (nombreTraducido.contains(claveNombre)) nombreTraducido = ins.getNombre();
 
         medalla.setTitle(nombreTraducido);
@@ -132,14 +138,12 @@ public class MiDoWidget extends VerticalLayout {
         boolean desbloqueada = (logro != null);
         Dialog dialog = new Dialog();
 
-        // Claves i18n dinámicas
         String claveNombre = "badge." + ins.getClave().toLowerCase() + ".nombre";
         String claveDesc = "badge." + ins.getClave().toLowerCase() + ".desc";
 
         String nombre = traduccionService.get(claveNombre);
         String descripcion = traduccionService.get(claveDesc);
 
-        // Título del diálogo
         dialog.setHeaderTitle(desbloqueada ?
                 traduccionService.get("badge.estado.desbloqueada") :
                 traduccionService.get("badge.estado.bloqueada"));

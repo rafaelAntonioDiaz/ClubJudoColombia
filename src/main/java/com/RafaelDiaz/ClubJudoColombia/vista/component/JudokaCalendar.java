@@ -47,7 +47,7 @@ public class JudokaCalendar extends Div {
         addClassName("judoka-calendar-container");
         buildHeader();
         buildCalendarGrid();
-        refreshCalendar();
+        refresh();
     }
 
     private void buildHeader() {
@@ -57,7 +57,7 @@ public class JudokaCalendar extends Div {
 
         Button prevBtn = new Button(new Icon(VaadinIcon.CHEVRON_LEFT), e -> {
             currentMonth = currentMonth.minusMonths(1);
-            refreshCalendar();
+            refresh();
         });
         prevBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
@@ -66,7 +66,7 @@ public class JudokaCalendar extends Div {
 
         Button nextBtn = new Button(new Icon(VaadinIcon.CHEVRON_RIGHT), e -> {
             currentMonth = currentMonth.plusMonths(1);
-            refreshCalendar();
+            refresh();
         });
         nextBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
@@ -80,7 +80,7 @@ public class JudokaCalendar extends Div {
         add(calendarGrid);
     }
 
-    private void refreshCalendar() {
+    public void refresh() {
         calendarGrid.removeAll();
 
         // 1. OBTENER IDIOMA DEL USUARIO (Corregido para Java 21)

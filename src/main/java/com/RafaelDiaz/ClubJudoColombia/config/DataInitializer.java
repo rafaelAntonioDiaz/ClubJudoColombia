@@ -100,6 +100,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         // 2. Traducciones
         crearTraduccionesFestivos();
         crearTraduccionesDias();
+        crearTraduccionesDashboard();
 
         // 3. Usuarios
         Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
@@ -131,7 +132,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         generarDatosHistoricosCompletos(judokas);
         crearChatInicial();
         otorgarInsigniasDemo(judokas);
-        crearTraduccionesGamificacion();
+        crearTraduccionesDashboard();
         System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
     }
 
@@ -142,7 +143,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             throw new RuntimeException("ERROR CRÍTICO: Roles no encontrados.");
         }
     }
-
     private void crearTraduccionesDias() {
         if (traduccionRepository.findByClaveAndIdioma("MONDAY", "es").isPresent()) return;
         traduccionRepository.saveAll(List.of(
@@ -155,7 +155,110 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                 new Traduccion("SUNDAY", "es", "Domingo")
         ));
     }
+    private void crearTraduccionesFestivos() {
+        if (traduccionRepository.findByClaveAndIdioma("festivo.navidad", "es").isPresent()) return;
 
+        System.out.println(">>> CARGANDO FESTIVOS...");
+        traduccionRepository.saveAll(List.of(
+                new Traduccion("festivo.ano_nuevo", "es", "Año Nuevo"),
+                new Traduccion("festivo.reyes_magos", "es", "Epifanía del Señor (Reyes Magos)"),
+                new Traduccion("festivo.san_jose", "es", "Día de San José"),
+                new Traduccion("festivo.jueves_santo", "es", "Jueves Santo"),
+                new Traduccion("festivo.viernes_santo", "es", "Viernes Santo"),
+                new Traduccion("festivo.dia_trabajo", "es", "Día del Trabajo"),
+                new Traduccion("festivo.ascension", "es", "Ascensión del Señor"),
+                new Traduccion("festivo.corpus_christi", "es", "Corpus Christi"),
+                new Traduccion("festivo.sagrado_corazon", "es", "Sagrado Corazón de Jesús"),
+                new Traduccion("festivo.san_pedro", "es", "San Pedro y San Pablo"),
+                new Traduccion("festivo.independencia", "es", "Independencia de Colombia"),
+                new Traduccion("festivo.batalla_boyaca", "es", "Batalla de Boyacá"),
+                new Traduccion("festivo.asuncion", "es", "Asunción de la Virgen"),
+                new Traduccion("festivo.dia_raza", "es", "Día de la Raza"),
+                new Traduccion("festivo.todos_santos", "es", "Todos los Santos"),
+                new Traduccion("festivo.independencia_cartagena", "es", "Independencia de Cartagena"),
+                new Traduccion("festivo.inmaculada", "es", "Inmaculada Concepción"),
+                new Traduccion("festivo.navidad", "es", "Navidad")
+        ));
+    }
+    private void crearTraduccionesDashboard() {
+        // Validación para no duplicar datos
+        if (traduccionRepository.findByClaveAndIdioma("dashboard.welcome", "es").isPresent()) return;
+
+        System.out.println(">>> CARGANDO TODAS LAS TRADUCCIONES DEL DASHBOARD (ES/EN)...");
+        List<Traduccion> lista = new ArrayList<>();
+
+        // --- 1. DASHBOARD GENERAL (Bienvenida y Botones) ---
+        agregarTraduccion(lista, "dashboard.welcome", "Hola, {0}", "Hello, {0}");
+        agregarTraduccion(lista, "dashboard.btn.tareas", "Ir a Mis Tareas", "Go to My Tasks");
+
+        // --- 2. KPIs (Indicadores Superiores) ---
+        agregarTraduccion(lista, "kpi.poder_combate", "Poder de Combate", "Combat Power");
+        agregarTraduccion(lista, "kpi.planes_activos", "Planes Activos", "Active Plans");
+        agregarTraduccion(lista, "kpi.tareas_hoy", "Tareas Hoy", "Tasks Today");
+        agregarTraduccion(lista, "kpi.proxima_eval", "Próxima Eval.", "Next Eval.");
+        agregarTraduccion(lista, "kpi.hoy", "¡Hoy!", "Today!");
+        agregarTraduccion(lista, "kpi.dias", "días", "days");
+
+        // --- 3. GRÁFICOS Y LEYENDAS ---
+        agregarTraduccion(lista, "chart.radar.serie", "Nivel Actual", "Current Level");
+        agregarTraduccion(lista, "legend.progreso", "Mi Progreso", "My Progress");
+        agregarTraduccion(lista, "legend.meta", "Meta a Batir", "Goal");
+        agregarTraduccion(lista, "chart.sin_datos", "Sin datos", "No Data");
+
+        // --- 4. ESTADOS VACÍOS ---
+        agregarTraduccion(lista, "empty.title", "Aún no tienes estadísticas", "No stats yet");
+        agregarTraduccion(lista, "empty.desc", "Completa tu primera evaluación para desbloquear tu Perfil de Combate.", "Complete your first evaluation to unlock your Combat Profile.");
+
+        // --- 5. GAMIFICACIÓN: WIDGET 'MI DO' ---
+        // Títulos de Columnas
+        agregarTraduccion(lista, "widget.mido.titulo", "Mi Do (El Camino)", "My Do (The Way)");
+        agregarTraduccion(lista, "widget.mido.shin", "SHIN (Mente)", "SHIN (Mind)");
+        agregarTraduccion(lista, "widget.mido.gi", "GI (Técnica)", "GI (Technique)");
+        agregarTraduccion(lista, "widget.mido.tai", "TAI (Cuerpo)", "TAI (Body)");
+
+        // Estados del Diálogo de Insignia
+        agregarTraduccion(lista, "badge.estado.desbloqueada", "¡Insignia Desbloqueada!", "Badge Unlocked!");
+        agregarTraduccion(lista, "badge.estado.bloqueada", "Insignia Bloqueada", "Badge Locked");
+        agregarTraduccion(lista, "badge.label.obtenida", "Obtenida el", "Obtained on");
+        agregarTraduccion(lista, "badge.label.pendiente", "Aún no la tienes. ¡Sigue entrenando!", "Not earned yet. Keep training!");
+        agregarTraduccion(lista, "btn.cerrar", "Entendido", "Got it");
+
+        // --- 6. INSIGNIAS ESPECÍFICAS (SHIN - GI - TAI) ---
+        // SHIN (Mente)
+        agregarTraduccion(lista, "badge.shin_inicio.nombre", "Primer Paso", "First Step");
+        agregarTraduccion(lista, "badge.shin_inicio.desc", "Completaste tu primer entrenamiento. El viaje comienza.", "You completed your first training. The journey begins.");
+
+        agregarTraduccion(lista, "badge.shin_constancia.nombre", "Espíritu Indomable", "Indomitable Spirit");
+        agregarTraduccion(lista, "badge.shin_constancia.desc", "10 Asistencias consecutivas sin faltar.", "10 consecutive attendances without missing.");
+
+        agregarTraduccion(lista, "badge.shin_compromiso.nombre", "Guardián del Dojo", "Dojo Guardian");
+        agregarTraduccion(lista, "badge.shin_compromiso.desc", "50 Asistencias totales acumuladas.", "50 total accumulated attendances.");
+
+        // GI (Técnica)
+        agregarTraduccion(lista, "badge.gi_cinturon.nombre", "Nuevo Horizonte", "New Horizon");
+        agregarTraduccion(lista, "badge.gi_cinturon.desc", "Has ascendido de grado (Cinturón).", "You have advanced in rank (Belt).");
+
+        agregarTraduccion(lista, "badge.gi_tecnico.nombre", "Técnica Pura", "Pure Technique");
+        agregarTraduccion(lista, "badge.gi_tecnico.desc", "Evaluación técnica sobresaliente.", "Outstanding technical evaluation.");
+
+        // TAI (Cuerpo)
+        agregarTraduccion(lista, "badge.tai_hercules.nombre", "Hércules", "Hercules");
+        agregarTraduccion(lista, "badge.tai_hercules.desc", "Superaste 40 flexiones en un minuto.", "You exceeded 40 push-ups in a minute.");
+
+        agregarTraduccion(lista, "badge.tai_velocidad.nombre", "Relámpago", "Lightning");
+        agregarTraduccion(lista, "badge.tai_velocidad.desc", "Corriste 20m en menos de 3.5 segundos.", "You ran 20m in less than 3.5 seconds.");
+
+        agregarTraduccion(lista, "badge.tai_resistencia.nombre", "Pulmones de Acero", "Steel Lungs");
+        agregarTraduccion(lista, "badge.tai_resistencia.desc", "Índice SJFT Excelente.", "Excellent SJFT Index.");
+
+        traduccionRepository.saveAll(lista);
+    }
+
+    // --- MÉTODO HELPER (Asegúrate de tener este también en la clase) ---
+    private void agregarTraduccion(List<Traduccion> lista, String clave, String textoEs, String textoEn) {
+        lista.add(new Traduccion(clave, "es", textoEs));
+        lista.add(new Traduccion(clave, "en", textoEn));
+    }
     private Sensei crearSensei(String user, String nom, String ape, String pass, GradoCinturon grado) {
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
@@ -169,7 +272,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         s.setAnosPractica(25);
         return senseiRepository.save(s);
     }
-
     private List<Judoka> crearJudokas() {
         List<Judoka> lista = new ArrayList<>();
         lista.add(crearJudokaIndividual("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López"));
@@ -178,7 +280,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null));
         return judokaRepository.saveAll(lista);
     }
-
     private Judoka crearJudokaIndividual(String user, String nom, String ape, int anio, int mes, int dia, Sexo sexo, GradoCinturon grado, boolean competidor, String acudiente) {
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
@@ -197,7 +298,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         j.setEstatura(sexo == Sexo.MASCULINO ? 175.0 : 160.0);
         return j; // El usuario ya se guarda por cascada/servicio
     }
-
     private void crearGruposYAsignar(List<Judoka> judokas) {
         GrupoEntrenamiento cadetes = new GrupoEntrenamiento();
         cadetes.setNombre("Judokas Cadetes");
@@ -292,7 +392,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         plan.addEjercicio(ej);
         return planService.guardarPlan(plan);
     }
-
     private void programarSesiones(Sensei sensei) {
         GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
         LocalDateTime base = LocalDateTime.now().plusDays(1).withHour(18).withMinute(0);
@@ -457,7 +556,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         resultadoPruebaRepository.saveAll(resultadosParaGuardar);
         System.out.println(">>> HISTORIAL GENERADO CORRECTAMENTE (" + resultadosParaGuardar.size() + " registros).");
     }
-
     // Helper para dar valores que tengan sentido en la gráfica
     private double calcularValorBaseLogico(String clave) {
         if (clave.contains("salto")) return 160.0; // cm
@@ -505,31 +603,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         chatService.enviarMensaje(kiuzo, "Aquí publicaremos anuncios importantes sobre los torneos.");
         chatService.enviarMensaje(maria, "¡Entendido Sensei! ¿A qué hora es el pesaje el sábado?");
     }
-    private void crearTraduccionesFestivos() {
-        if (traduccionRepository.findByClaveAndIdioma("festivo.navidad", "es").isPresent()) return;
-
-        System.out.println(">>> CARGANDO FESTIVOS...");
-        traduccionRepository.saveAll(List.of(
-                new Traduccion("festivo.ano_nuevo", "es", "Año Nuevo"),
-                new Traduccion("festivo.reyes_magos", "es", "Epifanía del Señor (Reyes Magos)"),
-                new Traduccion("festivo.san_jose", "es", "Día de San José"),
-                new Traduccion("festivo.jueves_santo", "es", "Jueves Santo"),
-                new Traduccion("festivo.viernes_santo", "es", "Viernes Santo"),
-                new Traduccion("festivo.dia_trabajo", "es", "Día del Trabajo"),
-                new Traduccion("festivo.ascension", "es", "Ascensión del Señor"),
-                new Traduccion("festivo.corpus_christi", "es", "Corpus Christi"),
-                new Traduccion("festivo.sagrado_corazon", "es", "Sagrado Corazón de Jesús"),
-                new Traduccion("festivo.san_pedro", "es", "San Pedro y San Pablo"),
-                new Traduccion("festivo.independencia", "es", "Independencia de Colombia"),
-                new Traduccion("festivo.batalla_boyaca", "es", "Batalla de Boyacá"),
-                new Traduccion("festivo.asuncion", "es", "Asunción de la Virgen"),
-                new Traduccion("festivo.dia_raza", "es", "Día de la Raza"),
-                new Traduccion("festivo.todos_santos", "es", "Todos los Santos"),
-                new Traduccion("festivo.independencia_cartagena", "es", "Independencia de Cartagena"),
-                new Traduccion("festivo.inmaculada", "es", "Inmaculada Concepción"),
-                new Traduccion("festivo.navidad", "es", "Navidad")
-        ));
-    }
     private void otorgarInsigniasDemo(List<Judoka> judokas) {
         // 1. Buscar a María
         Judoka maria = judokas.stream()
@@ -554,8 +627,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             if (insignia != null) {
                 // Creamos la relación (El logro)
                 JudokaInsignia logro = new JudokaInsignia();
-                logro.setJudoka(maria);
                 logro.setInsignia(insignia);
+                logro.setJudoka(maria);
+
                 logro.setFechaObtencion(LocalDateTime.now().minusDays(new Random().nextInt(30))); // Ganada hace días
 
                 judokaInsigniaRepository.save(logro);
@@ -563,54 +637,5 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             }
         }
     }
-    private void crearTraduccionesGamificacion() {
-        if (traduccionRepository.findByClaveAndIdioma("widget.mido.titulo", "es").isPresent()) return;
 
-        System.out.println(">>> CARGANDO TRADUCCIONES DE GAMIFICACIÓN...");
-        List<Traduccion> lista = new ArrayList<>();
-
-        // Títulos del Widget
-        lista.add(new Traduccion("widget.mido.titulo", "es", "Mi Do (El Camino)"));
-        lista.add(new Traduccion("widget.mido.shin", "es", "SHIN (Mente)"));
-        lista.add(new Traduccion("widget.mido.gi", "es", "GI (Técnica)"));
-        lista.add(new Traduccion("widget.mido.tai", "es", "TAI (Cuerpo)"));
-
-        // Estados del Dialog
-        lista.add(new Traduccion("badge.estado.desbloqueada", "es", "¡Insignia Desbloqueada!"));
-        lista.add(new Traduccion("badge.estado.bloqueada", "es", "Insignia Bloqueada"));
-        lista.add(new Traduccion("badge.label.obtenida", "es", "Obtenida el"));
-        lista.add(new Traduccion("badge.label.pendiente", "es", "Aún no la tienes. ¡Sigue entrenando!"));
-        lista.add(new Traduccion("btn.cerrar", "es", "Entendido"));
-
-        // --- INSIGNIAS (Claves derivadas de: "badge." + CLAVE_SQL.lower + ".nombre/desc") ---
-
-        // SHIN
-        lista.add(new Traduccion("badge.shin_inicio.nombre", "es", "Primer Paso"));
-        lista.add(new Traduccion("badge.shin_inicio.desc", "es", "Completaste tu primer entrenamiento. El viaje comienza."));
-
-        lista.add(new Traduccion("badge.shin_constancia.nombre", "es", "Espíritu Indomable"));
-        lista.add(new Traduccion("badge.shin_constancia.desc", "es", "10 Asistencias consecutivas sin faltar."));
-
-        lista.add(new Traduccion("badge.shin_compromiso.nombre", "es", "Guardián del Dojo"));
-        lista.add(new Traduccion("badge.shin_compromiso.desc", "es", "50 Asistencias totales acumuladas."));
-
-        // GI
-        lista.add(new Traduccion("badge.gi_cinturon.nombre", "es", "Nuevo Horizonte"));
-        lista.add(new Traduccion("badge.gi_cinturon.desc", "es", "Has ascendido de grado (Cinturón)."));
-
-        lista.add(new Traduccion("badge.gi_tecnico.nombre", "es", "Técnica Pura"));
-        lista.add(new Traduccion("badge.gi_tecnico.desc", "es", "Evaluación técnica sobresaliente."));
-
-        // TAI
-        lista.add(new Traduccion("badge.tai_hercules.nombre", "es", "Hércules"));
-        lista.add(new Traduccion("badge.tai_hercules.desc", "es", "Superaste 40 flexiones en un minuto."));
-
-        lista.add(new Traduccion("badge.tai_velocidad.nombre", "es", "Relámpago"));
-        lista.add(new Traduccion("badge.tai_velocidad.desc", "es", "Corriste 20m en menos de 3.5 segundos."));
-
-        lista.add(new Traduccion("badge.tai_resistencia.nombre", "es", "Pulmones de Acero"));
-        lista.add(new Traduccion("badge.tai_resistencia.desc", "es", "Índice SJFT Excelente."));
-
-        traduccionRepository.saveAll(lista);
-    }
 }
