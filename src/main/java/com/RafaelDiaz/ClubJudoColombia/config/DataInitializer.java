@@ -37,7 +37,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private final InsigniaRepository insigniaRepository;      // <--- NUEVO
     private final JudokaInsigniaRepository judokaInsigniaRepository;
     private final EjercicioPlanificadoRepository ejercicioRepository;
-    private MensajeChatRepository mensajeChatRepository;
+    private final MensajeChatRepository mensajeChatRepository;
+    private final ParticipacionCompetenciaRepository palmaresRepo;
     private ChatService chatService;
 
     public DataInitializer(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository, UsuarioService usuarioService,
@@ -58,7 +59,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                            MensajeChatRepository mensajeChatRepository,
                            ChatService chatService,
                            JudokaInsigniaRepository judokaInsigniaRepository,
-                           InsigniaRepository insigniaRepository) {
+                           InsigniaRepository insigniaRepository, ParticipacionCompetenciaRepository palmaresRepo) {
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.usuarioService = usuarioService;
@@ -80,6 +81,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         this.chatService = chatService;
         this.insigniaRepository = insigniaRepository;
         this.judokaInsigniaRepository = judokaInsigniaRepository;
+        this.palmaresRepo = palmaresRepo;
     }
 
     // 2. Método run transaccional: Mantiene la sesión abierta todo el tiempo
@@ -140,6 +142,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearChatInicial();
         otorgarInsigniasDemo(judokas);
         crearTraduccionesDashboard();
+        crearTraduccionesComunidad();
+        crearBibliotecaSabiduria();
         judokas = judokaRepository.findAll();
 
         // 3. Generar Historia (Julián y actualización de María)
@@ -149,7 +153,103 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
     }
 
-    // --- MÉTODOS PRIVADOS (Igual que antes, con pequeñas mejoras de seguridad) ---
+    private void crearBibliotecaSabiduria() {
+        if (traduccionRepository.findByClaveAndIdioma("sabiduria.suntzu.1", "es").isPresent()) return;
+
+        System.out.println(">>> CARGANDO BIBLIOTECA DE SABIDURÍA (ES/EN)...");
+        List<Traduccion> lista = new ArrayList<>();
+
+        // Textos de la UI del Perfil
+        agregarTraduccion(lista, "perfil.titulo", "Mi Santuario", "My Sanctuary");
+        agregarTraduccion(lista, "perfil.notas.titulo", "Bitácora de Reflexión", "Reflection Journal");
+        agregarTraduccion(lista, "perfil.notas.placeholder", "Escribe aquí tus pensamientos, metas o correcciones...", "Write your thoughts, goals, or corrections here...");
+        agregarTraduccion(lista, "perfil.btn.guardar", "Guardar Reflexión", "Save Reflection");
+        agregarTraduccion(lista, "perfil.msg.guardado", "Reflexión guardada en tu mente.", "Reflection saved in your mind.");
+
+        // --- SUN TZU (El Estratega del Tatami) ---
+        agregarTraduccion(lista, "sabiduria.suntzu.1",
+                "Los competidores victoriosos ganan primero en su tatami y luego van a la competencia; los derrotados van a la competencia primero y luego buscan cómo ganar.",
+                "Victorious competitors win first on their tatami and then go to competition; the defeated go to competition first and then seek how to win.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.2",
+                "La excelencia suprema consiste en romper el equilibrio del oponente sin usar la fuerza bruta.",
+                "Supreme excellence consists in breaking the opponent's balance without using brute force.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.3",
+                "En medio del caos del combate, siempre puedes marcar Ippon.",
+                "In the midst of combat chaos, you can always score Ippon.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.4",
+                "Conoce a tu oponente y conócete a ti mismo; en cien combates, nunca perderás.",
+                "Know your opponent and know yourself; in a hundred battles, you will never lose.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.5",
+                "La invencibilidad reside en la defensa; la posibilidad de ganar, en el ataque.",
+                "Invincibility lies in the defense; the possibility of victory, in the attack.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.6",
+                "El agua determina su curso según el suelo; el Judoka consigue la victoria adaptándose a su oponente.",
+                "Water determines its course according to the ground; the Judoka achieves victory by adapting to their opponent.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.7",
+                "Aparenta debilidad cuando seas fuerte, y fuerza cuando estés cansado.",
+                "Appear weak when you are strong, and strong when you are tired.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.8",
+                "La rapidez es la esencia del Judo.",
+                "Speed is the essence of Judo.");
+
+        agregarTraduccion(lista, "sabiduria.suntzu.9",
+                "La invencibilidad depende de mí, la derrota de mi oponente.",
+                "Invincibility depends on me, the opponent's defeat depends on them.");
+
+        // --- MIYAMOTO MUSASHI (Mentalidad de Acero) ---
+        agregarTraduccion(lista, "sabiduria.musashi.1",
+                "No hagas ningún movimiento en el tatami que no sea de utilidad.",
+                "Do not make any movement on the tatami that is not useful.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.2",
+                "Percibe la intención de tu oponente antes de que se mueva.",
+                "Perceive your opponent's intention before they move.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.3",
+                "Hoy es la victoria sobre tu yo de ayer; mañana será tu victoria en el campeonato.",
+                "Today is victory over your self of yesterday; tomorrow is your victory in the championship.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.4",
+                "Debes entender que hay más de un camino para lograr el Ippon.",
+                "You must understand that there is more than one way to achieve Ippon.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.5",
+                "En el combate, mira lo distante como si estuviera cerca y lo cercano con perspectiva.",
+                "In combat, look at distant things as if they were close and close things with perspective.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.6",
+                "El ritmo existe en todo. Si no entiendes el ritmo del combate, serás proyectado.",
+                "Rhythm exists in everything. If you don't understand the combat rhythm, you will be thrown.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.7",
+                "Si conoces el Camino ampliamente, verás el Judo en todas las cosas.",
+                "If you know the Way broadly, you will see Judo in everything.");
+
+        agregarTraduccion(lista, "sabiduria.musashi.8",
+                "La verdadera técnica significa practicar de tal forma que sea útil aún en la calle.",
+                "True technique means practicing in such a way that it is useful even on the street.");
+
+        // --- JIGORO KANO (Principios) ---
+        agregarTraduccion(lista, "sabiduria.kano.1", "El Judo no es solo deporte, es el principio básico de la conducta humana.", "Judo is not just a sport, it is the basic principle of human conduct.");
+        agregarTraduccion(lista, "sabiduria.kano.2", "Camina por un solo camino. No te vuelvas engreído por el Oro, ni roto por la derrota.", "Walk a single path. Do not become conceited by Gold, nor broken by defeat.");
+        agregarTraduccion(lista, "sabiduria.kano.3", "Lo importante no es ser mejor que otros competidores, sino ser mejor que ayer.", "The important thing is not to be better than other competitors, but to be better than yesterday.");
+        agregarTraduccion(lista, "sabiduria.kano.4", "Máxima eficiencia con el mínimo esfuerzo.", "Maximum efficiency with minimum effort.");
+        agregarTraduccion(lista, "sabiduria.kano.5", "Prosperidad y beneficio mutuo dentro y fuera del tatami.", "Mutual welfare and benefit inside and outside the tatami.");
+        agregarTraduccion(lista, "sabiduria.kano.6", "Ser proyectado es temporal; rendirse es lo que lo hace permanente.", "Being thrown is temporary; giving up is what makes it permanent.");
+        agregarTraduccion(lista, "sabiduria.kano.7", "Antes y después del Randori, inclínate ante tu compañero.", "Before and after Randori, bow to your partner.");
+        agregarTraduccion(lista, "sabiduria.kano.8", "La delicadeza controla la fuerza. Cede para vencer.", "Gentleness controls strength. Yield to win.");
+
+        traduccionRepository.saveAll(lista);
+    }
+
+    // --- MÉTODOS PRIVADOS  ---
 
     private void validarRolesExistentes() {
         if (rolRepository.findByNombre("ROLE_SENSEI").isEmpty()) {
@@ -766,6 +866,73 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             logro.setFechaObtencion(LocalDateTime.now().minusDays(1));
             judokaInsigniaRepository.save(logro);
         });
+// --- CARGAR PALMARES ---
+        // --- NUEVO: CARGAR PALMARÉS ---
+
+        // 1. Palmarés de María (Experimentada)
+        if (maria != null && palmaresRepo.findByJudokaOrderByFechaDesc(maria).isEmpty()) {
+            System.out.println(">>> GENERANDO PALMARÉS PARA MARÍA...");
+
+            palmaresRepo.saveAll(List.of(
+                    new ParticipacionCompetencia(maria, "Campeonato Nacional Mayores", "Bogotá",
+                            LocalDate.now().minusMonths(2), NivelCompetencia.NACIONAL, ResultadoCompetencia.ORO,
+                            "https://www.youtube.com/watch?v=dQw4w9WgXcQ"), // Link demo (cambiar por real de Judo)
+
+                    new ParticipacionCompetencia(maria, "Departamental Open Valle", "Cali",
+                            LocalDate.now().minusMonths(5), NivelCompetencia.DEPARTAMENTAL, ResultadoCompetencia.PLATA,
+                            null),
+
+                    new ParticipacionCompetencia(maria, "Copa Internacional Andina", "Quito",
+                            LocalDate.now().minusYears(1), NivelCompetencia.INTERNACIONAL, ResultadoCompetencia.QUINTO,
+                            "https://www.youtube.com/watch?v=VIDEO_ID_HERE")
+            ));
+        }
+
+        // 2. Palmarés de Julián (Novato)
+        if (julian != null && palmaresRepo.findByJudokaOrderByFechaDesc(julian).isEmpty()) {
+            System.out.println(">>> GENERANDO PALMARÉS PARA JULIÁN...");
+
+            palmaresRepo.save(new ParticipacionCompetencia(julian, "Festival Infantil Local", "Bucaramanga",
+                    LocalDate.now().minusWeeks(3), NivelCompetencia.LOCAL, ResultadoCompetencia.BRONCE,
+                    "https://www.youtube.com/watch?v=KID_JUDO_VIDEO"));
+        }
 
         System.out.println("   -> Julián Andrés creado (User: julian.bohorquez / Pass: 1234).");
-    }}
+    }
+    private void crearTraduccionesComunidad() {
+        // Validación básica
+        if (traduccionRepository.findByClaveAndIdioma("comunidad.tab.muro", "es").isPresent()) return;
+
+        System.out.println(">>> CARGANDO TRADUCCIONES DE COMUNIDAD...");
+        List<Traduccion> lista = new ArrayList<>();
+
+        // --- PESTAÑAS Y TÍTULOS ---
+        agregarTraduccion(lista, "comunidad.tab.muro", "Muro del Dojo", "Dojo Wall");
+        agregarTraduccion(lista, "comunidad.tab.chat", "Chat Grupal", "Group Chat");
+
+        // --- CREAR PUBLICACIÓN ---
+        agregarTraduccion(lista, "comunidad.post.placeholder", "¿Qué entrenaste hoy? Comparte tu progreso...", "What did you train today? Share your progress...");
+        agregarTraduccion(lista, "comunidad.btn.subir_foto", "Subir Foto/Video", "Upload Photo/Video");
+        agregarTraduccion(lista, "comunidad.label.drop", "Arrastra archivos aquí...", "Drag files here...");
+        agregarTraduccion(lista, "comunidad.btn.publicar", "Publicar", "Post");
+        agregarTraduccion(lista, "comunidad.msg.publicado", "¡Publicado en el muro!", "Posted on the wall!");
+        agregarTraduccion(lista, "comunidad.msg.archivo_listo", "Archivo listo", "File ready");
+        agregarTraduccion(lista, "comunidad.warn.empty_post", "Escribe algo o sube una foto", "Write something or upload a photo");
+
+        // --- TARJETAS Y COMENTARIOS ---
+        agregarTraduccion(lista, "comunidad.btn.comentar", "Comentar", "Comment");
+        agregarTraduccion(lista, "comunidad.comment.placeholder", "Escribe una respuesta...", "Write a reply...");
+        agregarTraduccion(lista, "comunidad.msg.comment_sent", "Comentario enviado", "Comment sent");
+        agregarTraduccion(lista, "comunidad.label.image_of", "Imagen de", "Image of");
+
+        // --- CHAT ---
+        agregarTraduccion(lista, "comunidad.chat.escribir", "Escribe un mensaje...", "Type a message...");
+        agregarTraduccion(lista, "comunidad.chat.enviar", "Enviar", "Send");
+
+        // --- ERRORES GENÉRICOS (Opcional, reutilizable) ---
+        agregarTraduccion(lista, "error.generic", "Ha ocurrido un error", "An error occurred");
+        agregarTraduccion(lista, "error.upload", "Error al subir archivo", "Error uploading file");
+
+        traduccionRepository.saveAll(lista);
+    }
+}

@@ -6,37 +6,43 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.JudokaInsignia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.InsigniaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaInsigniaRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaDashboardService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
-import com.RafaelDiaz.ClubJudoColombia.vista.component.JudokaCalendar;
-import com.RafaelDiaz.ClubJudoColombia.vista.component.KpiCard;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.AgendaDialog;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.CombatRadarWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.MiDoWidget;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.PalmaresDialog;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
 import com.github.appreciated.apexcharts.ApexCharts;
 import com.github.appreciated.apexcharts.ApexChartsBuilder;
+import com.github.appreciated.apexcharts.config.Chart;
 import com.github.appreciated.apexcharts.config.Legend;
-import com.github.appreciated.apexcharts.config.builder.*;
+import com.github.appreciated.apexcharts.config.Stroke;
+import com.github.appreciated.apexcharts.config.TitleSubtitle;
+import com.github.appreciated.apexcharts.config.XAxis;
+import com.github.appreciated.apexcharts.config.chart.Toolbar;
 import com.github.appreciated.apexcharts.config.chart.Type;
-import com.github.appreciated.apexcharts.config.chart.builder.ZoomBuilder;
-import com.github.appreciated.apexcharts.config.plotoptions.builder.RadarBuilder;
-import com.github.appreciated.apexcharts.config.plotoptions.radar.builder.PolygonsBuilder;
+import com.github.appreciated.apexcharts.config.chart.Zoom;
+import com.github.appreciated.apexcharts.config.legend.Position;
 import com.github.appreciated.apexcharts.config.stroke.Curve;
-import com.github.appreciated.apexcharts.config.xaxis.XAxisType;
-import com.github.appreciated.apexcharts.config.xaxis.builder.LabelsBuilder;
-import com.github.appreciated.apexcharts.config.xaxis.labels.builder.StyleBuilder;
+import com.github.appreciated.apexcharts.config.subtitle.Align;
 import com.github.appreciated.apexcharts.helper.Series;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.CssImport;
-import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
@@ -52,48 +58,43 @@ import java.util.stream.Collectors;
 
 @Route("dashboard-judoka")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
-@PageTitle("Dashboard | Club Judo Colombia")
+@PageTitle("Combat Profile | Club Judo Colombia")
 @CssImport("./styles/dashboard-judoka.css")
 public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObserver {
 
+    private final JudokaDashboardService dashboardService;
     private final SecurityService securityService;
-    private final ResultadoPruebaService resultadoPruebaService;
     private final TraduccionService traduccionService;
-    private final PruebaEstandarRepository pruebaEstandarRepository;
     private final SesionService sesionService;
     private final InsigniaRepository insigniaRepository;
     private final JudokaInsigniaRepository judokaInsigniaRepository;
 
     private Judoka judokaActual;
 
-    private H2 tituloBienvenida;
-    private Button btnTareas;
-    private JudokaCalendar calendario;
-    private MiDoWidget insigniasWidget;
-    private Div kpiContainer;
-    private Div chartsGrid;
+    private H2 tituloNombre;
+    private Button btnAgenda;
+    private Button btnTrofeos;
+    private CombatRadarWidget radarWidget;
+    private Div detailChartContainer;
 
     @Autowired
-    public JudokaDashboardView(SecurityService securityService,
-                               ResultadoPruebaService resultadoPruebaService,
+    public JudokaDashboardView(JudokaDashboardService dashboardService,
+                               SecurityService securityService,
                                TraduccionService traduccionService,
-                               PruebaEstandarRepository pruebaEstandarRepository,
-                               AccessAnnotationChecker accessChecker,
                                SesionService sesionService,
+                               AccessAnnotationChecker accessChecker,
                                InsigniaRepository insigniaRepository,
                                JudokaInsigniaRepository judokaInsigniaRepository) {
         super(securityService, accessChecker);
+        this.dashboardService = dashboardService;
         this.securityService = securityService;
-        this.resultadoPruebaService = resultadoPruebaService;
         this.traduccionService = traduccionService;
-        this.pruebaEstandarRepository = pruebaEstandarRepository;
         this.sesionService = sesionService;
         this.insigniaRepository = insigniaRepository;
         this.judokaInsigniaRepository = judokaInsigniaRepository;
 
         initJudoka();
-        buildDashboard();
-        cargarDatos();
+        buildModernDashboard();
     }
 
     private void initJudoka() {
@@ -101,237 +102,276 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                 .orElseThrow(() -> new RuntimeException("Error: Judoka no autenticado."));
     }
 
-    private void buildDashboard() {
-        Div mainContent = new Div();
-        mainContent.addClassName("judoka-dashboard-content");
+    private void buildModernDashboard() {
+        VerticalLayout mainLayout = new VerticalLayout();
+        mainLayout.addClassName("judoka-dashboard-content");
+        mainLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+        mainLayout.setMaxWidth("800px");
+        mainLayout.getStyle().set("margin", "0 auto");
 
-        tituloBienvenida = new H2();
-        tituloBienvenida.addClassName("dashboard-page-title");
+        tituloNombre = new H2();
+        tituloNombre.getStyle().set("margin", "0").set("color", "var(--lumo-header-text-color)");
 
-        btnTareas = new Button(new Icon(VaadinIcon.ARROW_RIGHT));
-        btnTareas.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        btnTareas.addClickListener(e -> UI.getCurrent().navigate("mis-planes"));
+        btnTrofeos = new Button(new Icon(VaadinIcon.TROPHY));
+        btnTrofeos.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_LARGE);
+        btnTrofeos.getStyle().set("color", "#F1C40F");
+        btnTrofeos.addClickListener(e -> abrirDialogoTrofeos());
 
-        Div headerWrapper = new Div(tituloBienvenida, btnTareas);
-        headerWrapper.getStyle().set("display", "flex");
-        headerWrapper.getStyle().set("justify-content", "space-between");
-        headerWrapper.getStyle().set("align-items", "center");
-        headerWrapper.getStyle().set("flex-wrap", "wrap");
-        headerWrapper.getStyle().set("gap", "1rem");
-        headerWrapper.getStyle().set("margin-bottom", "1.5rem");
+        btnAgenda = new Button(new Icon(VaadinIcon.CALENDAR_CLOCK));
+        btnAgenda.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        btnAgenda.addClickListener(
+                e -> new AgendaDialog(dashboardService,
+                        sesionService, traduccionService, judokaActual).open());
+        Button btnPalmares = new Button(new Icon(VaadinIcon.MEDAL));
+        btnPalmares.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_LARGE);
+        btnPalmares.getStyle().set("color", "#2ECC71"); // Verde esmeralda o el color que prefieras
+        btnPalmares.addClickListener(e -> new PalmaresDialog(dashboardService, traduccionService, judokaActual).open());
 
-        calendario = new JudokaCalendar(sesionService, traduccionService, judokaActual);
+        HorizontalLayout header = new HorizontalLayout(tituloNombre, btnPalmares, btnTrofeos, btnAgenda); // Añadido btnPalmares
+        header.setWidthFull();
+        header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        header.setAlignItems(FlexComponent.Alignment.CENTER);
 
-        List<Insignia> todasLasInsignias = insigniaRepository.findAll();
-        List<JudokaInsignia> misLogros = judokaInsigniaRepository.findByJudoka(judokaActual);
-        insigniasWidget = new MiDoWidget(todasLasInsignias, misLogros, traduccionService);
+        radarWidget = new CombatRadarWidget();
 
-        kpiContainer = new Div();
-        kpiContainer.addClassName("dashboard-kpis");
+        FlexLayout chipsLayout = new FlexLayout();
+        chipsLayout.setFlexWrap(FlexLayout.FlexWrap.WRAP);
+        chipsLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+        chipsLayout.getStyle().set("gap", "10px").set("margin-top", "20px");
 
-        chartsGrid = new Div();
-        chartsGrid.addClassName("dashboard-charts");
+        chipsLayout.add(crearChipFiltro("Fuerza", "ejercicio.abdominales_1min.nombre"));
+        chipsLayout.add(crearChipFiltro("Velocidad", "ejercicio.carrera_20m.nombre"));
+        chipsLayout.add(crearChipFiltro("Resistencia Especial", "ejercicio.sjft.nombre"));
+        chipsLayout.add(crearChipFiltro("Agilidad", "ejercicio.agilidad_4x4.nombre"));
+        chipsLayout.add(crearChipFiltro("Potencia", "ejercicio.salto_horizontal_proesp.nombre"));
 
-        mainContent.add(headerWrapper, kpiContainer, calendario, insigniasWidget, chartsGrid);
-        setContent(mainContent);
+        detailChartContainer = new Div();
+        detailChartContainer.setWidthFull();
+        detailChartContainer.getStyle()
+                .set("background", "var(--lumo-base-color)")
+                .set("border-radius", "16px")
+                .set("padding", "20px")
+                .set("box-shadow", "0 4px 12px rgba(0,0,0,0.05)")
+                .set("margin-top", "20px")
+                .set("min-height", "200px")
+                .set("display", "flex")
+                .set("align-items", "center")
+                .set("justify-content", "center");
+
+        detailChartContainer.add(new Span("Selecciona una categoría arriba para ver tu evolución."));
+
+        mainLayout.add(header, radarWidget, chipsLayout, detailChartContainer);
+        setContent(mainLayout);
+
+        actualizarTextos();
+        actualizarDatos();
     }
 
-    private void cargarDatos() {
-        kpiContainer.removeAll();
-        chartsGrid.removeAll();
+    private void actualizarDatos() {
+        Double poder = dashboardService.getPoderDeCombate(judokaActual);
+        Map<String, Double> radarData = dashboardService.getDatosRadar(judokaActual);
 
-        Double poderDeCombate = resultadoPruebaService.calcularPoderDeCombate(judokaActual);
-        Map<String, Double> componentes = resultadoPruebaService.getPoderDeCombateComponentes(judokaActual);
-
-        boolean sinDatos = componentes.isEmpty();
-
-        kpiContainer.add(
-                new KpiCard(getTranslation("kpi.poder_combate"), String.format("%.0f PC", poderDeCombate), new Icon(VaadinIcon.FIRE)),
-                new KpiCard(getTranslation("kpi.planes_activos"), String.valueOf(resultadoPruebaService.contarPlanesActivos(judokaActual)), new Icon(VaadinIcon.CALENDAR)),
-                new KpiCard(getTranslation("kpi.tareas_hoy"), String.valueOf(ejecucionesHoy()), new Icon(VaadinIcon.CHECK_CIRCLE)),
-                new KpiCard(getTranslation("kpi.proxima_eval"), diasHastaProximaEvaluacion(), new Icon(VaadinIcon.CLOCK))
+        radarWidget.updateData(
+                poder,
+                radarData,
+                traduccionService.get("kpi.poder_combate"),
+                traduccionService.get("chart.radar.serie"),
+                traduccionService.get("chart.sin_datos")
         );
+    }
 
-        if (sinDatos) {
-            chartsGrid.add(crearEstadoVacio());
-        } else {
-            // LEYENDA GLOBAL UNIFICADA
-            chartsGrid.add(crearLeyendaGlobal());
+    private void actualizarTextos() {
+        // 1. Obtener el nombre de forma segura
+        String nombre = (judokaActual != null && judokaActual.getUsuario() != null)
+                ? judokaActual.getUsuario().getNombre() : "";
 
-            ApexCharts radarChart = crearGraficoRadar(componentes);
-            chartsGrid.add(wrapInCard(radarChart, "radar-chart-container"));
+        // 2. CORRECCIÓN: Usar getTranslation() de Vaadin en lugar del servicio directo.
+        // Esto invoca a CustomI18NProvider, que sí sabe reemplazar el {0} por el nombre.
+        tituloNombre.setText(getTranslation("dashboard.welcome", nombre));
 
-            List<String> clavesPruebas = List.of(
-                    "ejercicio.salto_horizontal_proesp.nombre",
-                    "ejercicio.lanzamiento_balon.nombre",
-                    "ejercicio.abdominales_1min.nombre",
-                    "ejercicio.carrera_6min.nombre",
-                    "ejercicio.agilidad_4x4.nombre",
-                    "ejercicio.carrera_20m.nombre",
-                    "ejercicio.sjft.nombre"
+        // Lo mismo para el botón, para mantener coherencia con el idioma actual
+        btnAgenda.setText(getTranslation("kpi.tareas_hoy"));
+    }
+
+    private Button crearChipFiltro(String etiqueta, String clavePrueba) {
+        Button chip = new Button(etiqueta);
+        chip.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_SMALL);
+        chip.getStyle().set("border-radius", "20px");
+        chip.addClickListener(e -> {
+            chip.getParent().ifPresent(parent ->
+                    parent.getChildren().filter(c -> c instanceof Button).forEach(c ->
+                            ((Button)c).removeThemeVariants(ButtonVariant.LUMO_PRIMARY)
+                    )
             );
+            chip.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            mostrarGraficoDetalle(clavePrueba);
+        });
+        return chip;
+    }
 
-            for (String clave : clavesPruebas) {
-                Optional<PruebaEstandar> pruebaOpt = pruebaEstandarRepository.findByNombreKey(clave);
-                if (pruebaOpt.isPresent()) {
-                    String titulo = traduccionService.get(clave);
-                    ApexCharts chart = crearGraficoHistorial(pruebaOpt.get(), titulo);
-                    chartsGrid.add(wrapInCard(chart, ""));
-                }
+    private void mostrarGraficoDetalle(String clavePrueba) {
+        detailChartContainer.removeAll();
+
+        // 1. Buscamos la prueba (Metadata)
+        Optional<PruebaEstandar> pruebaOpt = dashboardService.buscarPrueba(clavePrueba);
+
+        if (pruebaOpt.isPresent()) {
+            String tituloCategoria = traduccionService.get(clavePrueba);
+
+            // 2. Buscamos los datos históricos
+            List<Map<String, Object>> datos = dashboardService.getHistorialPrueba(judokaActual, pruebaOpt.get());
+
+            // 3. --- NUEVO: Buscamos la Meta (Mejor marca esperada) ---
+            List<Map<String, Object>> normas = dashboardService.getMetaPrueba(judokaActual, pruebaOpt.get());
+
+            if (datos.isEmpty()) {
+                detailChartContainer.add(crearEstadoVacio(tituloCategoria));
+            } else {
+                // Si hay datos, mostramos el gráfico lineal pasando también las normas
+                ApexCharts chart = crearGraficoHistorial(datos, normas, tituloCategoria); // <--- CAMBIO AQUÍ
+                chart.setWidth("100%");
+                detailChartContainer.add(chart);
+
+                UI.getCurrent().getPage().executeJs(
+                        "setTimeout(() => window.dispatchEvent(new Event('resize')), 200);");
             }
-            UI.getCurrent().getPage().executeJs("setTimeout(() => window.dispatchEvent(new Event('resize')), 500);");
+        } else {
+            detailChartContainer.add(new Span("Configuración no encontrada para: " + clavePrueba));
         }
     }
 
-    // --- CORRECCIÓN EN EL GRÁFICO HISTORIAL ---
-    private ApexCharts crearGraficoHistorial(PruebaEstandar prueba, String titulo) {
-        // 1. Datos del Usuario
-        List<Map<String, Object>> datos = resultadoPruebaService.getHistorialParaGrafico(judokaActual, prueba);
-        if (datos.isEmpty()) return crearChartSinDatos(titulo);
+    // --- Método Actualizado para incluir la Meta ---
+    private ApexCharts crearGraficoHistorial(List<Map<String, Object>> datos,
+                                             List<Map<String, Object>> normas, // <--- Nuevo Parámetro
+                                             String titulo) {
 
-        List<String> fechas = datos.stream()
-                .map(m -> (String) m.get("fecha"))
-                .distinct()
-                .collect(Collectors.toList());
-
-        // FIX: Tomar solo la PRIMERA métrica encontrada para evitar series duplicadas (ej: SJFT Pulsaciones)
+        List<String> fechas = datos.stream().map(m -> (String) m.get("fecha")).distinct().collect(Collectors.toList());
         String metricaPrincipal = datos.get(0).get("metrica").toString();
 
+        // Serie 1: Usuario (Azul)
         Double[] valoresUsuario = datos.stream()
                 .filter(m -> m.get("metrica").equals(metricaPrincipal))
                 .map(m -> Double.valueOf(m.get("valor").toString()))
                 .toArray(Double[]::new);
 
-        Series<Double> serieUsuario = new Series<>(getTranslation("legend.progreso"), valoresUsuario);
+        Series<Double> serieUsuario = new Series<>(traduccionService.get("legend.progreso"), valoresUsuario);
 
-        // 2. Datos del Benchmark (Meta)
-        // Llamada al método que creaste en el servicio
-        List<Map<String, Object>> normas = resultadoPruebaService.getNormasParaGrafico(judokaActual, prueba);
+        // Serie 2: Meta (Dorado) --- LÓGICA NUEVA ---
         Series<Double> serieMeta = null;
-
-        if (!normas.isEmpty()) {
-            Double valorMeta = Double.valueOf(normas.get(0).get("valor").toString());
-            // Crear línea constante
-            Double[] valoresMeta = new Double[fechas.size()];
-            Arrays.fill(valoresMeta, valorMeta);
-            serieMeta = new Series<>(getTranslation("legend.meta"), valoresMeta);
+        if (normas != null && !normas.isEmpty()) {
+            try {
+                // Asumimos que la meta es un valor constante (Ej: "Excelente" = 35 repeticiones)
+                Double valorMeta = Double.valueOf(normas.get(0).get("valor").toString());
+                Double[] valoresMeta = new Double[fechas.size()]; // Creamos una línea recta a lo largo del tiempo
+                Arrays.fill(valoresMeta, valorMeta);
+                serieMeta = new Series<>(traduccionService.get("legend.meta"), valoresMeta);
+            } catch (Exception e) {
+                // Si falla conversión, simplemente no mostramos la meta
+                System.err.println("Error al procesar meta para gráfico: " + e.getMessage());
+            }
         }
 
-        // 3. Configurar Colores y Series
-        String[] colores;
+        // Definimos las series a mostrar
         Series[] seriesChart;
+        String[] colores;
 
         if (serieMeta != null) {
-            colores = new String[] { "#1A73E8", "#F1C40F" }; // 0=Azul (User), 1=Dorado (Meta)
-            seriesChart = new Series[] { serieUsuario, serieMeta };
+            seriesChart = new Series[]{serieUsuario, serieMeta};
+            // Azul para usuario, Dorado para la meta (Objetivo)
+            colores = new String[]{"#1A73E8", "#FBC02D"};
         } else {
-            colores = new String[] { "#1A73E8" }; // Solo Azul
-            seriesChart = new Series[] { serieUsuario };
+            seriesChart = new Series[]{serieUsuario};
+            colores = new String[]{"#1A73E8"};
         }
 
-        return ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get().withType(Type.LINE).withHeight("350px").withZoom(ZoomBuilder.get().withEnabled(false).build()).withForeColor("#333").build())
-                .withColors(colores) // Aplicar colores estrictos
-                .withStroke(StrokeBuilder.get().withCurve(Curve.SMOOTH).withWidth(3.0).build())
-                .withLegend(createLegend(false)) // Ocultar leyenda individual
-                .withTitle(TitleSubtitleBuilder.get().withText(titulo).withAlign(com.github.appreciated.apexcharts.config.subtitle.Align.LEFT).build())
-                .withSeries(seriesChart)
-                .withXaxis(XAxisBuilder.get().withType(XAxisType.CATEGORIES).withCategories(fechas).build())
-                .build();
-    }
+        // Configuración Gráfica
+        Toolbar toolbar = new Toolbar();
+        toolbar.setShow(false);
+        Zoom zoom = new Zoom();
+        zoom.setEnabled(false);
+        Chart chartConfig = new Chart();
+        chartConfig.setType(Type.LINE);
+        chartConfig.setHeight("300px");
+        chartConfig.setZoom(zoom);
+        chartConfig.setToolbar(toolbar);
 
-    private Component crearLeyendaGlobal() {
-        HorizontalLayout leyenda = new HorizontalLayout();
-        leyenda.setAlignItems(FlexComponent.Alignment.CENTER);
-        leyenda.getStyle().set("margin-bottom", "10px");
-        leyenda.add(crearItemLeyenda("#1A73E8", getTranslation("legend.progreso"))); // "Mi Progreso"
-        leyenda.add(crearItemLeyenda("#F1C40F", getTranslation("legend.meta")));     // "Meta a Batir"
-        return leyenda;
-    }
+        Stroke stroke = new Stroke();
+        stroke.setCurve(Curve.SMOOTH);
+        stroke.setWidth(4.0);
 
-    private Span crearItemLeyenda(String color, String texto) {
-        Span punto = new Span();
-        punto.getStyle().set("background-color", color).set("width", "12px").set("height", "12px").set("border-radius", "50%").set("display", "inline-block").set("margin-right", "5px");
-        Span label = new Span(texto);
-        label.getStyle().set("font-size", "0.9rem").set("color", "var(--lumo-secondary-text-color)");
-        Span wrapper = new Span(punto, label);
-        wrapper.getStyle().set("display", "flex").set("align-items", "center").set("margin-right", "15px");
-        return wrapper;
-    }
-
-    private Legend createLegend(boolean show) {
         Legend legend = new Legend();
-        legend.setShow(show);
-        return legend;
-    }
+        legend.setShow(true);
+        legend.setPosition(Position.TOP);
 
-    // ... Resto de métodos (crearGraficoRadar, localeChange, etc.) IGUALES ...
-    @Override
-    public void localeChange(LocaleChangeEvent event) {
-        // 1. Obtener nombre de forma segura (evitando NullPointer)
-        String nombre = (judokaActual != null && judokaActual.getUsuario() != null)
-                ? judokaActual.getUsuario().getNombre()
-                : "";
+        XAxis xaxis = new XAxis();
+        xaxis.setCategories(fechas);
 
-        // 2. Usar getTranslation (que ahora usa MessageFormat)
-        tituloBienvenida.setText(getTranslation("dashboard.welcome", nombre));
-
-        btnTareas.setText(getTranslation("dashboard.btn.tareas"));
-
-        // 3. Refrescar componentes hijos
-        if (calendario != null) calendario.refresh();
-        if (insigniasWidget != null) insigniasWidget.refresh();
-
-        // 4. Recargar datos (KPIs y Gráficos se traducen dentro de este método)
-        cargarDatos();
-    }
-
-    private Div wrapInCard(Component chart, String extraClass) {
-        Div card = new Div(chart);
-        card.addClassName("chart-card");
-        if (extraClass != null && !extraClass.isEmpty()) card.addClassName(extraClass);
-        if (chart instanceof ApexCharts) {
-            ((ApexCharts) chart).setWidth("100%");
-            ((ApexCharts) chart).setHeight("400px");
-        }
-        return card;
-    }
-
-    private ApexCharts crearGraficoRadar(Map<String, Double> data) {
-        String[] categorias = data.keySet().toArray(new String[0]);
-        Double[] valores = data.values().toArray(new Double[0]);
-        List<String> coloresEtiquetas = Collections.nCopies(categorias.length, "#000000");
         return ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get().withType(Type.RADAR).withHeight("500px").withForeColor("#000000").build())
-                .withColors("#FF6B6B", "#2C3E50")
-                .withFill(FillBuilder.get().withOpacity(0.2).build())
-                .withStroke(StrokeBuilder.get().withWidth(2.0).build())
-                .withPlotOptions(PlotOptionsBuilder.get().withRadar(RadarBuilder.get().withSize(150.0).withPolygons(PolygonsBuilder.get().withStrokeColor(Collections.singletonList("#90A4AE")).withConnectorColors(Collections.singletonList("#000000")).build()).build()).build())
-                .withMarkers(MarkersBuilder.get().withSize(5.0, 5.0).build())
-                .withSeries(new Series<>(getTranslation("chart.radar.serie"), valores))                .withXaxis(XAxisBuilder.get().withCategories(categorias).withLabels(LabelsBuilder.get().withStyle(StyleBuilder.get().withColors(coloresEtiquetas).withFontSize("13px").withFontFamily("Inter, sans-serif").build()).build()).build())
-                .withYaxis(YAxisBuilder.get().withMin(0).withMax(5).withTickAmount(5.0).withShow(false).build())
+                .withChart(chartConfig)
+                .withColors(colores) // Aplicamos colores (Azul/Dorado)
+                .withStroke(stroke)
+                .withLegend(legend)
+                .withSeries(seriesChart) // Pasamos 1 o 2 series
+                .withXaxis(xaxis)
                 .build();
     }
 
     private ApexCharts crearChartSinDatos(String titulo) {
+        TitleSubtitle title = new TitleSubtitle();
+        title.setText(traduccionService.get("chart.sin_datos"));
+        title.setAlign(Align.CENTER);
+
+        Chart chartConfig = new Chart();
+        chartConfig.setHeight("200px");
+
         return ApexChartsBuilder.get()
-                .withChart(ChartBuilder.get().withHeight("350px").withForeColor("#000000").build())
-                .withTitle(TitleSubtitleBuilder.get().withText(titulo + " (" + getTranslation("chart.sin_datos") + ")").build())
+                .withChart(chartConfig)
+                .withTitle(title)
                 .build();
     }
 
-    private long ejecucionesHoy() { return resultadoPruebaService.contarEjecucionesTareaHoy(judokaActual); }
-    private String diasHastaProximaEvaluacion() {
-        return resultadoPruebaService.proximaEvaluacionEnDias(judokaActual)
-                .map(d -> d == 0 ? getTranslation("kpi.hoy") : d + " " + getTranslation("kpi.dias"))
-                .orElse("-");
+    private void abrirDialogoTrofeos() {
+        Dialog dialog = new Dialog();
+        dialog.setWidth("800px");
+        dialog.setMaxWidth("95vw");
+
+        List<Insignia> todas = dashboardService.getCatalogoInsignias();
+        List<JudokaInsignia> mios = dashboardService.getInsigniasGanadas(judokaActual);
+
+        MiDoWidget widget = new MiDoWidget(todas, mios, traduccionService);
+        dialog.add(widget);
+
+        Button cerrar = new Button(traduccionService.get("btn.cerrar"), e -> dialog.close());
+        dialog.getFooter().add(cerrar);
+        dialog.open();
     }
-    private VerticalLayout crearEstadoVacio() {
-        H3 titulo = new H3(getTranslation("empty.title"));
-        Paragraph p = new Paragraph(getTranslation("empty.desc"));
-        VerticalLayout box = new VerticalLayout(titulo, p);
-        box.setAlignItems(FlexComponent.Alignment.CENTER);
-        box.addClassName("empty-state-card");
-        return box;
+
+    private Component crearEstadoVacio(String nombreCategoria) {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setAlignItems(FlexComponent.Alignment.CENTER);
+        layout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+        layout.setSpacing(true);
+        layout.setPadding(true);
+        layout.setHeight("300px");
+
+        Icon icon = VaadinIcon.LOCK.create();
+        icon.setSize("40px");
+        icon.setColor("#B0BEC5");
+
+        H3 titulo = new H3(nombreCategoria + " " +
+                traduccionService.get("badge.estado.bloqueada"));
+        titulo.getStyle().set("color", "#78909C").set("margin", "0");
+
+        Span mensaje = new Span(traduccionService.get("empty.desc"));
+        mensaje.getStyle().set("color", "#B0BEC5").set("font-style", "italic").set("text-align", "center");
+
+        layout.add(icon, titulo, mensaje);
+        return layout;
+    }
+
+    @Override
+    public void localeChange(LocaleChangeEvent event) {
+        actualizarTextos();
+        actualizarDatos();
     }
 }

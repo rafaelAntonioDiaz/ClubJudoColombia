@@ -89,8 +89,10 @@ public class ComunidadView extends JudokaLayout {
         addClassName("comunidad-view");
 
         // Pestañas
-        Tab tabMuro = new Tab(VaadinIcon.GRID_BIG.create(), new Span(" " + traduccionService.get("comunidad.tab.muro")));
-        Tab tabChat = new Tab(VaadinIcon.CHAT.create(), new Span(" " + traduccionService.get("comunidad.tab.chat")));
+        Tab tabMuro = new Tab(VaadinIcon.GRID_BIG.create(),
+                new Span(" " + traduccionService.get("comunidad.tab.muro")));
+        Tab tabChat = new Tab(VaadinIcon.CHAT.create(),
+                new Span(" " + traduccionService.get("comunidad.tab.chat")));
         Tabs tabs = new Tabs(tabMuro, tabChat);
         tabs.setWidthFull();
         tabs.addThemeVariants(com.vaadin.flow.component.tabs.TabsVariant.LUMO_EQUAL_WIDTH_TABS);
@@ -133,7 +135,7 @@ public class ComunidadView extends JudokaLayout {
         crearPostCard.getStyle().set("padding", "20px").set("margin-top", "20px");
 
         TextArea textoPost = new TextArea();
-        textoPost.setPlaceholder("¿Qué entrenaste hoy? Comparte tu progreso...");
+        textoPost.setPlaceholder(traduccionService.get("comunidad.post.placeholder"));
         textoPost.setWidthFull();
         textoPost.setMaxHeight("150px");
 
@@ -144,29 +146,35 @@ public class ComunidadView extends JudokaLayout {
         upload.setUploadHandler(event -> {
             try {
                 // 1. Guardar el archivo usando el stream del evento
-                String fileName = fileStorageService.save(event.getInputStream(), event.getFileName());
+                String fileName = fileStorageService.save(event.getInputStream(),
+                        event.getFileName());
 
                 // 2. Actualizar UI (Necesario UI.access porque esto corre en otro hilo)
                 getUI().ifPresent(ui -> ui.access(() -> {
                     this.ultimoArchivoSubido = fileName;
-                    Notification.show(traduccionService.get("comunidad.msg.archivo_listo") + ": " + fileName)
+                    Notification.show(traduccionService.get(
+                            "comunidad.msg.archivo_listo") + ": " + fileName)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 }));
             } catch (IOException e) {
                 logger.error("Error subiendo archivo", e);
                 getUI().ifPresent(ui -> ui.access(() ->
-                        Notification.show("Error: " + e.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR)
-                ));
+                        Notification.show(traduccionService.get("error.upload")
+                                + ": " + e.getMessage())
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR)));
                 // Importante: No lanzar RuntimeException aquí para no romper el hilo de Vaadin silenciosamente
             }
         });
 
         upload.setAcceptedFileTypes("image/*", "video/*");
         upload.setMaxFiles(1);
-        upload.setUploadButton(new Button(traduccionService.get("comunidad.btn.subir_foto"), new Icon(VaadinIcon.CAMERA)));
-        upload.setDropLabel(new Span(traduccionService.get("comunidad.label.drop")));
+        upload.setUploadButton(new Button(traduccionService.get(
+                "comunidad.btn.subir_foto"), new Icon(VaadinIcon.CAMERA)));
+        upload.setDropLabel(new Span(traduccionService.get(
+                "comunidad.label.drop")));
 
-        Button btnPublicar = new Button(traduccionService.get("comunidad.btn.publicar"), new Icon(VaadinIcon.PAPERPLANE));
+        Button btnPublicar = new Button(traduccionService.get(
+                "comunidad.btn.publicar"), new Icon(VaadinIcon.PAPERPLANE));
         btnPublicar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnPublicar.setWidthFull();
 
@@ -176,10 +184,12 @@ public class ComunidadView extends JudokaLayout {
                     Usuario autor = securityService.getAuthenticatedUsuario()
                             .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-                    Publicacion nuevaPublicacion = new Publicacion(autor, textoPost.getValue(), ultimoArchivoSubido);
+                    Publicacion nuevaPublicacion = new Publicacion(autor,
+                            textoPost.getValue(), ultimoArchivoSubido);
                     publicacionService.guardar(nuevaPublicacion);
 
-                    Notification.show(traduccionService.get("comunidad.msg.publicado"), 3000, Notification.Position.BOTTOM_CENTER)
+                    Notification.show(traduccionService.get("comunidad.msg.publicado"),
+                                    3000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
                     textoPost.clear();
@@ -189,12 +199,13 @@ public class ComunidadView extends JudokaLayout {
                     cargarPublicaciones();
 
                 } catch (Exception ex) {
-                    Notification.show("Error al publicar: " + ex.getMessage(), 3000, Notification.Position.MIDDLE)
+                    Notification.show("Error al publicar: " + ex.getMessage(),
+                                    3000, Notification.Position.MIDDLE)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 }
             } else {
-                Notification.show("Escribe algo o sube una foto", 3000, Notification.Position.MIDDLE);
-            }
+                Notification.show(traduccionService.get("comunidad.warn.empty_post"),
+                        3000, Notification.Position.MIDDLE);            }
         });
 
         VerticalLayout layoutTarjeta = new VerticalLayout(textoPost, upload, btnPublicar);
@@ -250,17 +261,20 @@ public class ComunidadView extends JudokaLayout {
 
         Div mediaContainer = new Div();
         if (post.getImagenUrl() != null && !post.getImagenUrl().isEmpty()) {
-            DownloadHandler imageHandler = DownloadHandler.fromInputStream(context -> {
+            DownloadHandler imageHandler = DownloadHandler.
+                    fromInputStream(context -> {
                 try {
                     File file = new File("uploads/" + post.getImagenUrl());
                     String mimeType = Files.probeContentType(file.toPath());
                     if (mimeType == null) mimeType = "application/octet-stream";
-                    return new DownloadResponse(new FileInputStream(file), post.getImagenUrl(), mimeType, file.length());
+                    return new DownloadResponse(new FileInputStream(file),
+                            post.getImagenUrl(), mimeType, file.length());
                 } catch (Exception e) {
                     return new DownloadResponse(new ByteArrayInputStream(new byte[0]), "error", "application/octet-stream", 0);
                 }
             }).inline();
-            Image img = new Image(imageHandler, "Imagen de " + nombreAutor);
+            Image img = new Image(imageHandler, traduccionService.get(
+                    "comunidad.label.image_of") + " " + nombreAutor);
             img.setWidth("100%");
             img.getStyle().set("border-radius", "12px");
             mediaContainer.add(img);
@@ -274,14 +288,16 @@ public class ComunidadView extends JudokaLayout {
             btnLike.addThemeVariants(ButtonVariant.LUMO_ERROR);
         });
 
-        Button btnComentar = new Button(traduccionService.get("comunidad.btn.comentar"), new Icon(VaadinIcon.COMMENT_O));
+        Button btnComentar = new Button(traduccionService.get("comunidad.btn.comentar"),
+                new Icon(VaadinIcon.COMMENT_O));
 
         // --- SECCIÓN DE COMENTARIOS (LÓGICA NUEVA) ---
         VerticalLayout comentariosLayout = new VerticalLayout();
         comentariosLayout.setVisible(false); // Oculto por defecto
         comentariosLayout.setPadding(false);
         comentariosLayout.setSpacing(true);
-        comentariosLayout.getStyle().set("background-color", "#f5f5f5").set("border-radius", "10px").set("padding", "10px");
+        comentariosLayout.getStyle().set("background-color",
+                "#f5f5f5").set("border-radius", "10px").set("padding", "10px");
 
         // 1. Contenedor para la lista de comentarios existentes
         VerticalLayout listaComentarios = new VerticalLayout();
@@ -289,16 +305,16 @@ public class ComunidadView extends JudokaLayout {
         listaComentarios.setSpacing(false);
 
         // Cargar comentarios iniciales
-        List<Comentario> comentariosExistentes = publicacionService.obtenerComentarios(post);
+        List<Comentario> comentariosExistentes =
+                publicacionService.obtenerComentarios(post);
         for (Comentario c : comentariosExistentes) {
             listaComentarios.add(crearFilaComentario(c));
         }
 
         // 2. Input para nuevo comentario
         TextField inputComentario = new TextField();
-        inputComentario.setPlaceholder("Escribe una respuesta...");
+        inputComentario.setPlaceholder(traduccionService.get("comunidad.comment.placeholder"));
         inputComentario.setWidthFull();
-
         Button btnEnviar = new Button(new Icon(VaadinIcon.PAPERPLANE));
         btnEnviar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
@@ -309,13 +325,14 @@ public class ComunidadView extends JudokaLayout {
                     Usuario yo = securityService.getAuthenticatedUsuario().orElseThrow();
 
                     // Guardar en BD
-                    Comentario nuevo = publicacionService.comentar(post, yo, inputComentario.getValue());
+                    Comentario nuevo = publicacionService.comentar(post,
+                            yo, inputComentario.getValue());
 
                     // Actualizar UI inmediatamente (sin recargar todo)
                     listaComentarios.add(crearFilaComentario(nuevo));
                     inputComentario.clear();
-                    Notification.show("Comentario enviado", 2000, Notification.Position.BOTTOM_CENTER);
-
+                    Notification.show(traduccionService.get("comunidad.msg.comment_sent"),
+                            2000, Notification.Position.BOTTOM_CENTER);
                 } catch (Exception ex) {
                     Notification.show("Error: " + ex.getMessage());
                 }
@@ -407,15 +424,19 @@ public class ComunidadView extends JudokaLayout {
 
         List<MessageListItem> itemsUi = historial.stream().map(msg -> {
             String nombreAutor = msg.getAutor().getNombre();
-            Instant fechaInstant = msg.getFecha().toInstant(ZoneOffset.UTC); // Ajusta zona horaria si es necesario
+            Instant fechaInstant =
+                    msg.getFecha().toInstant(ZoneOffset.UTC);// Ajusta zona horaria si es necesario
 
-            MessageListItem item = new MessageListItem(msg.getContenido(), fechaInstant, nombreAutor);
+            MessageListItem item = new MessageListItem(
+                    msg.getContenido(), fechaInstant, nombreAutor);
 
             // Asignar color de avatar basado en el nombre (para consistencia visual)
             item.setUserColorIndex(Math.abs(nombreAutor.hashCode()) % 7);
 
-            // Opcional: Si el autor es el usuario actual, podrías marcarlo visualmente
-            // (Vaadin lo maneja automáticamente si seteas el currentUser en el componente, pero esto basta por ahora)
+            // Opcional: Si el autor es el usuario actual,
+            // podrías marcarlo visualmente
+            // (Vaadin lo maneja automáticamente
+            // si seteas el currentUser en el componente, pero esto basta por ahora)
 
             return item;
         }).collect(Collectors.toList());

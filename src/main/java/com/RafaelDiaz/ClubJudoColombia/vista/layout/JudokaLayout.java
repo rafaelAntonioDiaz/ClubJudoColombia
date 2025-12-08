@@ -96,9 +96,6 @@ public abstract class JudokaLayout extends AppLayout {
         agregarTab("Mis Planes", VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
 
         agregarTab("Comunidad", VaadinIcon.USERS, ComunidadView.class);
-// --------------
-        agregarTab("Historial", VaadinIcon.CHART_TIMELINE, "historial-evaluaciones");
-// ...agregarTab("Mi Progreso", VaadinIcon.TROPHY, "progreso-judoka");
 
         VerticalLayout drawerContent = new VerticalLayout(menuTabs);
         drawerContent.setSizeFull();

@@ -79,6 +79,9 @@ public class Judoka implements Serializable {
     @Column(name = "ruta_autorizacion_waiver")
     private String rutaAutorizacionWaiver;
 
+    @Column(name = "url_foto_perfil")
+    private String urlFotoPerfil;
+
     // --- CONSTRUCTORES ---
     public Judoka() {}
 
@@ -111,10 +114,12 @@ public class Judoka implements Serializable {
     public void setPalmares(String palmares) { this.palmares = palmares; }
 
     public String getOcupacionPrincipal() { return ocupacionPrincipal; }
-    public void setOcupacionPrincipal(String ocupacionPrincipal) { this.ocupacionPrincipal = ocupacionPrincipal; }
+    public void setOcupacionPrincipal(String ocupacionPrincipal) {
+        this.ocupacionPrincipal = ocupacionPrincipal; }
 
     public boolean isEsCompetidorActivo() { return esCompetidorActivo; }
-    public void setEsCompetidorActivo(boolean esCompetidorActivo) { this.esCompetidorActivo = esCompetidorActivo; }
+    public void setEsCompetidorActivo(boolean esCompetidorActivo) {
+        this.esCompetidorActivo = esCompetidorActivo; }
 
     // --- NUEVOS GETTERS/SETTERS ---
 
@@ -122,17 +127,20 @@ public class Judoka implements Serializable {
     public void setEps(String eps) { this.eps = eps; }
 
     public String getRutaCertificadoEps() { return rutaCertificadoEps; }
-    public void setRutaCertificadoEps(String rutaCertificadoEps) { this.rutaCertificadoEps = rutaCertificadoEps; }
+    public void setRutaCertificadoEps(String rutaCertificadoEps) {
+        this.rutaCertificadoEps = rutaCertificadoEps; }
 
     public String getNombreAcudiente() { return nombreAcudiente; }
-    public void setNombreAcudiente(String nombreAcudiente) { this.nombreAcudiente = nombreAcudiente; }
+    public void setNombreAcudiente(String nombreAcudiente) {
+        this.nombreAcudiente = nombreAcudiente; }
 
     public String getTelefonoAcudiente() { return telefonoAcudiente; }
-    public void setTelefonoAcudiente(String telefonoAcudiente) { this.telefonoAcudiente = telefonoAcudiente; }
+    public void setTelefonoAcudiente(String telefonoAcudiente) {
+        this.telefonoAcudiente = telefonoAcudiente; }
 
     public String getRutaAutorizacionWaiver() { return rutaAutorizacionWaiver; }
-    public void setRutaAutorizacionWaiver(String rutaAutorizacionWaiver) { this.rutaAutorizacionWaiver = rutaAutorizacionWaiver; }
-
+    public void setRutaAutorizacionWaiver(String rutaAutorizacionWaiver) {
+        this.rutaAutorizacionWaiver = rutaAutorizacionWaiver; }
     // --- LÓGICA DE NEGOCIO ---
 
     @Transient
@@ -146,6 +154,10 @@ public class Judoka implements Serializable {
         if (this.fechaNacimiento == null) return 0;
         return Period.between(this.fechaNacimiento, LocalDate.now()).getYears();
     }
+
+    public String getUrlFotoPerfil() { return urlFotoPerfil; }
+
+    public void setUrlFotoPerfil(String urlFotoPerfil) { this.urlFotoPerfil = urlFotoPerfil; }
 
     @Override
     public int hashCode() {
