@@ -68,6 +68,13 @@ public class SesionProgramada implements Serializable {
     @Version
     @Column(name = "version", nullable = false)
     private Long version = 0L;
+    // Coordenadas del Dojo o lugar de entrenamiento
+    private Double latitud;
+    private Double longitud;
+
+    // Radio de tolerancia en metros (ej: 50m, 100m)
+    // Si el alumno está dentro de este círculo, el check-in es válido.
+    private Integer radioPermitidoMetros = 100;
 
     // --- Constructores ---
     public SesionProgramada() {}
@@ -100,7 +107,14 @@ public class SesionProgramada implements Serializable {
     public void setAsistencias(Set<Asistencia> asistencias) { this.asistencias = asistencias; }
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
+    public Double getLatitud() { return latitud; }
+    public void setLatitud(Double latitud) { this.latitud = latitud; }
 
+    public Double getLongitud() { return longitud; }
+    public void setLongitud(Double longitud) { this.longitud = longitud; }
+
+    public Integer getRadioPermitidoMetros() { return radioPermitidoMetros; }
+    public void setRadioPermitidoMetros(Integer radioPermitidoMetros) { this.radioPermitidoMetros = radioPermitidoMetros; }
     // --- Helpers de Negocio ---
     @Transient
     public boolean esFutura() {

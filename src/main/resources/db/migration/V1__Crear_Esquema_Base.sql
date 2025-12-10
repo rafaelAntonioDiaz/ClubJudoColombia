@@ -51,6 +51,7 @@ CREATE TABLE judokas (
     palmares TEXT NULL,
     ocupacion_principal VARCHAR(200) NULL,
     es_competidor_activo TINYINT(1) NOT NULL DEFAULT 0,
+    celular VARCHAR(13) NULL,
     nombre_acudiente VARCHAR(255) NULL,
     telefono_acudiente VARCHAR(20) NULL,
     ruta_autorizacion_waiver VARCHAR(255) NULL,

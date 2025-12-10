@@ -71,4 +71,28 @@ public class FileStorageService {
             throw ex;
         }
     }
+    /**
+     * Elimina un archivo del sistema de archivos.
+     * @param rutaArchivo La ruta completa o relativa del archivo a borrar.
+     * @return true si se borró, false si no existía o falló.
+     */
+    public boolean delete(String rutaArchivo) {
+        if (rutaArchivo == null || rutaArchivo.isEmpty()) {
+            return false;
+        }
+
+        try {
+            // Convierte el String a Path
+            Path archivo = Paths.get(rutaArchivo);
+
+            // Borra el archivo si existe (devuelve true si lo borró)
+            return Files.deleteIfExists(archivo);
+
+        } catch (IOException e) {
+            // Si falla (ej. permisos, archivo bloqueado), lo registramos pero no detenemos el sistema
+            // logger.warn("No se pudo borrar el archivo: " + rutaArchivo, e);
+            System.err.println("Error borrando archivo: " + rutaArchivo + " -> " + e.getMessage());
+            return false;
+        }
+    }
 }

@@ -9,6 +9,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.TareaDiariaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
@@ -33,7 +34,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Route("gestion-planes")
+@Route(value = "gestion-planes", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_SENSEI")
 public class SenseiPlanView extends VerticalLayout {
 
@@ -57,7 +58,7 @@ public class SenseiPlanView extends VerticalLayout {
 
     private CheckboxGroup<DayOfWeek> diasSelector;
 
-    // ✅ CORREGIDO: Mover tipoSesionCombo a campo de clase
+    // Campo de clase para el tipo de sesión
     private ComboBox<TipoSesion> tipoSesionCombo;
 
     private PlanEntrenamiento planActual;
@@ -81,7 +82,8 @@ public class SenseiPlanView extends VerticalLayout {
                 .orElseThrow(() -> new RuntimeException("Error de seguridad"));
 
         setSizeFull();
-        add(new H1("Gestión de Planes de Entrenamiento"));
+        // i18n: Título traducido
+        add(new H1(traduccionService.get("view.sensei.plan.titulo")));
 
         HorizontalLayout panelSuperior = configurarPanelSuperior();
         HorizontalLayout contenido = configurarContenido();
@@ -90,31 +92,39 @@ public class SenseiPlanView extends VerticalLayout {
     }
 
     private HorizontalLayout configurarPanelSuperior() {
-        // ✅ CORREGIDO: Inicializar como campo de clase
-        tipoSesionCombo = new ComboBox<>("Tipo de Sesión");
+        // i18n: Etiqueta traducida
+        tipoSesionCombo = new ComboBox<>(traduccionService.get("lbl.tipo.sesion"));
         tipoSesionCombo.setItems(TipoSesion.values());
         tipoSesionCombo.setValue(TipoSesion.ENTRENAMIENTO);
-        tipoSesionCombo.addValueChangeListener(
-                event -> planActual.setTipoSesion(event.getValue()));
 
-        grupoComboBox = new ComboBox<>("Seleccionar Grupo");
+        // i18n: Traducción automática de Enums usando el servicio
+        tipoSesionCombo.setItemLabelGenerator(traduccionService::get);
+
+        tipoSesionCombo.addValueChangeListener(
+                event -> {
+                    if (planActual != null) {
+                        planActual.setTipoSesion(event.getValue());
+                    }
+                });
+
+        grupoComboBox = new ComboBox<>(traduccionService.get("lbl.seleccionar.grupo"));
         grupoComboBox.setItems(grupoEntrenamientoRepository.findAll());
         grupoComboBox.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
-        btnNuevoPlan = new Button("Crear Nuevo Plan", event -> habilitarFormularioPlan());
-        nombrePlanField = new TextField("Nombre del Plan");
+
+        btnNuevoPlan = new Button(traduccionService.get("btn.crear.plan"), event -> habilitarFormularioPlan());
+        nombrePlanField = new TextField(traduccionService.get("lbl.nombre.plan"));
         nombrePlanField.setVisible(false);
 
         diasSelector = new CheckboxGroup<>();
-        diasSelector.setLabel("Asignar para los días:");
+        diasSelector.setLabel(traduccionService.get("lbl.asignar.dias"));
         diasSelector.setItems(DayOfWeek.values());
         diasSelector.addThemeVariants(CheckboxGroupVariant.LUMO_VERTICAL);
         diasSelector.setVisible(false);
 
-        diasSelector.setItemLabelGenerator(day ->
-                traduccionService.get(day.name())
-        );
+        // i18n: Traducción automática de Enums (DayOfWeek)
+        diasSelector.setItemLabelGenerator(traduccionService::get);
 
-        HorizontalLayout panelSuperior = new HorizontalLayout(grupoComboBox, btnNuevoPlan, nombrePlanField, diasSelector);
+        HorizontalLayout panelSuperior = new HorizontalLayout(grupoComboBox, tipoSesionCombo, btnNuevoPlan, nombrePlanField, diasSelector);
         panelSuperior.setDefaultVerticalComponentAlignment(Alignment.BASELINE);
         return panelSuperior;
     }
@@ -127,25 +137,26 @@ public class SenseiPlanView extends VerticalLayout {
         configurarGridPruebas();
         configurarGridTareas();
 
+        // i18n: Títulos de sección traducidos
         panelIzquierdoBibliotecas.add(new H3(
-                "Bibliotecas (Seleccione días arriba primero)"), pruebasGrid, tareasGrid);
+                traduccionService.get("header.bibliotecas")), pruebasGrid, tareasGrid);
 
         panelDerechoPlan = new VerticalLayout();
         panelDerechoPlan.setWidth("50%");
 
         configurarGridPlanActual();
 
-        btnGuardarPlan = new Button("Guardar Cambios",
+        btnGuardarPlan = new Button(traduccionService.get("btn.guardar.cambios"),
                 event -> guardarPlan());
         btnGuardarPlan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        btnCompletarPlan = new Button("Marcar Plan como COMPLETADO", event -> completarPlan());
+        btnCompletarPlan = new Button(traduccionService.get("btn.completar.plan"), event -> completarPlan());
         btnCompletarPlan.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
         btnCompletarPlan.setVisible(false);
 
         HorizontalLayout botonesPlan = new HorizontalLayout(btnGuardarPlan, btnCompletarPlan);
 
-        panelDerechoPlan.add(new H3("Plan Actual"), planGrid, botonesPlan);
+        panelDerechoPlan.add(new H3(traduccionService.get("header.plan.actual")), planGrid, botonesPlan);
         panelDerechoPlan.setVisible(false);
 
         return new HorizontalLayout(panelIzquierdoBibliotecas, panelDerechoPlan);
@@ -167,7 +178,8 @@ public class SenseiPlanView extends VerticalLayout {
             } else {
                 return nombreSpan;
             }
-        }).setHeader("Prueba").setFlexGrow(1);
+        }).setHeader(traduccionService.get("col.prueba")).setFlexGrow(1); // i18n: Header
+
         pruebasGrid.setItems(pruebaEstandarRepository.findAll());
         pruebasGrid.asSingleSelect().addValueChangeListener(event -> addPruebaAPlan(event.getValue()));
     }
@@ -176,8 +188,10 @@ public class SenseiPlanView extends VerticalLayout {
         tareasGrid = new Grid<>(TareaDiaria.class);
         tareasGrid.setHeight("300px");
         tareasGrid.removeAllColumns();
-        tareasGrid.addColumn(TareaDiaria::getNombre).setHeader("Tarea");
-        tareasGrid.addColumn(TareaDiaria::getMetaTexto).setHeader("Meta");
+        // i18n: Headers
+        tareasGrid.addColumn(TareaDiaria::getNombre).setHeader(traduccionService.get("col.tarea"));
+        tareasGrid.addColumn(TareaDiaria::getMetaTexto).setHeader(traduccionService.get("col.meta"));
+
         tareasGrid.setItems(tareaDiariaRepository.findAll());
         tareasGrid.asSingleSelect().addValueChangeListener(event -> addTareaAPlan(event.getValue()));
     }
@@ -187,24 +201,31 @@ public class SenseiPlanView extends VerticalLayout {
         planGrid.addColumn(ep -> {
             String nombre = "";
             if (ep.getPruebaEstandar() != null) {
-                nombre = "[Prueba] " + traduccionService.get(ep.getPruebaEstandar().getNombreKey());
+                // i18n: Prefijo y nombre traducidos
+                nombre = "[" + traduccionService.get("tipo.prueba") + "] " +
+                        traduccionService.get(ep.getPruebaEstandar().getNombreKey());
             } else if (ep.getTareaDiaria() != null) {
-                nombre = "[Tarea] " + ep.getTareaDiaria().getNombre();
+                // i18n: Prefijo y nombre
+                nombre = "[" + traduccionService.get("tipo.tarea") + "] " +
+                        ep.getTareaDiaria().getNombre();
             }
             return nombre;
-        }).setHeader("Ejercicio");
+        }).setHeader(traduccionService.get("col.ejercicio")); // i18n: Header
 
         planGrid.addColumn(ep -> {
-            if (ep.getDiasAsignados().isEmpty()) return "Cualquier día";
+            if (ep.getDiasAsignados().isEmpty()) return traduccionService.get("txt.cualquier.dia");
             return ep.getDiasAsignados().stream()
-                    .map(d -> d.name().substring(0, 3))
+                    // i18n: Traducción y formateo del día
+                    .map(d -> traduccionService.get(d).substring(0, 3).toUpperCase())
                     .collect(Collectors.joining(", "));
-        }).setHeader("Días");
+        }).setHeader(traduccionService.get("col.dias")); // i18n: Header
     }
 
     private void habilitarFormularioPlan() {
         if (grupoComboBox.getValue() == null) {
-            Notification.show("Por favor, seleccione un grupo primero.", 3000, Notification.Position.MIDDLE);
+            // i18n: Mensaje de error
+            Notification.show(traduccionService.get("msg.error.seleccionar.grupo"),
+                    3000, Notification.Position.MIDDLE);
             return;
         }
         planActual = new PlanEntrenamiento();
@@ -248,7 +269,9 @@ public class SenseiPlanView extends VerticalLayout {
 
     private void guardarPlan() {
         if (nombrePlanField.getValue().isEmpty()) {
-            Notification.show("Ingrese nombre.", 3000, Notification.Position.MIDDLE);
+            // i18n: Mensaje de validación
+            Notification.show(traduccionService.get("msg.error.nombre.vacio"),
+                    3000, Notification.Position.MIDDLE);
             return;
         }
         planActual.setNombre(nombrePlanField.getValue());
@@ -257,15 +280,19 @@ public class SenseiPlanView extends VerticalLayout {
             planActual.addEjercicio(tarea);
         }
 
-        // ✅ CORREGIDO: Guardar tipoSesion antes de persistir
+        // Guardar tipoSesion antes de persistir
         planActual.setTipoSesion(tipoSesionCombo.getValue());
 
         try {
             planActual = planEntrenamientoService.guardarPlan(planActual);
-            Notification.show("Plan guardado.", 3000, Notification.Position.MIDDLE);
+            // i18n: Mensaje de éxito
+            Notification.show(traduccionService.get("msg.exito.plan.guardado"),
+                    3000, Notification.Position.MIDDLE);
             btnCompletarPlan.setVisible(true);
         } catch (Exception e) {
-            Notification.show("Error: " + e.getMessage(), 5000, Notification.Position.MIDDLE);
+            // i18n: Mensaje de error general
+            Notification.show(traduccionService.get("msg.error.general") + ": " + e.getMessage(),
+                    5000, Notification.Position.MIDDLE);
         }
     }
 
@@ -273,7 +300,9 @@ public class SenseiPlanView extends VerticalLayout {
         if (planActual == null || planActual.getId() == null) return;
 
         planEntrenamientoService.actualizarEstadoPlan(planActual.getId(), EstadoPlan.COMPLETADO);
-        Notification.show("Plan marcado como COMPLETADO.", 3000, Notification.Position.MIDDLE);
+        // i18n: Mensaje de éxito
+        Notification.show(traduccionService.get("msg.exito.plan.completado"),
+                3000, Notification.Position.MIDDLE);
         resetearVista();
     }
 

@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.EjecucionTarea;
 import com.RafaelDiaz.ClubJudoColombia.servicio.EjecucionTareaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // NUEVO IMPORT
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Anchor;
@@ -15,25 +16,24 @@ import jakarta.annotation.security.RolesAllowed;
 
 import java.time.format.DateTimeFormatter;
 
-/**
- * --- NUEVA VISTA (Flujo 2: Supervisión) ---
- * Esta vista es para el SENSEI.
- * Le permite revisar las Tareas Diarias (checks)
- * que sus Judokas han reportado.
- */
 @Route("revision-tareas")
 @RolesAllowed("ROLE_SENSEI")
 public class SenseiRevisionView extends VerticalLayout {
 
     private final EjecucionTareaService ejecucionTareaService;
+    private final TraduccionService traduccionService; // NUEVO: Servicio de traducción
 
     private Grid<EjecucionTarea> grid;
 
-    public SenseiRevisionView(EjecucionTareaService ejecucionTareaService) {
+    // NUEVO: Inyectar TraduccionService en el constructor
+    public SenseiRevisionView(EjecucionTareaService ejecucionTareaService,
+                              TraduccionService traduccionService) {
         this.ejecucionTareaService = ejecucionTareaService;
+        this.traduccionService = traduccionService; // NUEVO: Inicialización
 
         setSizeFull();
-        add(new H1("Revisión de Tareas Diarias Completadas"));
+        // NUEVO: Título traducido
+        add(new H1(traduccionService.get("revision.titulo")));
 
         configurarGrid();
         cargarEjecuciones();
@@ -51,7 +51,7 @@ public class SenseiRevisionView extends VerticalLayout {
 
         // Columna 1: Cuándo
         grid.addColumn(ejecucion -> ejecucion.getFechaRegistro().format(formatter))
-                .setHeader("Fecha y Hora")
+                .setHeader(traduccionService.get("revision.grid.fecha_hora"))
                 .setSortable(true)
                 .setAutoWidth(true);
 
@@ -60,44 +60,35 @@ public class SenseiRevisionView extends VerticalLayout {
             String nombre = ejecucion.getJudoka().getUsuario().getNombre();
             String apellido = ejecucion.getJudoka().getUsuario().getApellido();
             return nombre + " " + apellido;
-        }).setHeader("Judoka").setSortable(true);
+        }).setHeader(traduccionService.get("revision.grid.judoka")).setSortable(true);
 
         // Columna 3: Qué
         grid.addColumn(ejecucion -> ejecucion.getEjercicioPlanificado().getTareaDiaria().getNombre())
-                .setHeader("Tarea Realizada")
+                .setHeader(traduccionService.get("revision.grid.tarea_realizada"))
                 .setSortable(true);
 
-        // Columna 4: Ubicación (¡Tu requisito!)
+        // Columna 4: Ubicación
         grid.addColumn(new ComponentRenderer<>(ejecucion -> {
             Double lat = ejecucion.getLatitud();
             Double lon = ejecucion.getLongitud();
 
             if (lat == null || lon == null) {
-                return new Span("Sin GPS");
+                // NUEVO: Texto traducido para "Sin GPS"
+                return new Span(traduccionService.get("revision.grid.sin_gps"));
             }
 
-            // --- CORRECCIÓN DE SINTAXIS ---
-
-            // 1. Creamos el enlace a Google Maps
-            // (Nota: Corregí el formato de la URL de Google Maps también)
             String url = String.format("https://www.google.com/maps/search/?api=1&query=%f,%f", lat, lon);
 
-            // 2. Creamos el Anchor (enlace)
-            Anchor link = new Anchor(url, "Ver Mapa");
-
-            // 3. Establecemos el Target (nueva pestaña)
+            // NUEVO: Texto traducido para "Ver Mapa"
+            Anchor link = new Anchor(url, traduccionService.get("revision.grid.ver_mapa"));
             link.setTarget("_blank");
-
-            // --- FIN DE LA CORRECCIÓN ---
-
             link.addComponentAsFirst(new Icon(VaadinIcon.MAP_MARKER));
             return link;
 
-        })).setHeader("Ubicación (GPS)");
+        })).setHeader(traduccionService.get("revision.grid.ubicacion_gps"));
     }
 
     private void cargarEjecuciones() {
-        // Usamos el nuevo método del servicio que hace el fetch
         grid.setItems(ejecucionTareaService.findAllWithDetails());
     }
 }

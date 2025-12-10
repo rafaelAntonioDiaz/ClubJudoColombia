@@ -1,15 +1,17 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka; // --- NUEVO IMPORT ---
+import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository; // --- NUEVO IMPORT ---
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.SenseiRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
+import com.vaadin.flow.spring.security.AuthenticationContext; // <--- IMPORTANTE
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // --- 1. IMPORTAR ---
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Optional;
 
 @Service
@@ -17,23 +19,26 @@ public class SecurityService {
 
     private final UsuarioRepository usuarioRepository;
     private final SenseiRepository senseiRepository;
-    private final JudokaRepository judokaRepository; // --- NUEVO CAMPO ---
+    private final JudokaRepository judokaRepository;
+    private final AuthenticationContext authenticationContext; // <--- NUEVO CAMPO
 
-    // --- CONSTRUCTOR ACTUALIZADO ---
     public SecurityService(UsuarioRepository usuarioRepository,
                            SenseiRepository senseiRepository,
-                           JudokaRepository judokaRepository) { // --- NUEVO PARÁMETRO ---
+                           JudokaRepository judokaRepository,
+                           AuthenticationContext authenticationContext) { // <--- INYECCIÓN
         this.usuarioRepository = usuarioRepository;
         this.senseiRepository = senseiRepository;
-        this.judokaRepository = judokaRepository; // --- NUEVA ASIGNACIÓN ---
+        this.judokaRepository = judokaRepository;
+        this.authenticationContext = authenticationContext;
     }
 
     /**
-     * Obtiene el UserDetails del usuario actualmente logueado.
+     * Obtiene el UserDetails del usuario actualmente autenticado.
      */
     public Optional<UserDetails> getAuthenticatedUserDetails() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() ||
+        if (authentication == null ||
+                !authentication.isAuthenticated() ||
                 !(authentication.getPrincipal() instanceof UserDetails)) {
             return Optional.empty();
         }
@@ -46,8 +51,7 @@ public class SecurityService {
     @Transactional(readOnly = true)
     public Optional<Usuario> getAuthenticatedUsuario() {
         return getAuthenticatedUserDetails()
-                .flatMap(userDetails -> usuarioRepository.
-                        findByUsername(userDetails.getUsername()));
+                .flatMap(userDetails -> usuarioRepository.findByUsername(userDetails.getUsername()));
     }
 
     /**
@@ -63,10 +67,7 @@ public class SecurityService {
     }
 
     /**
-     * --- NUEVO MÉTODO ---
      * Busca el perfil de 'Judoka' del usuario actualmente logueado.
-     *
-     * @return Optional<Judoka>
      */
     @Transactional(readOnly = true)
     public Optional<Judoka> getAuthenticatedJudoka() {
@@ -74,7 +75,13 @@ public class SecurityService {
         if (usuarioOpt.isEmpty()) {
             return Optional.empty();
         }
-        // Usamos el Usuario para buscar su perfil de Judoka
         return judokaRepository.findByUsuario(usuarioOpt.get());
+    }
+
+    /**
+     * Cierra la sesión del usuario actual.
+     */
+    public void logout() {
+        authenticationContext.logout();
     }
 }

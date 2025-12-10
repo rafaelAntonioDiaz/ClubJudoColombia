@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-import com.RafaelDiaz.ClubJudoColombia.vista.SenseiDashboardView; // Asegúrate de importar tus vistas
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- Importado
+import com.RafaelDiaz.ClubJudoColombia.vista.SenseiDashboardView;
 import com.RafaelDiaz.ClubJudoColombia.vista.JudokaDashboardView;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
@@ -13,17 +14,25 @@ import jakarta.annotation.security.PermitAll;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Route("")
 @PermitAll
 public class MainView extends VerticalLayout implements BeforeEnterObserver {
 
-    public MainView() {
+    private final TraduccionService traduccionService;
+
+    // Inyección del servicio en el constructor
+    @Autowired
+    public MainView(TraduccionService traduccionService) {
+        this.traduccionService = traduccionService;
+
         setSizeFull();
         setJustifyContentMode(JustifyContentMode.CENTER);
         setAlignItems(Alignment.CENTER);
-        // Contenido por defecto mientras redirige
-        add(new H1("Cargando..."));
+
+        // i18n: Mensaje de carga inicial
+        add(new H1(traduccionService.get("main.cargando")));
     }
 
     @Override
@@ -31,7 +40,7 @@ public class MainView extends VerticalLayout implements BeforeEnterObserver {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth != null && auth.isAuthenticated()) {
-            // --- DIAGNÓSTICO: MIRA LA CONSOLA DE TU IDE/SERVIDOR ---
+            // --- DIAGNÓSTICO (Logs del servidor no se traducen) ---
             System.out.println("=== DIAGNÓSTICO LOGIN ===");
             System.out.println("Usuario: " + auth.getName());
             System.out.println("Autoridades (Roles): " + auth.getAuthorities());
@@ -62,9 +71,16 @@ public class MainView extends VerticalLayout implements BeforeEnterObserver {
 
     private void mostrarPantallaSinRol(String nombre) {
         removeAll();
-        add(new H1("Bienvenido, " + nombre));
-        add(new Paragraph("No tienes un rol de 'Sensei' o 'Judoka' asignado para redirigir."));
-        add(new Paragraph("Revisa la consola del servidor para ver tus roles exactos."));
-        add(new Anchor("logout", "Cerrar Sesión"));
+
+        // i18n: Mensaje de bienvenida con formato (ej. "Bienvenido, Juan")
+        String bienvenida = String.format(traduccionService.get("main.bienvenido"), nombre);
+        add(new H1(bienvenida));
+
+        // i18n: Mensajes de error explicativos
+        add(new Paragraph(traduccionService.get("main.error.sin_rol_1")));
+        add(new Paragraph(traduccionService.get("main.error.sin_rol_2")));
+
+        // i18n: Enlace de logout
+        add(new Anchor("logout", traduccionService.get("btn.cerrar.sesion")));
     }
 }

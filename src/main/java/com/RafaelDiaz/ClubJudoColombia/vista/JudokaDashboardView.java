@@ -6,11 +6,13 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.JudokaInsignia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.InsigniaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaInsigniaRepository;
+import com.RafaelDiaz.ClubJudoColombia.servicio.AsistenciaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaDashboardService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.AgendaDialog;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.CheckInWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.CombatRadarWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.MiDoWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.PalmaresDialog;
@@ -58,7 +60,7 @@ import java.util.stream.Collectors;
 
 @Route("dashboard-judoka")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
-@PageTitle("Combat Profile | Club Judo Colombia")
+@PageTitle("Combat Profile | Club Judo Colombia") // Nota: Para título dinámico se requeriría HasDynamicTitle
 @CssImport("./styles/dashboard-judoka.css")
 public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObserver {
 
@@ -68,14 +70,17 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     private final SesionService sesionService;
     private final InsigniaRepository insigniaRepository;
     private final JudokaInsigniaRepository judokaInsigniaRepository;
+    private final AsistenciaService asistenciaService;
 
     private Judoka judokaActual;
 
+    // Componentes UI
     private H2 tituloNombre;
     private Button btnAgenda;
     private Button btnTrofeos;
     private CombatRadarWidget radarWidget;
     private Div detailChartContainer;
+    private Span lblInstruccionChart;
 
     @Autowired
     public JudokaDashboardView(JudokaDashboardService dashboardService,
@@ -84,14 +89,16 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                                SesionService sesionService,
                                AccessAnnotationChecker accessChecker,
                                InsigniaRepository insigniaRepository,
-                               JudokaInsigniaRepository judokaInsigniaRepository) {
-        super(securityService, accessChecker);
+                               JudokaInsigniaRepository judokaInsigniaRepository,
+                               AsistenciaService asistenciaService) {
+        super(securityService, accessChecker, traduccionService);
         this.dashboardService = dashboardService;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
         this.sesionService = sesionService;
         this.insigniaRepository = insigniaRepository;
         this.judokaInsigniaRepository = judokaInsigniaRepository;
+        this.asistenciaService = asistenciaService;
 
         initJudoka();
         buildModernDashboard();
@@ -115,6 +122,8 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         btnTrofeos = new Button(new Icon(VaadinIcon.TROPHY));
         btnTrofeos.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_LARGE);
         btnTrofeos.getStyle().set("color", "#F1C40F");
+        // i18n: Tooltip para trofeos
+        btnTrofeos.setTooltipText(traduccionService.get("tooltip.trofeos"));
         btnTrofeos.addClickListener(e -> abrirDialogoTrofeos());
 
         btnAgenda = new Button(new Icon(VaadinIcon.CALENDAR_CLOCK));
@@ -122,15 +131,21 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         btnAgenda.addClickListener(
                 e -> new AgendaDialog(dashboardService,
                         sesionService, traduccionService, judokaActual).open());
+
         Button btnPalmares = new Button(new Icon(VaadinIcon.MEDAL));
         btnPalmares.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_LARGE);
-        btnPalmares.getStyle().set("color", "#2ECC71"); // Verde esmeralda o el color que prefieras
+        btnPalmares.getStyle().set("color", "#2ECC71");
+        // i18n: Tooltip para palmarés
+        btnPalmares.setTooltipText(traduccionService.get("tooltip.palmares"));
         btnPalmares.addClickListener(e -> new PalmaresDialog(dashboardService, traduccionService, judokaActual).open());
 
-        HorizontalLayout header = new HorizontalLayout(tituloNombre, btnPalmares, btnTrofeos, btnAgenda); // Añadido btnPalmares
+        HorizontalLayout header = new HorizontalLayout(tituloNombre, btnPalmares, btnTrofeos, btnAgenda);
         header.setWidthFull();
         header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
+
+        CheckInWidget checkInWidget = new CheckInWidget(asistenciaService, judokaActual, traduccionService);
+        checkInWidget.getStyle().set("margin-bottom", "30px");
 
         radarWidget = new CombatRadarWidget();
 
@@ -139,11 +154,12 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         chipsLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
         chipsLayout.getStyle().set("gap", "10px").set("margin-top", "20px");
 
-        chipsLayout.add(crearChipFiltro("Fuerza", "ejercicio.abdominales_1min.nombre"));
-        chipsLayout.add(crearChipFiltro("Velocidad", "ejercicio.carrera_20m.nombre"));
-        chipsLayout.add(crearChipFiltro("Resistencia Especial", "ejercicio.sjft.nombre"));
-        chipsLayout.add(crearChipFiltro("Agilidad", "ejercicio.agilidad_4x4.nombre"));
-        chipsLayout.add(crearChipFiltro("Potencia", "ejercicio.salto_horizontal_proesp.nombre"));
+        // i18n: Usamos claves de traducción para los botones de filtro
+        chipsLayout.add(crearChipFiltro("cat.fuerza", "ejercicio.abdominales_1min.nombre"));
+        chipsLayout.add(crearChipFiltro("cat.velocidad", "ejercicio.carrera_20m.nombre"));
+        chipsLayout.add(crearChipFiltro("cat.resistencia", "ejercicio.sjft.nombre"));
+        chipsLayout.add(crearChipFiltro("cat.agilidad", "ejercicio.agilidad_4x4.nombre"));
+        chipsLayout.add(crearChipFiltro("cat.potencia", "ejercicio.salto_horizontal_proesp.nombre"));
 
         detailChartContainer = new Div();
         detailChartContainer.setWidthFull();
@@ -158,9 +174,11 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                 .set("align-items", "center")
                 .set("justify-content", "center");
 
-        detailChartContainer.add(new Span("Selecciona una categoría arriba para ver tu evolución."));
+        // i18n: Texto de instrucción inicial
+        lblInstruccionChart = new Span(traduccionService.get("msg.selecciona.categoria"));
+        detailChartContainer.add(lblInstruccionChart);
 
-        mainLayout.add(header, radarWidget, chipsLayout, detailChartContainer);
+        mainLayout.add(header, checkInWidget, radarWidget, chipsLayout, detailChartContainer);
         setContent(mainLayout);
 
         actualizarTextos();
@@ -171,6 +189,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         Double poder = dashboardService.getPoderDeCombate(judokaActual);
         Map<String, Double> radarData = dashboardService.getDatosRadar(judokaActual);
 
+        // i18n: Títulos del radar
         radarWidget.updateData(
                 poder,
                 radarData,
@@ -181,20 +200,21 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     }
 
     private void actualizarTextos() {
-        // 1. Obtener el nombre de forma segura
         String nombre = (judokaActual != null && judokaActual.getUsuario() != null)
                 ? judokaActual.getUsuario().getNombre() : "";
 
-        // 2. CORRECCIÓN: Usar getTranslation() de Vaadin en lugar del servicio directo.
-        // Esto invoca a CustomI18NProvider, que sí sabe reemplazar el {0} por el nombre.
-        tituloNombre.setText(getTranslation("dashboard.welcome", nombre));
+        // i18n: Bienvenida con formato usando el servicio
+        // Se asume que la clave "dashboard.welcome" es "Hola, {0}" o similar
+        String welcomeMsg = String.format(traduccionService.get("dashboard.welcome"), nombre);
+        tituloNombre.setText(welcomeMsg);
 
-        // Lo mismo para el botón, para mantener coherencia con el idioma actual
-        btnAgenda.setText(getTranslation("kpi.tareas_hoy"));
+        // i18n: Texto del botón agenda
+        btnAgenda.setText(traduccionService.get("kpi.tareas_hoy"));
     }
 
-    private Button crearChipFiltro(String etiqueta, String clavePrueba) {
-        Button chip = new Button(etiqueta);
+    private Button crearChipFiltro(String claveEtiqueta, String clavePrueba) {
+        // i18n: Traducir la etiqueta del botón
+        Button chip = new Button(traduccionService.get(claveEtiqueta));
         chip.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_SMALL);
         chip.getStyle().set("border-radius", "20px");
         chip.addClickListener(e -> {
@@ -212,23 +232,19 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     private void mostrarGraficoDetalle(String clavePrueba) {
         detailChartContainer.removeAll();
 
-        // 1. Buscamos la prueba (Metadata)
         Optional<PruebaEstandar> pruebaOpt = dashboardService.buscarPrueba(clavePrueba);
 
         if (pruebaOpt.isPresent()) {
+            // i18n: Título de la prueba
             String tituloCategoria = traduccionService.get(clavePrueba);
 
-            // 2. Buscamos los datos históricos
             List<Map<String, Object>> datos = dashboardService.getHistorialPrueba(judokaActual, pruebaOpt.get());
-
-            // 3. --- NUEVO: Buscamos la Meta (Mejor marca esperada) ---
             List<Map<String, Object>> normas = dashboardService.getMetaPrueba(judokaActual, pruebaOpt.get());
 
             if (datos.isEmpty()) {
                 detailChartContainer.add(crearEstadoVacio(tituloCategoria));
             } else {
-                // Si hay datos, mostramos el gráfico lineal pasando también las normas
-                ApexCharts chart = crearGraficoHistorial(datos, normas, tituloCategoria); // <--- CAMBIO AQUÍ
+                ApexCharts chart = crearGraficoHistorial(datos, normas, tituloCategoria);
                 chart.setWidth("100%");
                 detailChartContainer.add(chart);
 
@@ -236,55 +252,51 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                         "setTimeout(() => window.dispatchEvent(new Event('resize')), 200);");
             }
         } else {
-            detailChartContainer.add(new Span("Configuración no encontrada para: " + clavePrueba));
+            // i18n: Mensaje de error técnico
+            String errorMsg = traduccionService.get("err.config.no_encontrada") + ": " + clavePrueba;
+            detailChartContainer.add(new Span(errorMsg));
         }
     }
 
-    // --- Método Actualizado para incluir la Meta ---
     private ApexCharts crearGraficoHistorial(List<Map<String, Object>> datos,
-                                             List<Map<String, Object>> normas, // <--- Nuevo Parámetro
+                                             List<Map<String, Object>> normas,
                                              String titulo) {
 
         List<String> fechas = datos.stream().map(m -> (String) m.get("fecha")).distinct().collect(Collectors.toList());
         String metricaPrincipal = datos.get(0).get("metrica").toString();
 
-        // Serie 1: Usuario (Azul)
         Double[] valoresUsuario = datos.stream()
                 .filter(m -> m.get("metrica").equals(metricaPrincipal))
                 .map(m -> Double.valueOf(m.get("valor").toString()))
                 .toArray(Double[]::new);
 
+        // i18n: Leyenda Progreso
         Series<Double> serieUsuario = new Series<>(traduccionService.get("legend.progreso"), valoresUsuario);
 
-        // Serie 2: Meta (Dorado) --- LÓGICA NUEVA ---
         Series<Double> serieMeta = null;
         if (normas != null && !normas.isEmpty()) {
             try {
-                // Asumimos que la meta es un valor constante (Ej: "Excelente" = 35 repeticiones)
                 Double valorMeta = Double.valueOf(normas.get(0).get("valor").toString());
-                Double[] valoresMeta = new Double[fechas.size()]; // Creamos una línea recta a lo largo del tiempo
+                Double[] valoresMeta = new Double[fechas.size()];
                 Arrays.fill(valoresMeta, valorMeta);
+                // i18n: Leyenda Meta
                 serieMeta = new Series<>(traduccionService.get("legend.meta"), valoresMeta);
             } catch (Exception e) {
-                // Si falla conversión, simplemente no mostramos la meta
-                System.err.println("Error al procesar meta para gráfico: " + e.getMessage());
+                System.err.println("Error al procesar meta: " + e.getMessage());
             }
         }
 
-        // Definimos las series a mostrar
         Series[] seriesChart;
         String[] colores;
 
         if (serieMeta != null) {
             seriesChart = new Series[]{serieUsuario, serieMeta};
-            // Azul para usuario, Dorado para la meta (Objetivo)
             colores = new String[]{"#1A73E8", "#FBC02D"};
         } else {
             seriesChart = new Series[]{serieUsuario};
             colores = new String[]{"#1A73E8"};
         }
 
-        // Configuración Gráfica
         Toolbar toolbar = new Toolbar();
         toolbar.setShow(false);
         Zoom zoom = new Zoom();
@@ -308,16 +320,17 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
 
         return ApexChartsBuilder.get()
                 .withChart(chartConfig)
-                .withColors(colores) // Aplicamos colores (Azul/Dorado)
+                .withColors(colores)
                 .withStroke(stroke)
                 .withLegend(legend)
-                .withSeries(seriesChart) // Pasamos 1 o 2 series
+                .withSeries(seriesChart)
                 .withXaxis(xaxis)
                 .build();
     }
 
     private ApexCharts crearChartSinDatos(String titulo) {
         TitleSubtitle title = new TitleSubtitle();
+        // i18n: Título gráfico vacío
         title.setText(traduccionService.get("chart.sin_datos"));
         title.setAlign(Align.CENTER);
 
@@ -341,6 +354,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         MiDoWidget widget = new MiDoWidget(todas, mios, traduccionService);
         dialog.add(widget);
 
+        // i18n: Botón cerrar
         Button cerrar = new Button(traduccionService.get("btn.cerrar"), e -> dialog.close());
         dialog.getFooter().add(cerrar);
         dialog.open();
@@ -358,10 +372,12 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         icon.setSize("40px");
         icon.setColor("#B0BEC5");
 
+        // i18n: Estado bloqueada
         H3 titulo = new H3(nombreCategoria + " " +
                 traduccionService.get("badge.estado.bloqueada"));
         titulo.getStyle().set("color", "#78909C").set("margin", "0");
 
+        // i18n: Descripción vacía
         Span mensaje = new Span(traduccionService.get("empty.desc"));
         mensaje.getStyle().set("color", "#B0BEC5").set("font-style", "italic").set("text-align", "center");
 

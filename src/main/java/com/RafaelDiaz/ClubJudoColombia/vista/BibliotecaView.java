@@ -4,8 +4,10 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TareaDiaria;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TareaDiariaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // NUEVO IMPORT
 import com.RafaelDiaz.ClubJudoColombia.vista.form.BaseForm;
 import com.RafaelDiaz.ClubJudoColombia.vista.form.TareaDiariaForm;
+import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.ComponentEventListener;
@@ -21,6 +23,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.security.RolesAllowed;
@@ -30,22 +33,9 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.stream.Stream;
 
-/**
- * --- VISTA ARMONIZADA ---
- * Gestión de biblioteca de Tareas Diarias con:
- * <ul>
- *   <li>Lazy loading real</li>
- *   <li>Serialización para Spring DevTools</li>
- *   <li>API coherente con BaseForm (setBean, event.getData)</li>
- *   <li>Notificaciones estandarizadas</li>
- * </ul>
- *
- * @author RafaelDiaz
- * @version 2.0 (Armonizada)
- * @since 2025-11-19
- */
-@Route("biblioteca-tareas")
+@Route(value = "biblioteca-tareas", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_SENSEI")
+@PageTitle("Biblioteca de Ejercicios | Club Judo Colombia")
 public class BibliotecaView extends VerticalLayout implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -53,17 +43,23 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
 
     private final TareaDiariaService tareaDiariaService;
     private final SecurityService securityService;
+    private final TraduccionService traduccionService; // NUEVO: Servicio de traducción
 
     private final Grid<TareaDiaria> grid = new Grid<>(TareaDiaria.class, false);
     private final TareaDiariaForm form = new TareaDiariaForm();
-    private final Button btnNuevaTarea = new Button("Añadir Nueva Tarea");
+    private final Button btnNuevaTarea;
 
     private Sensei senseiActual;
 
     public BibliotecaView(TareaDiariaService tareaDiariaService,
-                          SecurityService securityService) {
+                          SecurityService securityService,
+                          TraduccionService traduccionService) { // NUEVO: Parámetro añadido
         this.tareaDiariaService = tareaDiariaService;
         this.securityService = securityService;
+        this.traduccionService = traduccionService; // NUEVO: Inicialización
+
+        // NUEVO: Botón con texto traducido
+        this.btnNuevaTarea = new Button(traduccionService.get("biblioteca.boton.nueva_tarea"));
 
         configureLayout();
         configureGrid();
@@ -83,25 +79,26 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         content.setFlexGrow(1, grid);
         content.setFlexGrow(0.4, form);
 
-        add(new H1("Biblioteca de Tareas Diarias"), btnNuevaTarea, content);
+        // NUEVO: Título traducido
+        add(new H1(traduccionService.get("biblioteca.titulo")), btnNuevaTarea, content);
     }
 
     private void configureGrid() {
         grid.setWidthFull();
 
         grid.addColumn(TareaDiaria::getNombre)
-                .setHeader("Nombre Tarea")
+                .setHeader(traduccionService.get("biblioteca.grid.nombre_tarea"))
                 .setSortable(true)
                 .setAutoWidth(true)
                 .setFlexGrow(1);
 
         grid.addColumn(TareaDiaria::getMetaTexto)
-                .setHeader("Meta")
+                .setHeader(traduccionService.get("biblioteca.grid.meta"))
                 .setSortable(true)
                 .setAutoWidth(true);
 
         grid.addColumn(TareaDiaria::getDescripcion)
-                .setHeader("Descripción")
+                .setHeader(traduccionService.get("biblioteca.grid.descripcion"))
                 .setSortable(true)
                 .setAutoWidth(true)
                 .setFlexGrow(2);
@@ -109,28 +106,28 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         grid.addComponentColumn(tarea -> {
                     if (tarea.getVideoUrl() != null && !tarea.getVideoUrl().isBlank()) {
                         Icon icon = new Icon(VaadinIcon.MOVIE);
-                        icon.setTooltipText("Tiene video");
+                        icon.setTooltipText(traduccionService.get("biblioteca.grid.tooltip.tiene_video"));
                         return icon;
                     }
                     return new Span("");
-                }).setHeader("Video")
+                }).setHeader(traduccionService.get("biblioteca.grid.video"))
                 .setAutoWidth(true)
                 .setFlexGrow(0);
 
         grid.addComponentColumn(tarea -> {
                     Button editBtn = new Button(new Icon(VaadinIcon.EDIT));
                     editBtn.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
-                    editBtn.setTooltipText("Editar tarea");
+                    editBtn.setTooltipText(traduccionService.get("biblioteca.grid.tooltip.editar_tarea"));
                     editBtn.addClickListener(
                             (ComponentEventListener<ClickEvent<Button>> & Serializable)
                                     e -> abrirFormularioEdicion(tarea)
                     );
                     return editBtn;
-                }).setHeader("Acciones")
+                }).setHeader(traduccionService.get("biblioteca.grid.acciones"))
                 .setAutoWidth(true)
                 .setFlexGrow(0);
 
-        // ✅ Lazy loading con paginación
+        // Lazy loading con paginación
         grid.setDataProvider(DataProvider.fromFilteringCallbacks(
                 this::fetchTareas,
                 this::countTareas
@@ -142,7 +139,6 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         form.setVisible(false);
         form.setWidth("100%");
 
-        // ✅ CORREGIDO: Cast serializable y event.getData()
         form.addSaveListener(
                 (ComponentEventListener<BaseForm.SaveEvent<TareaDiaria>> & Serializable)
                         event -> guardarTarea(event)
@@ -164,7 +160,7 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
 
     private void loadSensei() {
         this.senseiActual = securityService.getAuthenticatedSensei()
-                .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));
+                .orElseThrow(() -> new RuntimeException(traduccionService.get("biblioteca.error.sensei_no_autenticado")));
         logger.info("Sensei {} cargado", senseiActual.getId());
     }
 
@@ -172,7 +168,7 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         form.setBean(new TareaDiaria());
         form.setVisible(true);
         btnNuevaTarea.setEnabled(false);
-        grid.asSingleSelect().clear(); // ✅ CORRECTO
+        grid.asSingleSelect().clear();
         logger.debug("Formulario nuevo abierto");
     }
 
@@ -180,7 +176,7 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         form.setBean(tarea);
         form.setVisible(true);
         btnNuevaTarea.setEnabled(false);
-        grid.asSingleSelect().setValue(tarea); // ✅ CORREGIDO: setValue() en lugar de select()
+        grid.asSingleSelect().setValue(tarea);
         logger.debug("Formulario edición abierto: {}", tarea.getId());
     }
 
@@ -188,24 +184,29 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         form.setVisible(false);
         form.setBean(null);
         btnNuevaTarea.setEnabled(true);
-        grid.asSingleSelect().clear(); // ✅ CORRECTO
+        grid.asSingleSelect().clear();
         logger.debug("Formulario cerrado");
     }
-    /**
-     * ✅ CORREGIDO: Recibe SaveEvent y usa event.getData()
-     */
+
     private void guardarTarea(BaseForm.SaveEvent<TareaDiaria> event) {
         try {
             TareaDiaria tarea = event.getData();
             tareaDiariaService.guardarTarea(tarea, senseiActual);
 
-            NotificationHelper.success("Tarea guardada: " + tarea.getNombre());
+            // NUEVO: Mensaje traducido
+            NotificationHelper.success(
+                    String.format(traduccionService.get("biblioteca.notificacion.tarea_guardada"),
+                            tarea.getNombre())
+            );
             cerrarFormulario();
             grid.getDataProvider().refreshAll();
 
             logger.info("Tarea {} guardada", tarea.getId());
         } catch (Exception e) {
-            NotificationHelper.error("Error al guardar: " + e.getMessage());
+            // NUEVO: Mensaje de error traducido
+            NotificationHelper.error(
+                    traduccionService.get("biblioteca.notificacion.error_guardar") + e.getMessage()
+            );
             logger.error("Error guardando tarea", e);
         }
     }

@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import com.RafaelDiaz.ClubJudoColombia.vista.form.UsuarioForm;
 import com.vaadin.flow.component.button.Button;
@@ -18,17 +19,24 @@ public class GestionUsuariosView extends VerticalLayout {
     private Grid<Usuario> grid = new Grid<>(Usuario.class);
     private UsuarioForm form;
     private final UsuarioService usuarioService;
+    private final TraduccionService traduccionService;
 
-    private Button nuevoUsuarioBtn = new Button("Nuevo Usuario");
+    // Quitamos la inicialización en línea para usar el servicio en el constructor
+    private Button nuevoUsuarioBtn;
 
-    public GestionUsuariosView(UsuarioService usuarioService) {
+    public GestionUsuariosView(UsuarioService usuarioService, TraduccionService traduccionService) {
         this.usuarioService = usuarioService;
+        this.traduccionService = traduccionService;
 
+        // i18n: Texto del botón
+        this.nuevoUsuarioBtn = new Button(traduccionService.get("btn.nuevo.usuario"));
+
+        // Nota: Si UsuarioForm también necesita traducción, deberías pasarle el servicio aquí
         this.form = new UsuarioForm();
         form.setVisible(false);
 
         nuevoUsuarioBtn.addClickListener(e -> crearNuevoUsuario());
-        HorizontalLayout toolbar = new HorizontalLayout(nuevoUsuarioBtn); // Corregido el typo
+        HorizontalLayout toolbar = new HorizontalLayout(nuevoUsuarioBtn);
 
         HorizontalLayout contenido = new HorizontalLayout(grid, form);
         contenido.setSizeFull();
@@ -37,22 +45,32 @@ public class GestionUsuariosView extends VerticalLayout {
         configurarGrid();
         cargarUsuarios();
 
-        // Registramos los listeners (igual que antes)
+        // Registramos los listeners
         form.addSaveListener(this::guardarUsuario);
         form.addCancelListener(this::cancelarEdicion);
 
         grid.asSingleSelect().addValueChangeListener(e -> editarUsuario(e.getValue()));
 
-        add(new H1("Gestión de Usuarios"), toolbar, contenido);
+        // i18n: Título de la vista
+        add(new H1(traduccionService.get("view.gestion.usuarios.titulo")), toolbar, contenido);
         setSizeFull();
     }
 
     private void configurarGrid() {
         grid.removeAllColumns();
-        grid.addColumn(Usuario::getUsername).setHeader("Username").setSortable(true);
-        grid.addColumn(Usuario::getNombre).setHeader("Nombre").setSortable(true);
-        grid.addColumn(Usuario::getApellido).setHeader("Apellido").setSortable(true);
-        grid.addColumn(Usuario::isActivo).setHeader("Activo").setSortable(true);
+        // i18n: Encabezados de columna
+        grid.addColumn(Usuario::getUsername)
+                .setHeader(traduccionService.get("col.username"))
+                .setSortable(true);
+        grid.addColumn(Usuario::getNombre)
+                .setHeader(traduccionService.get("col.nombre"))
+                .setSortable(true);
+        grid.addColumn(Usuario::getApellido)
+                .setHeader(traduccionService.get("col.apellido"))
+                .setSortable(true);
+        grid.addColumn(Usuario::isActivo)
+                .setHeader(traduccionService.get("col.activo"))
+                .setSortable(true);
     }
 
     private void cargarUsuarios() {
@@ -74,20 +92,12 @@ public class GestionUsuariosView extends VerticalLayout {
     }
 
     /**
-     * --- MÉTODO MODIFICADO ---
      * Handler para el evento 'SaveEvent' del formulario.
      */
     private void guardarUsuario(UsuarioForm.SaveEvent event) {
-        // --- ESTE ES EL CAMBIO CLAVE ---
-        // 1. Ahora llamamos al método de servicio actualizado, pasando
-        //    el usuario y la contraseña en texto plano por separado.
+        // Guardamos usuario y contraseña plana por separado
         usuarioService.saveUsuario(event.getUsuario(), event.getPlainPassword());
-
-        // (El resto es igual)
-        // 2. Refresca el Grid
         cargarUsuarios();
-
-        // 3. Cierra el formulario
         cerrarEditor();
     }
 

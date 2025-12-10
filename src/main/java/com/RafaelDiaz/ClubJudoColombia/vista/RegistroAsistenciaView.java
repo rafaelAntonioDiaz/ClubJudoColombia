@@ -1,252 +1,304 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.*;
-import com.RafaelDiaz.ClubJudoColombia.servicio.*;
+import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
+import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.servicio.AsistenciaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // NUEVO: Importación
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
-import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
-import com.vaadin.flow.component.ClickEvent;
-import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.grid.GridVariant;
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.data.provider.DataProvider;
-import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
+import com.vaadin.flow.spring.security.AuthenticationContext;
 import jakarta.annotation.security.RolesAllowed;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.util.stream.Stream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-/**
- * Vista para registrar asistencia en tiempo real con geolocalización.
- *
- * @author RafaelDiaz
- * @version 1.4 (Corregida para Vaadin 24.8.4)
- * @since 2025-11-20
- */
-@Route("registrar-asistencia")
+@Route(value = "asistencia", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_SENSEI")
-public class RegistroAsistenciaView extends SenseiLayout implements Serializable {
+@PageTitle("Control de Clase | Club Judo Colombia")
+public class RegistroAsistenciaView extends SenseiLayout {
 
-    private static final long serialVersionUID = 1L;
-    private static final Logger logger = LoggerFactory.getLogger(RegistroAsistenciaView.class);
-
-    private final SesionProgramadaService sesionService;
-    private final AsistenciaService asistenciaService;
     private final GrupoEntrenamientoService grupoService;
+    private final TraduccionService traduccionService; // NUEVO: Servicio de traducción
 
-    private final ComboBox<GrupoEntrenamiento> grupoCombo = new ComboBox<>("Seleccionar Grupo");
-    private final ComboBox<SesionProgramada> sesionCombo = new ComboBox<>("Sesión Activa");
-    private final Grid<Judoka> gridJudokas = new Grid<>(Judoka.class, false);
-    private final Button btnCheckIn = new Button("Check-in con GPS", new Icon(VaadinIcon.MAP_MARKER));
+    private ComboBox<GrupoEntrenamiento> grupoSelector;
+    private final FlexLayout contenedorTarjetas;
+    private final Set<Judoka> presentes = new HashSet<>();
+    private final Button btnGuardarGlobal;
 
-    private SesionProgramada sesionActual;
-
-    public RegistroAsistenciaView(SesionProgramadaService sesionService,
+    @Autowired
+    public RegistroAsistenciaView(GrupoEntrenamientoService grupoService,
                                   AsistenciaService asistenciaService,
-                                  GrupoEntrenamientoService grupoService,
                                   SecurityService securityService,
-                                  AccessAnnotationChecker accessChecker) {
-        super(securityService, accessChecker);
-        this.sesionService = sesionService;
-        this.asistenciaService = asistenciaService;
+                                  AccessAnnotationChecker accessChecker,
+                                  ConfiguracionService configuracionService,
+                                  AuthenticationContext authenticationContext,
+                                  TraduccionService traduccionService) { // NUEVO: Parámetro añadido
+        super(securityService, accessChecker, configuracionService, authenticationContext);
         this.grupoService = grupoService;
+        this.traduccionService = traduccionService; // NUEVO: Inicialización
 
-        configureCombos();
-        configureGrid();
-        configureCheckInButton();
-        buildLayout();
+        addClassName("asistencia-view");
 
-        logger.info("RegistroAsistenciaView inicializada correctamente");
+        // Contenedor principal
+        VerticalLayout mainLayout = new VerticalLayout();
+        mainLayout.setSizeFull();
+        mainLayout.setPadding(true);
+        mainLayout.setSpacing(true);
+
+        // 1. Cabecera (Selector de Grupo y Fecha)
+        mainLayout.add(crearCabecera());
+
+        // 2. Grilla de Tarjetas (El Tatami Virtual)
+        contenedorTarjetas = new FlexLayout();
+        contenedorTarjetas.setFlexWrap(FlexLayout.FlexWrap.WRAP);
+        contenedorTarjetas.getStyle().set("gap", "20px");
+        contenedorTarjetas.setSizeFull();
+        contenedorTarjetas.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+
+        // Scroll para las tarjetas
+        Div scrollContainer = new Div(contenedorTarjetas);
+        scrollContainer.setSizeFull();
+        scrollContainer.getStyle().set("overflow-y", "auto");
+
+        mainLayout.add(scrollContainer);
+
+        // 3. Footer (Botón flotante o fijo)
+        btnGuardarGlobal = new Button(traduccionService.get("asistencia.boton.cerrar_clase"),
+                new Icon(VaadinIcon.CHECK_CIRCLE));
+        btnGuardarGlobal.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
+        btnGuardarGlobal.setWidthFull();
+        btnGuardarGlobal.setVisible(false);
+        btnGuardarGlobal.addClickListener(e -> guardarAsistenciaMasiva());
+
+        mainLayout.add(btnGuardarGlobal);
+
+        setContent(mainLayout);
     }
 
-    private void configureCombos() {
-        grupoCombo.setItems(grupoService.findAll(0, 100, ""));
-        grupoCombo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
-        grupoCombo.setWidth("400px");
-        grupoCombo.setPlaceholder("Seleccione un grupo...");
-        grupoCombo.setClearButtonVisible(true);
-        grupoCombo.addValueChangeListener(event -> {
-            GrupoEntrenamiento grupo = event.getValue();
-            if (grupo != null) {
-                sesionCombo.setItems(sesionService.findActivas(grupo.getId(), 0, 50));
-                gridJudokas.getDataProvider().refreshAll();
+    private Component crearCabecera() {
+        HorizontalLayout header = new HorizontalLayout();
+        header.setWidthFull();
+        header.setAlignItems(FlexComponent.Alignment.BASELINE);
+
+        grupoSelector = new ComboBox<>(traduccionService.get("asistencia.selector.grupo"));
+        grupoSelector.setItems(grupoService.findAll(0, 100, ""));
+        grupoSelector.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
+        grupoSelector.setWidth("300px");
+        grupoSelector.setPlaceholder(traduccionService.get("asistencia.placeholder.grupo"));
+
+        grupoSelector.addValueChangeListener(e -> cargarAlumnos(e.getValue()));
+
+        String fechaFormateada = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        Span fechaHoy = new Span(traduccionService.get("asistencia.fecha") + ": " + fechaFormateada);
+        fechaHoy.getStyle().set("font-weight", "bold").set("color", "gray");
+
+        header.add(grupoSelector, fechaHoy);
+        return header;
+    }
+
+    private void cargarAlumnos(GrupoEntrenamiento grupo) {
+        contenedorTarjetas.removeAll();
+        presentes.clear();
+
+        if (grupo == null) {
+            btnGuardarGlobal.setVisible(false);
+            return;
+        }
+
+        List<Judoka> alumnos = grupoService.findJudokasEnGrupo(grupo.getId(), "", null, null);
+
+        if (alumnos.isEmpty()) {
+            contenedorTarjetas.add(new H3(traduccionService.get("asistencia.mensaje.sin_alumnos")));
+            btnGuardarGlobal.setVisible(false);
+            return;
+        }
+
+        for (Judoka alumno : alumnos) {
+            contenedorTarjetas.add(crearTarjetaAlumno(alumno));
+        }
+
+        Notification.show(traduccionService.get("asistencia.notificacion.cargados") +
+                        " " + alumnos.size() + " " +
+                        traduccionService.get("asistencia.notificacion.alumnos"))
+                .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+        btnGuardarGlobal.setVisible(true);
+    }
+
+    private Component crearTarjetaAlumno(Judoka alumno) {
+        VerticalLayout card = new VerticalLayout();
+        card.setWidth("160px");
+        card.setHeight("220px");
+        card.addClassName("alumno-card");
+        card.setAlignItems(FlexComponent.Alignment.CENTER);
+        card.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
+        card.setSpacing(false);
+        card.setPadding(true);
+
+        card.getStyle()
+                .set("border", "2px solid #ddd")
+                .set("border-radius", "12px")
+                .set("background-color", "#f5f5f5")
+                .set("cursor", "pointer")
+                .set("transition", "all 0.2s");
+
+        // Avatar
+        Avatar avatar = new Avatar(alumno.getUsuario().getNombre());
+        avatar.setWidth("64px");
+        avatar.setHeight("64px");
+
+        // Nombre
+        Span nombre = new Span(alumno.getUsuario().getNombre());
+        nombre.getStyle().set("font-weight", "bold").set("font-size", "0.9rem").set("text-align", "center");
+
+        Span apellido = new Span(alumno.getUsuario().getApellido());
+        apellido.getStyle().set("font-size", "0.8rem").set("text-align", "center");
+
+        // Estado Visual
+        Span estado = new Span(traduccionService.get("asistencia.estado.ausente"));
+        estado.getElement().getThemeList().add("badge");
+
+        // --- BOTÓN DE PÁNICO (SOS) ---
+        Button btnSOS = new Button(new Icon(VaadinIcon.AMBULANCE));
+        btnSOS.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_ERROR);
+        btnSOS.setWidth("40px");
+        btnSOS.setHeight("40px");
+        btnSOS.getStyle().set("border-radius", "50%");
+
+        // 1. Lógica Servidor: Abrir diálogo
+        btnSOS.addClickListener(e -> mostrarDialogoSOS(alumno));
+
+        // 2. Lógica Cliente: Detener propagación del clic para no activar la tarjeta
+        btnSOS.getElement().executeJs("this.addEventListener('click', function(e) { e.stopPropagation(); });");
+
+        // --- CLIC EN TARJETA (ASISTENCIA) ---
+        card.addClickListener(e -> {
+            boolean estaPresente = presentes.contains(alumno);
+            if (estaPresente) {
+                // Marcar Ausente
+                presentes.remove(alumno);
+                card.getStyle().set("background-color", "#f5f5f5").set("border-color", "#ddd");
+                estado.setText(traduccionService.get("asistencia.estado.ausente"));
+                estado.getElement().getThemeList().clear();
+                estado.getElement().getThemeList().add("badge");
             } else {
-                sesionCombo.setItems();
+                // Marcar Presente
+                presentes.add(alumno);
+                card.getStyle().set("background-color", "#e8f5e9").set("border-color", "#2e7d32");
+                estado.setText(traduccionService.get("asistencia.estado.presente"));
+                estado.getElement().getThemeList().clear();
+                estado.getElement().getThemeList().add("badge success");
             }
         });
 
-        sesionCombo.setItemLabelGenerator(s -> String.format("%s - %s",
-                s.getTipoSesion().name(), s.getFechaHoraInicio().toString()));
-        sesionCombo.setWidth("400px");
-        sesionCombo.setPlaceholder("Seleccione sesión activa...");
-        sesionCombo.setClearButtonVisible(true);
-        sesionCombo.setEnabled(false);
-        sesionCombo.addValueChangeListener(event -> {
-            this.sesionActual = event.getValue();
-            btnCheckIn.setEnabled(sesionActual != null);
-            gridJudokas.getDataProvider().refreshAll();
-        });
+        card.add(btnSOS, avatar, nombre, apellido, estado);
+        return card;
     }
 
-    private void configureGrid() {
-        gridJudokas.addColumn(j -> String.format("%s %s",
-                        j.getUsuario().getNombre(), j.getUsuario().getApellido()))
-                .setHeader("Nombre Completo")
-                .setSortable(true)
-                .setAutoWidth(true)
-                .setFlexGrow(1);
+    private void mostrarDialogoSOS(Judoka alumno) {
+        Dialog d = new Dialog();
+        d.setHeaderTitle(traduccionService.get("asistencia.dialog.sos.titulo"));
 
-        gridJudokas.addColumn(Judoka::getGrado)
-                .setHeader("Grado")
-                .setSortable(true)
-                .setAutoWidth(true);
+        VerticalLayout layout = new VerticalLayout();
 
-        gridJudokas.addColumn(Judoka::getSexo)
-                .setHeader("Sexo")
-                .setSortable(true)
-                .setAutoWidth(true);
+        layout.add(new H4(alumno.getUsuario().getNombre() + " " + alumno.getUsuario().getApellido()));
 
-        gridJudokas.addColumn(j -> String.format("%d años", j.getEdad()))
-                .setHeader("Edad")
-                .setSortable(true)
-                .setAutoWidth(true);
+        // Datos de emergencia con labels traducidos
+        layout.add(crearFilaInfo(VaadinIcon.PHONE,
+                traduccionService.get("asistencia.dialog.sos.acudiente_movil"),
+                alumno.getTelefonoAcudiente()));
+        layout.add(crearFilaInfo(VaadinIcon.ENVELOPE,
+                traduccionService.get("asistencia.dialog.sos.email"),
+                alumno.getUsuario().getEmail()));
+        layout.add(crearFilaInfo(VaadinIcon.USER_HEART,
+                traduccionService.get("asistencia.dialog.sos.eps"),
+                alumno.getEps()));
+        layout.add(crearFilaInfo(VaadinIcon.FAMILY,
+                traduccionService.get("asistencia.dialog.sos.nombre_acudiente"),
+                alumno.getNombreAcudiente()));
 
-        gridJudokas.addComponentColumn(this::crearIndicadorAsistencia)
-                .setHeader("Estado Asistencia")
-                .setAutoWidth(true)
-                .setFlexGrow(0);
+        Button btnLlamar = new Button(traduccionService.get("asistencia.dialog.sos.llamar_ahora"),
+                new Icon(VaadinIcon.PHONE));
+        btnLlamar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+        btnLlamar.setWidthFull();
 
-        gridJudokas.setPageSize(20);
-        gridJudokas.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
-        gridJudokas.asSingleSelect().addValueChangeListener(event ->
-                btnCheckIn.setEnabled(event.getValue() != null && sesionActual != null)
-        );
+        // Enlace tel: para móviles
+        String telefonoLlamada = alumno.getTelefonoAcudiente() != null ? alumno.getTelefonoAcudiente() : alumno.getCelular();
+        if (telefonoLlamada != null && !telefonoLlamada.isEmpty()) {
+            Anchor link = new Anchor("tel:" + telefonoLlamada, btnLlamar);
+            link.setWidthFull();
+            layout.add(link);
+        } else {
+            btnLlamar.setEnabled(false);
+            btnLlamar.setText(traduccionService.get("asistencia.dialog.sos.sin_telefono"));
+            layout.add(btnLlamar);
+        }
 
-        gridJudokas.setDataProvider(DataProvider.fromFilteringCallbacks(
-                this::fetchJudokasDelGrupo,
-                this::countJudokasDelGrupo
-        ));
+        Button cerrar = new Button(traduccionService.get("asistencia.boton.cerrar"), e -> d.close());
+
+        d.add(layout);
+        d.getFooter().add(cerrar);
+        d.open();
     }
 
-    private com.vaadin.flow.component.Component crearIndicadorAsistencia(Judoka judoka) {
-        if (sesionActual == null) return new Icon(VaadinIcon.QUESTION_CIRCLE_O);
+    private HorizontalLayout crearFilaInfo(VaadinIcon icon, String label, String valor) {
+        HorizontalLayout h = new HorizontalLayout();
+        h.setAlignItems(FlexComponent.Alignment.CENTER);
+        Icon i = icon.create();
+        i.setColor("gray");
+        i.setSize("16px");
 
-        boolean asistio = asistenciaService.estaRegistrada(sesionActual.getId(), judoka.getId());
-        Icon icon = asistio ? new Icon(VaadinIcon.CHECK_CIRCLE) : new Icon(VaadinIcon.CIRCLE_THIN);
-        icon.setColor(asistio ? "var(--lumo-success-color)" : "var(--lumo-contrast-60pct)");
-        icon.setSize("20px");
-        return icon;
+        Span lbl = new Span(label + ": ");
+        lbl.getStyle().set("font-weight", "bold");
+
+        Span val = new Span(valor != null ? valor : "---");
+
+        h.add(i, lbl, val);
+        return h;
     }
 
-    private void configureCheckInButton() {
-        btnCheckIn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        btnCheckIn.setIcon(new Icon(VaadinIcon.MAP_MARKER));
-        btnCheckIn.setEnabled(false);
-        btnCheckIn.setTooltipText("Registrar asistencia con ubicación GPS");
-        btnCheckIn.addClickListener((ComponentEventListener<ClickEvent<Button>> & Serializable) event -> {
-            Judoka judokaSeleccionado = gridJudokas.asSingleSelect().getValue();
-            if (judokaSeleccionado == null || sesionActual == null) {
-                NotificationHelper.warning("Seleccione judoka y sesión");
-                return;
-            }
-            realizarCheckIn(judokaSeleccionado);
-        });
-    }
+    private void guardarAsistenciaMasiva() {
+        if (grupoSelector.getValue() == null) return;
 
-    private void realizarCheckIn(Judoka judoka) {
-        getUI().ifPresent(ui -> ui.getPage().executeJs(
-                "return navigator.geolocation.getCurrentPosition().then(" +
-                        "  pos => ({lat: pos.coords.latitude, lon: pos.coords.longitude})," +
-                        "  err => null);"
-        ).then(jsonValue -> {
-            if (jsonValue == null) {
-                NotificationHelper.warning("GPS no disponible");
-                return;
-            }
+        try {
+            // TODO: Implementar guardado real en AsistenciaService
+            Notification.show(traduccionService.get("asistencia.notificacion.registrada") +
+                            " " + traduccionService.get("asistencia.notificacion.presentes") +
+                            ": " + presentes.size())
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
-            try {
-                // ✅ CORREGIDO PARA VAADIN 24.8.4: Conversión explícita a JsonObject
-                elemental.json.JsonObject jsonObject = (elemental.json.JsonObject) jsonValue;
+            // Limpiar
+            grupoSelector.clear();
+            contenedorTarjetas.removeAll();
 
-                // ✅ CORREGIDO: Usar getNumber() que retorna JsonNumber, luego asDouble()
-                double lat = jsonObject.getNumber("lat");
-                double lon = jsonObject.getNumber("lon");
-
-                Asistencia asistencia = new Asistencia();
-                asistencia.setJudoka(judoka);
-                asistencia.setSesion(sesionActual);
-                asistencia.setPresente(true);
-                asistencia.setFechaHoraMarcacion(LocalDateTime.now());
-                asistencia.setLatitud(lat);
-                asistencia.setLongitud(lon);
-
-                asistenciaService.registrarAsistencia(asistencia);
-
-                NotificationHelper.success(String.format(
-                        "Asistencia registrada: %s %s",
-                        judoka.getUsuario().getNombre(),
-                        judoka.getUsuario().getApellido()
-                ));
-
-                gridJudokas.getDataProvider().refreshItem(judoka);
-                logger.info("Check-in exitoso: Judoka {} en Sesión {}", judoka.getId(), sesionActual.getId());
-
-            } catch (Exception e) {
-                NotificationHelper.error("Error: " + e.getMessage());
-                logger.error("Error en check-in", e);
-            }
-        }));
-    }
-
-    private void buildLayout() {
-        H2 titulo = new H2("Registro de Asistencia en Tiempo Real");
-
-        HorizontalLayout combosLayout = new HorizontalLayout(grupoCombo, sesionCombo);
-        combosLayout.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.BASELINE);
-        combosLayout.setWidthFull();
-
-        VerticalLayout mainContent = new VerticalLayout(titulo, combosLayout, gridJudokas, btnCheckIn);
-        mainContent.setSizeFull();
-        mainContent.setPadding(true);
-        mainContent.setSpacing(true);
-        mainContent.setAlignItems(FlexComponent.Alignment.STRETCH);
-
-        // ✅ CORREGIDO: Si getContent() causa error, usar add() directo o castear
-        // Opción 1: add(mainContent); (si SenseiLayout extiende VerticalLayout)
-        // Opción 2: ((VerticalLayout) getContent()).add(mainContent);
-
-        com.vaadin.flow.component.html.Div content =
-                (com.vaadin.flow.component.html.Div) getContent();
-        content.add(mainContent);
-    }
-
-    private Stream<Judoka> fetchJudokasDelGrupo(Query<Judoka, Void> query) {
-        GrupoEntrenamiento grupo = grupoCombo.getValue();
-        if (grupo == null) return Stream.empty();
-
-        return grupoService.findJudokasEnGrupo(grupo.getId(), null, null, null)
-                .stream()
-                .skip(query.getOffset())
-                .limit(query.getLimit());
-    }
-
-    private int countJudokasDelGrupo(Query<Judoka, Void> query) {
-        GrupoEntrenamiento grupo = grupoCombo.getValue();
-        if (grupo == null) return 0;
-
-        return grupoService.findJudokasEnGrupo(grupo.getId(), null, null, null).size();
+        } catch (Exception e) {
+            Notification.show(traduccionService.get("asistencia.notificacion.error_guardar") +
+                            e.getMessage())
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
     }
 }

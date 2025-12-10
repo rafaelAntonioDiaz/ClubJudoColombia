@@ -6,6 +6,10 @@ import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.Period;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "judokas")
@@ -61,6 +65,10 @@ public class Judoka implements Serializable {
     @Column(name = "ruta_certificado_eps")
     private String rutaCertificadoEps;
 
+    @Column(name = "celular", nullable = true, length = 13)
+    private String celular;
+
+
     // --- DATOS DE ACUDIENTE Y LEGAL ---
 
     @Column(name = "nombre_acudiente", length = 255)
@@ -82,6 +90,17 @@ public class Judoka implements Serializable {
     @Column(name = "url_foto_perfil")
     private String urlFotoPerfil;
 
+// --- NUEVOS CAMPOS PARA ADMISIONES ---
+
+    @Enumerated(EnumType.STRING)
+    private EstadoJudoka estado = EstadoJudoka.PENDIENTE; // Por defecto entra pendiente
+
+    private LocalDateTime fechaPreRegistro = LocalDateTime.now(); // Inicia el reloj de 15 días
+
+    private boolean matriculaPagada = false; // Control financiero simple
+
+    @OneToMany(mappedBy = "judoka", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DocumentoRequisito> documentos = new ArrayList<>();
     // --- CONSTRUCTORES ---
     public Judoka() {}
 
@@ -109,6 +128,9 @@ public class Judoka implements Serializable {
     // Alias para compatibilidad con DataInitializer
     public void setGradoCinturon(GradoCinturon grado) { this.grado = grado; }
     public void setGrado(GradoCinturon grado) { this.grado = grado; }
+    public GradoCinturon getGradoCinturon() {
+        return grado;
+    }
 
     public String getPalmares() { return palmares; }
     public void setPalmares(String palmares) { this.palmares = palmares; }
@@ -158,6 +180,45 @@ public class Judoka implements Serializable {
     public String getUrlFotoPerfil() { return urlFotoPerfil; }
 
     public void setUrlFotoPerfil(String urlFotoPerfil) { this.urlFotoPerfil = urlFotoPerfil; }
+    public void setCelular(String celular) {
+        this.celular = celular;
+    }
+
+    public String getCelular() {
+        return celular;
+    }
+
+    public EstadoJudoka getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoJudoka estado) {
+        this.estado = estado;
+    }
+
+    public void setFechaPreRegistro(LocalDateTime fechaPreRegistro) {
+        this.fechaPreRegistro = fechaPreRegistro;
+    }
+
+    public LocalDateTime getFechaPreRegistro() {
+        return fechaPreRegistro;
+    }
+
+    public void setMatriculaPagada(boolean matriculaPagada) {
+        this.matriculaPagada = matriculaPagada;
+    }
+
+    public boolean isMatriculaPagada() {
+        return matriculaPagada;
+    }
+
+    public List<DocumentoRequisito> getDocumentos() {
+        return documentos;
+    }
+
+    public void setDocumentos(List<DocumentoRequisito> documentos) {
+        this.documentos = documentos;
+    }
 
     @Override
     public int hashCode() {

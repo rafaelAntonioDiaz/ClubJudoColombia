@@ -1,11 +1,11 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo.enums;
 
 public enum NivelCompetencia {
-    INTERNACIONAL("Internacional", 100),
-    NACIONAL("Nacional", 50),
-    REGIONAL("Regional", 30),
-    DEPARTAMENTAL("Departamental", 20),
-    LOCAL("Local", 10);
+    INTERNACIONAL("enum.nivel_competencia.internacional", 100),
+    NACIONAL("enum.nivel_competencia.nacional", 50),
+    REGIONAL("enum.nivel_competencia.regional", 30),
+    DEPARTAMENTAL("enum.nivel_competencia.departamental", 20),
+    LOCAL("enum.nivel_competencia.local", 10);
 
     private final String nombre;
     private final int puntosBase;

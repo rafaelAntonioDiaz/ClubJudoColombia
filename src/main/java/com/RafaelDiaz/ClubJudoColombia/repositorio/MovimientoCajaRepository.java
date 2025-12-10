@@ -1,0 +1,23 @@
+package com.RafaelDiaz.ClubJudoColombia.repositorio;
+
+import com.RafaelDiaz.ClubJudoColombia.modelo.MovimientoCaja;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoTransaccion;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public interface MovimientoCajaRepository extends JpaRepository<MovimientoCaja, Long> {
+
+    // Para el historial del mes
+    List<MovimientoCaja> findByFechaBetweenOrderByFechaDesc(LocalDateTime inicio, LocalDateTime fin);
+
+    // Para calcular totales rápidos (Dashboard)
+    @Query("SELECT SUM(m.monto) FROM MovimientoCaja m WHERE m.tipo = :tipo AND m.fecha BETWEEN :inicio AND :fin")
+    BigDecimal sumarTotalPorTipoYFecha(@Param("tipo") TipoTransaccion tipo,
+                                       @Param("inicio") LocalDateTime inicio,
+                                       @Param("fin") LocalDateTime fin);
+}

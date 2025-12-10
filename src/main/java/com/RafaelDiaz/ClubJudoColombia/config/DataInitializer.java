@@ -301,21 +301,44 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         List<Traduccion> lista = new ArrayList<>();
 
         // --- 1. DASHBOARD GENERAL (Bienvenida y Botones) ---
-        agregarTraduccion(lista, "dashboard.welcome", "Hola, {0}", "Hello, {0}");
-        agregarTraduccion(lista, "dashboard.btn.tareas", "Ir a Mis Tareas", "Go to My Tasks");
+        agregarTraduccion(lista, "dashboard.welcome", "Hola, {0}",
+                "Hello, {0}");
+        agregarTraduccion(lista, "dashboard.btn.tareas",
+                "Ir a Mis Tareas", "Go to My Tasks");
+        agregarTraduccion(lista, "dashboard.titulo",
+                "Panel de Control del Sensei", "Sensei Control Panel");
+        agregarTraduccion(lista, "dashboard.boton.tomar_asistencia",
+                "Tomar Asistencia / SOS","Take Attendance / SOS");
         // --- 2. KPIs (Indicadores Superiores) ---
-        agregarTraduccion(lista, "kpi.poder_combate", "Poder de Combate", "Combat Power");
-        agregarTraduccion(lista, "kpi.planes_activos", "Planes Activos", "Active Plans");
-        agregarTraduccion(lista, "kpi.tareas_hoy", "Tareas Hoy", "Tasks Today");
-        agregarTraduccion(lista, "kpi.proxima_eval", "Próxima Eval.", "Next Eval.");
-        agregarTraduccion(lista, "kpi.hoy", "¡Hoy!", "Today!");
-        agregarTraduccion(lista, "kpi.dias", "días", "days");
+        agregarTraduccion(lista, "kpi.poder_combate",
+                "Poder de Combate", "Combat Power");
+        agregarTraduccion(lista, "kpi.planes_activos",
+                "Planes Activos", "Active Plans");
+        agregarTraduccion(lista, "kpi.tareas_hoy",
+                "Tareas Hoy", "Tasks Today");
+        agregarTraduccion(lista, "kpi.proxima_eval",
+                "Próxima Eval.", "Next Eval.");
+        agregarTraduccion(lista, "kpi.hoy",
+                "¡Hoy!", "Today!");
+        agregarTraduccion(lista, "kpi.dias",
+                "días", "days");
+
+        agregarTraduccion(lista, "dashboard.kpi.total_judokas", "Total Judokas","Judokas Total");
+        agregarTraduccion(lista, "dashboard.kpi.grupos_activos","Grupos Activos","Active Groups");
+        agregarTraduccion(lista, "dashboard.kpi.pruebas_hoy","Para Hoy", "For Today");
+        agregarTraduccion(lista, "dashboard.kpi.asistencia_promedio","Asistencia Promedio","Average Attendance");
+
+
 
         // --- 3. GRÁFICOS Y LEYENDAS ---
         agregarTraduccion(lista, "chart.radar.serie", "Nivel Actual", "Current Level");
         agregarTraduccion(lista, "legend.progreso", "Mi Progreso", "My Progress");
         agregarTraduccion(lista, "legend.meta", "Meta a Batir", "Goal");
         agregarTraduccion(lista, "chart.sin_datos", "Sin datos", "No Data");
+        agregarTraduccion(lista, "dashboard.grafico.poder_combate_titulo","Poder de Combate por Grupo","Group Combat Power");
+        agregarTraduccion(lista, "dashboard.grafico.asistencia_30dias_titulo","Asistencia últimos 30 días","Last 30 days attendance");
+        agregarTraduccion(lista, "dashboard.grafico.promedio","Promedio","Average");
+        agregarTraduccion(lista, "dashboard.grafico.asistencia_porcentaje","Asistencia %","Attendance %");
 
         // --- 4. ESTADOS VACÍOS ---
         agregarTraduccion(lista, "empty.title", "Aún no tienes estadísticas", "No stats yet");
@@ -372,6 +395,283 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         agregarTraduccion(lista, "badge.tai_resistencia.nombre", "Pulmones de Acero", "Steel Lungs");
         agregarTraduccion(lista, "badge.tai_resistencia.desc", "Índice SJFT Excelente.", "Excellent SJFT Index.");
+// --- SenseiPlanView (Gestión de Planes) ---
+        agregarTraduccion(lista, "view.sensei.plan.titulo", "Gestión de Planes de Entrenamiento", "Training Plans Management");
+        agregarTraduccion(lista, "lbl.tipo.sesion", "Tipo de Sesión", "Session Type");
+        agregarTraduccion(lista, "lbl.seleccionar.grupo", "Seleccionar Grupo", "Select Group");
+        agregarTraduccion(lista, "btn.crear.plan", "Crear Nuevo Plan", "Create New Plan");
+        agregarTraduccion(lista, "lbl.nombre.plan", "Nombre del Plan", "Plan Name");
+        agregarTraduccion(lista, "lbl.asignar.dias", "Asignar para los días:", "Assign to days:");
+        agregarTraduccion(lista, "header.bibliotecas", "Bibliotecas (Seleccione días arriba primero)", "Libraries (Select days above first)");
+        agregarTraduccion(lista, "header.plan.actual", "Plan Actual", "Current Plan");
+        agregarTraduccion(lista, "btn.guardar.cambios", "Guardar Cambios", "Save Changes");
+        agregarTraduccion(lista, "btn.completar.plan", "Marcar Plan como COMPLETADO", "Mark Plan as COMPLETED");
+        agregarTraduccion(lista, "col.prueba", "Prueba", "Test");
+        agregarTraduccion(lista, "col.tarea", "Tarea", "Task");
+        agregarTraduccion(lista, "col.meta", "Meta", "Goal");
+        agregarTraduccion(lista, "col.ejercicio", "Ejercicio", "Exercise");
+        agregarTraduccion(lista, "col.dias", "Días", "Days");
+        agregarTraduccion(lista, "tipo.prueba", "Prueba", "Test");
+        agregarTraduccion(lista, "tipo.tarea", "Tarea", "Task");
+        agregarTraduccion(lista, "txt.cualquier.dia", "Cualquier día", "Any day");
+
+// --- Mensajes y Notificaciones (SenseiPlanView) ---
+        agregarTraduccion(lista, "msg.error.seleccionar.grupo", "Por favor, seleccione un grupo primero.", "Please select a group first.");
+        agregarTraduccion(lista, "msg.error.nombre.vacio", "Ingrese un nombre para el plan.", "Please enter a plan name.");
+        agregarTraduccion(lista, "msg.exito.plan.guardado", "Plan guardado exitosamente.", "Plan saved successfully.");
+        agregarTraduccion(lista, "msg.exito.plan.completado", "Plan marcado como COMPLETADO.", "Plan marked as COMPLETED.");
+        agregarTraduccion(lista, "msg.error.general", "Error", "Error");
+
+// --- PerfilJudokaView (Perfil del Judoka) ---
+        agregarTraduccion(lista, "tooltip.cambiar.foto", "Cambiar foto de perfil", "Change profile photo");
+        agregarTraduccion(lista, "msg.foto.actualizada", "Foto actualizada correctamente", "Photo updated successfully");
+        agregarTraduccion(lista, "alt.foto.perfil", "Foto de Perfil", "Profile Photo");
+        agregarTraduccion(lista, "lbl.peso", "Peso", "Weight");
+        agregarTraduccion(lista, "lbl.altura", "Altura", "Height");
+        agregarTraduccion(lista, "lbl.edad", "Edad", "Age");
+        agregarTraduccion(lista, "btn.registrar.pensamiento", "Registrar Pensamiento", "Log Thought");
+        agregarTraduccion(lista, "msg.diario.vacio", "Tu diario está vacío. Empieza hoy.", "Your diary is empty. Start today.");
+        agregarTraduccion(lista, "title.editar.reflexion", "Editar Reflexión", "Edit Reflection");
+        agregarTraduccion(lista, "msg.entrada.actualizada", "Entrada actualizada.", "Entry updated.");
+        agregarTraduccion(lista, "btn.cancelar", "Cancelar", "Cancel");
+        agregarTraduccion(lista, "tooltip.registro.permanente", "Registro permanente (No editable)", "Permanent record (Non-editable)");
+
+// --- SenseiPlanView (Gestión de Planes) ---
+        agregarTraduccion(lista, "view.sensei.plan.titulo", "Gestión de Planes de Entrenamiento", "Training Plans Management");
+        agregarTraduccion(lista, "lbl.tipo.sesion", "Tipo de Sesión", "Session Type");
+        agregarTraduccion(lista, "lbl.seleccionar.grupo", "Seleccionar Grupo", "Select Group");
+        agregarTraduccion(lista, "btn.crear.plan", "Crear Nuevo Plan", "Create New Plan");
+        agregarTraduccion(lista, "lbl.nombre.plan", "Nombre del Plan", "Plan Name");
+        agregarTraduccion(lista, "lbl.asignar.dias", "Asignar para los días:", "Assign to days:");
+        agregarTraduccion(lista, "header.bibliotecas", "Bibliotecas (Seleccione días arriba primero)", "Libraries (Select days above first)");
+        agregarTraduccion(lista, "header.plan.actual", "Plan Actual", "Current Plan");
+        agregarTraduccion(lista, "btn.guardar.cambios", "Guardar Cambios", "Save Changes");
+        agregarTraduccion(lista, "btn.completar.plan", "Marcar Plan como COMPLETADO", "Mark Plan as COMPLETED");
+        agregarTraduccion(lista, "col.prueba", "Prueba", "Test");
+        agregarTraduccion(lista, "col.tarea", "Tarea", "Task");
+        agregarTraduccion(lista, "col.meta", "Meta", "Goal");
+        agregarTraduccion(lista, "col.ejercicio", "Ejercicio", "Exercise");
+        agregarTraduccion(lista, "col.dias", "Días", "Days");
+        agregarTraduccion(lista, "tipo.prueba", "Prueba", "Test");
+        agregarTraduccion(lista, "tipo.tarea", "Tarea", "Task");
+        agregarTraduccion(lista, "txt.cualquier.dia", "Cualquier día", "Any day");
+
+// --- Mensajes y Notificaciones (SenseiPlanView) ---
+        agregarTraduccion(lista, "msg.error.seleccionar.grupo", "Por favor, seleccione un grupo primero.", "Please select a group first.");
+        agregarTraduccion(lista, "msg.error.nombre.vacio", "Ingrese un nombre para el plan.", "Please enter a plan name.");
+        agregarTraduccion(lista, "msg.exito.plan.guardado", "Plan guardado exitosamente.", "Plan saved successfully.");
+        agregarTraduccion(lista, "msg.exito.plan.completado", "Plan marcado como COMPLETADO.", "Plan marked as COMPLETED.");
+        agregarTraduccion(lista, "msg.error.general", "Error", "Error");
+
+// --- PerfilJudokaView (Perfil del Judoka) ---
+        agregarTraduccion(lista, "tooltip.cambiar.foto", "Cambiar foto de perfil", "Change profile photo");
+        agregarTraduccion(lista, "msg.foto.actualizada", "Foto actualizada correctamente", "Photo updated successfully");
+        agregarTraduccion(lista, "alt.foto.perfil", "Foto de Perfil", "Profile Photo");
+        agregarTraduccion(lista, "lbl.peso", "Peso", "Weight");
+        agregarTraduccion(lista, "lbl.altura", "Altura", "Height");
+        agregarTraduccion(lista, "lbl.edad", "Edad", "Age");
+        agregarTraduccion(lista, "btn.registrar.pensamiento", "Registrar Pensamiento", "Log Thought");
+        agregarTraduccion(lista, "msg.diario.vacio", "Tu diario está vacío. Empieza hoy.", "Your diary is empty. Start today.");
+        agregarTraduccion(lista, "title.editar.reflexion", "Editar Reflexión", "Edit Reflection");
+        agregarTraduccion(lista, "msg.entrada.actualizada", "Entrada actualizada.", "Entry updated.");
+        agregarTraduccion(lista, "btn.cancelar", "Cancelar", "Cancel");
+        agregarTraduccion(lista, "tooltip.registro.permanente", "Registro permanente (No editable)", "Permanent record (Non-editable)");
+        // -- TESORERIA  ---
+        agregarTraduccion(lista, "tesoreria.titulo", "Gestión Financiera", "Financial Management");
+        agregarTraduccion(lista, "tesoreria.tab.registrar_ingreso", "Registrar Ingreso (Cobro)", "Register Income (Payment)");
+        agregarTraduccion(lista, "tesoreria.tab.registrar_gasto", "Registrar Gasto (Egreso)", "Register Expense (Outflow)");
+        agregarTraduccion(lista, "tesoreria.tab.balance_reportes", "Balance y Reportes", "Balance and Reports");
+
+        agregarTraduccion(lista, "tesoreria.alumno", "Alumno", "Student");
+        agregarTraduccion(lista, "tesoreria.buscar_alumno", "Buscar alumno...", "Search student...");
+        agregarTraduccion(lista, "tesoreria.concepto", "Concepto", "Concept");
+        agregarTraduccion(lista, "tesoreria.valor", "Valor ($)", "Amount ($)");
+        agregarTraduccion(lista, "tesoreria.valor_pagado", "Valor Pagado ($)", "Amount Paid ($)");
+        agregarTraduccion(lista, "tesoreria.metodo_pago", "Método de Pago", "Payment Method");
+        agregarTraduccion(lista, "tesoreria.observacion", "Observación (Opcional)", "Observation (Optional)");
+        agregarTraduccion(lista, "tesoreria.categoria_gasto", "Categoría de Gasto", "Expense Category");
+        agregarTraduccion(lista, "tesoreria.detalle_proveedor", "Detalle / Proveedor", "Detail / Supplier");
+        agregarTraduccion(lista, "tesoreria.foto_factura", "Foto de Factura", "Invoice Photo");
+        agregarTraduccion(lista, "tesoreria.soporte", "Soporte", "Support");
+
+        agregarTraduccion(lista, "tesoreria.boton.registrar_generar_recibo", "Registrar y Generar Recibo", "Register and Generate Receipt");
+        agregarTraduccion(lista, "tesoreria.boton.registrar_salida", "Registrar Salida", "Register Outflow");
+        agregarTraduccion(lista, "tesoreria.boton.guardar", "Guardar", "Save");
+
+        agregarTraduccion(lista, "tesoreria.kpi.ingresos_mes", "Ingresos Mes", "Monthly Income");
+        agregarTraduccion(lista, "tesoreria.kpi.egresos_mes", "Egresos Mes", "Monthly Expenses");
+        agregarTraduccion(lista, "tesoreria.kpi.balance", "Balance", "Balance");
+
+        agregarTraduccion(lista, "tesoreria.grid.fecha", "Fecha", "Date");
+        agregarTraduccion(lista, "tesoreria.grid.tipo", "Tipo", "Type");
+        agregarTraduccion(lista, "tesoreria.grid.concepto", "Concepto", "Concept");
+        agregarTraduccion(lista, "tesoreria.grid.monto", "Monto", "Amount");
+        agregarTraduccion(lista, "tesoreria.grid.judoka", "Judoka", "Judoka");
+        agregarTraduccion(lista, "tesoreria.grid.soporte", "Soporte", "Support");
+
+        agregarTraduccion(lista, "tesoreria.dialog.nuevo_concepto.titulo", "Nuevo Concepto de", "New Concept for");
+        agregarTraduccion(lista, "tesoreria.dialog.nuevo_concepto.nombre", "Nombre del Concepto", "Concept Name");
+        agregarTraduccion(lista, "tesoreria.dialog.nuevo_concepto.valor_sugerido", "Valor Sugerido (Opcional)", "Suggested Value (Optional)");
+
+        agregarTraduccion(lista, "tesoreria.validacion.concepto_monto", "Concepto y Monto son obligatorios", "Concept and Amount are required");
+        agregarTraduccion(lista, "tesoreria.validacion.categoria_monto", "Categoría y Monto obligatorios", "Category and Amount are required");
+
+        agregarTraduccion(lista, "tesoreria.notificacion.ingreso_exitoso", "Ingreso registrado con éxito", "Income registered successfully");
+        agregarTraduccion(lista, "tesoreria.notificacion.soporte_cargado", "Soporte cargado", "Support uploaded");
+        agregarTraduccion(lista, "tesoreria.notificacion.error_subir", "Error al subir: ", "Error uploading: ");
+        agregarTraduccion(lista, "tesoreria.notificacion.gasto_registrado", "Gasto registrado", "Expense registered");
+        agregarTraduccion(lista, "tesoreria.notificacion.concepto_creado", "Concepto Creado", "Concept Created");
+
+        //   -- ASISTENCIA   ---
+        agregarTraduccion(lista, "asistencia.boton.cerrar_clase", "Cerrar Clase y Guardar", "Close Class and Save");
+        agregarTraduccion(lista, "asistencia.boton.cerrar", "Cerrar", "Close");
+        agregarTraduccion(lista, "asistencia.selector.grupo", "Selecciona el Grupo", "Select Group");
+        agregarTraduccion(lista, "asistencia.placeholder.grupo", "Ej: Infantiles Martes", "Ex: Kids Tuesday");
+        agregarTraduccion(lista, "asistencia.fecha", "Fecha", "Date");
+        agregarTraduccion(lista, "asistencia.mensaje.sin_alumnos", "Este grupo no tiene alumnos asignados.", "This group has no assigned students.");
+        agregarTraduccion(lista, "asistencia.estado.ausente", "AUSENTE", "ABSENT");
+        agregarTraduccion(lista, "asistencia.estado.presente", "PRESENTE", "PRESENT");
+        agregarTraduccion(lista, "asistencia.notificacion.cargados", "Cargados", "Loaded");
+        agregarTraduccion(lista, "asistencia.notificacion.alumnos", "alumnos", "students");
+        agregarTraduccion(lista, "asistencia.notificacion.registrada", "Asistencia registrada", "Attendance registered");
+        agregarTraduccion(lista, "asistencia.notificacion.presentes", "Presentes", "Present");
+        agregarTraduccion(lista, "asistencia.notificacion.error_guardar", "Error al guardar: ", "Error saving: ");
+        agregarTraduccion(lista, "asistencia.dialog.sos.titulo", "🚨 INFORMACIÓN DE EMERGENCIA", "🚨 EMERGENCY INFORMATION");
+        agregarTraduccion(lista, "asistencia.dialog.sos.acudiente_movil", "Acudiente/Móvil", "Guardian/Phone");
+        agregarTraduccion(lista, "asistencia.dialog.sos.email", "Email", "Email");
+        agregarTraduccion(lista, "asistencia.dialog.sos.eps", "EPS", "Health Insurance");
+        agregarTraduccion(lista, "asistencia.dialog.sos.nombre_acudiente", "Nombre Acudiente", "Guardian Name");
+        agregarTraduccion(lista, "asistencia.dialog.sos.llamar_ahora", "Llamar Ahora", "Call Now");
+        agregarTraduccion(lista, "asistencia.dialog.sos.sin_telefono", "Sin Teléfono Registrado", "No Phone Registered");
+
+        // --- JudokaPlanView (Vista de Planes para Alumnos) ---
+        agregarTraduccion(lista, "view.judoka.plan.titulo", "Entrenamiento de Hoy", "Today's Training");
+        agregarTraduccion(lista, "lbl.selecciona.plan", "Selecciona tu Plan", "Select Your Plan");
+        agregarTraduccion(lista, "lbl.progreso.cero", "0% Completado", "0% Completed");
+        agregarTraduccion(lista, "lbl.progreso.dia", "Completado del Día", "Completed Today");
+        agregarTraduccion(lista, "msg.entrenamiento.finalizado", "¡Entrenamiento del día finalizado! 🥋🔥", "Daily training finished! 🥋🔥");
+        agregarTraduccion(lista, "btn.completado", "¡Completado!", "Completed!");
+        agregarTraduccion(lista, "btn.marcar.hecho", "Marcar como Hecho", "Mark as Done");
+        agregarTraduccion(lista, "msg.excelente.trabajo", "¡Excelente trabajo!", "Excellent work!");
+        agregarTraduccion(lista, "msg.error.guardar", "Error al guardar", "Error saving");
+        agregarTraduccion(lista, "msg.dia.descanso", "Hoy es día de descanso. ¡Recupérate!", "Today is a rest day. Recover!");
+
+        // --- JudokaDashboardView (Dashboard Principal) ---
+        agregarTraduccion(lista, "dashboard.welcome", "Hola, %s", "Hello, %s");
+        agregarTraduccion(lista, "tooltip.trofeos", "Mis Trofeos e Insignias", "My Trophies & Badges");
+        agregarTraduccion(lista, "tooltip.palmares", "Mi Palmarés (Medallero)", "My Record (Medals)");
+        agregarTraduccion(lista, "cat.fuerza", "Fuerza", "Strength");
+        agregarTraduccion(lista, "cat.velocidad", "Velocidad", "Speed");
+        agregarTraduccion(lista, "cat.resistencia", "Resistencia Esp.", "Spec. Endurance");
+        agregarTraduccion(lista, "cat.agilidad", "Agilidad", "Agility");
+        agregarTraduccion(lista, "cat.potencia", "Potencia", "Power");
+        agregarTraduccion(lista, "msg.selecciona.categoria", "Selecciona una categoría arriba para ver tu evolución.", "Select a category above to see your progress.");
+        agregarTraduccion(lista, "kpi.poder_combate", "Poder de Combate", "Combat Power");
+        agregarTraduccion(lista, "chart.radar.serie", "Habilidades", "Skills");
+        agregarTraduccion(lista, "chart.sin_datos", "Sin datos suficientes", "Not enough data");
+        agregarTraduccion(lista, "legend.progreso", "Mi Progreso", "My Progress");
+        agregarTraduccion(lista, "legend.meta", "Meta Esperada", "Target Goal");
+        agregarTraduccion(lista, "err.config.no_encontrada", "Configuración no encontrada", "Configuration not found");
+        agregarTraduccion(lista, "badge.estado.bloqueada", "(Bloqueada)", "(Locked)");
+        agregarTraduccion(lista, "empty.desc", "Realiza test físicos para desbloquear esta métrica.", "Perform physical tests to unlock this metric.");
+        agregarTraduccion(lista, "btn.cerrar", "Cerrar", "Close");
+        agregarTraduccion(lista, "kpi.tareas_hoy", "Agenda del Día", "Today's Agenda");
+
+        // --- GestionUsuariosView (Admin de Usuarios) ---
+        agregarTraduccion(lista, "view.gestion.usuarios.titulo", "Gestión de Usuarios", "User Management");
+        agregarTraduccion(lista, "btn.nuevo.usuario", "Nuevo Usuario", "New User");
+        agregarTraduccion(lista, "col.username", "Usuario", "Username");
+        agregarTraduccion(lista, "col.nombre", "Nombre", "First Name");
+        agregarTraduccion(lista, "col.apellido", "Apellido", "Last Name");
+        agregarTraduccion(lista, "col.activo", "Activo", "Active");
+
+        //-- REVISIÓN DE TAREAS (SenseiRevisionView)
+        agregarTraduccion(lista, "revision.titulo", "Revisión de Tareas Diarias Completadas", "Daily Tasks Review");
+        agregarTraduccion(lista, "revision.grid.fecha_hora", "Fecha y Hora", "Date and Time");
+        agregarTraduccion(lista, "revision.grid.judoka", "Judoka", "Judoka");
+        agregarTraduccion(lista, "revision.grid.tarea_realizada", "Tarea Realizada", "Task Completed");
+        agregarTraduccion(lista, "revision.grid.ubicacion_gps", "Ubicación (GPS)", "Location (GPS)");
+        agregarTraduccion(lista, "revision.grid.sin_gps", "Sin GPS", "No GPS");
+        agregarTraduccion(lista, "revision.grid.ver_mapa", "Ver Mapa", "View Map");
+
+        // --- AsignacionJudokasView (Sensei) ---
+        agregarTraduccion(lista, "view.asignacion.titulo", "Asignación de Judokas a Grupos", "Judoka Group Assignment");
+        agregarTraduccion(lista, "lbl.judokas.disponibles", "Judokas Disponibles", "Available Judokas");
+        agregarTraduccion(lista, "lbl.judokas.grupo", "Judokas en el Grupo", "Judokas in Group");
+        agregarTraduccion(lista, "col.nombre.completo", "Nombre Completo", "Full Name");
+        agregarTraduccion(lista, "col.grado", "Grado", "Rank");
+        agregarTraduccion(lista, "col.sexo", "Sexo", "Sex");
+        agregarTraduccion(lista, "col.edad", "Edad", "Age");
+        agregarTraduccion(lista, "col.accion", "Acción", "Action");
+        agregarTraduccion(lista, "lbl.anios", "años", "years");
+        agregarTraduccion(lista, "tooltip.asignar.grupo", "Asignar a", "Assign to");
+        agregarTraduccion(lista, "tooltip.remover.grupo", "Remover del grupo", "Remove from group");
+        agregarTraduccion(lista, "msg.exito.asignacion", "Judoka asignado correctamente a", "Judoka successfully assigned to");
+        agregarTraduccion(lista, "msg.error.asignacion", "Error al asignar", "Error assigning");
+        agregarTraduccion(lista, "msg.exito.remocion", "Judoka removido del grupo", "Judoka removed from group");
+        agregarTraduccion(lista, "msg.error.remocion", "Error al remover", "Error removing");
+
+        //  -- BIBLIOTECA DE TAREAS (BibliotecaView)
+                agregarTraduccion(lista, "biblioteca.titulo", "Biblioteca de Tareas Diarias", "Daily Tasks Library");
+        agregarTraduccion(lista, "biblioteca.boton.nueva_tarea", "Añadir Nueva Tarea", "Add New Task");
+        agregarTraduccion(lista, "biblioteca.grid.nombre_tarea", "Nombre Tarea", "Task Name");
+        agregarTraduccion(lista, "biblioteca.grid.meta", "Meta", "Goal");
+        agregarTraduccion(lista, "biblioteca.grid.descripcion", "Descripción", "Description");
+        agregarTraduccion(lista, "biblioteca.grid.video", "Video", "Video");
+        agregarTraduccion(lista, "biblioteca.grid.tooltip.tiene_video", "Tiene video", "Has video");
+        agregarTraduccion(lista, "biblioteca.grid.tooltip.editar_tarea", "Editar tarea", "Edit task");
+        agregarTraduccion(lista, "biblioteca.grid.acciones", "Acciones", "Actions");
+        agregarTraduccion(lista, "biblioteca.error.sensei_no_autenticado", "Sensei no autenticado", "Sensei not authenticated");
+        agregarTraduccion(lista, "biblioteca.notificacion.tarea_guardada", "Tarea guardada: %s", "Task saved: %s");
+        agregarTraduccion(lista, "biblioteca.notificacion.error_guardar", "Error al guardar: ", "Error saving: ");
+
+// --- LoginView (Pantalla de Acceso) ---
+        agregarTraduccion(lista, "app.nombre", "Club de Judo Colombia", "Judo Club Colombia");
+        agregarTraduccion(lista, "login.form.titulo", "Iniciar Sesión", "Sign In");
+        agregarTraduccion(lista, "login.lbl.usuario", "Usuario", "Username");
+        agregarTraduccion(lista, "login.lbl.password", "Contraseña", "Password");
+        agregarTraduccion(lista, "login.btn.ingresar", "Entrar", "Log in");
+        agregarTraduccion(lista, "login.link.olvido", "¿Olvidaste tu contraseña?", "Forgot password?");
+        agregarTraduccion(lista, "login.error.titulo", "Usuario o contraseña incorrectos", "Incorrect username or password");
+        agregarTraduccion(lista, "login.error.mensaje", "Por favor, verifica tus credenciales e intenta nuevamente.", "Please check your credentials and try again.");
+
+        // --- MainView (Ruta Raíz / Redirección) ---
+        agregarTraduccion(lista, "main.cargando", "Cargando...", "Loading...");
+        agregarTraduccion(lista, "main.bienvenido", "Bienvenido, %s", "Welcome, %s");
+        agregarTraduccion(lista, "main.error.sin_rol_1", "No tienes un rol de 'Sensei' o 'Judoka' asignado para redirigir.", "You do not have a 'Sensei' or 'Judoka' role assigned for redirection.");
+        agregarTraduccion(lista, "main.error.sin_rol_2", "Contacta al administrador para verificar tus permisos.", "Contact the administrator to verify your permissions.");
+        agregarTraduccion(lista, "btn.cerrar.sesion", "Cerrar Sesión", "Log Out");
+
+        //-- RESULTADOS (SenseiResultadosView)
+        agregarTraduccion(lista, "resultados.titulo", "Registro de Resultados de Pruebas Estándar", "Standard Test Results Registration");
+        agregarTraduccion(lista, "resultados.selector.judoka", "Seleccionar Judoka", "Select Judoka");
+        agregarTraduccion(lista, "resultados.grid.planes.header", "Planes de Evaluación", "Evaluation Plans");
+        agregarTraduccion(lista, "resultados.grid.pruebas.header", "Pruebas del Plan (Clic para registrar)", "Plan Tests (Click to register)");
+        agregarTraduccion(lista, "resultados.feedback.inicio", "Resultados guardados: ", "Results saved: ");
+        agregarTraduccion(lista, "resultados.feedback.sjft", "Índice SJFT: %.2f (%s). ", "SJFT Index: %.2f (%s). ");
+        agregarTraduccion(lista, "resultados.feedback.prueba", "%s: %.1f -> %s. ", "%s: %.1f -> %s. ");
+        agregarTraduccion(lista, "resultados.error.guardar", "Error al guardar: ", "Error saving: ");
+        agregarTraduccion(lista, "resultados.sin_clasificacion", "Sin clasificación", "No classification");
+        agregarTraduccion(lista, "resultados.sjft.error.faltan_datos", "Faltan datos para calcular el índice SJFT. Asegúrese de llenar todos los campos.", "Missing data to calculate SJFT index. Make sure to fill all fields.");
+        agregarTraduccion(lista, "resultados.sjft.error.total_cero", "El total de proyecciones no puede ser cero.", "Total projections cannot be zero.");
+        agregarTraduccion(lista, "resultados.sjft.error.metrica_no_encontrada", "Error fatal: No se encuentra la métrica 'metrica.sjft_indice.nombre'", "Fatal error: Metric 'metrica.sjft_indice.nombre' not found");
+        agregarTraduccion(lista, "resultados.sjft.nota_automatica", "Índice SJFT calculado automáticamente.", "SJFT index automatically calculated.");
+
+        //-- ENUMS de ClasificacionRendimiento (necesarios para traducción de enum)
+        agregarTraduccion(lista, "enum.clasificacionrendimiento.excelente", "Excelente", "Excellent");
+        agregarTraduccion(lista, "enum.clasificacionrendimiento.bueno", "Bueno", "Good");
+        agregarTraduccion(lista, "enum.clasificacionrendimiento.regular", "Regular", "Regular");
+        agregarTraduccion(lista, "enum.clasificacionrendimiento.mejorable", "Mejorable", "Needs Improvement");
+
+        //  --- ENUMS ---
+        agregarTraduccion(lista, "enum.metodopago.efectivo", "Efectivo", "Cash");
+        agregarTraduccion(lista, "enum.metodopago.transferencia", "Transferencia", "Transfer");
+        agregarTraduccion(lista, "enum.metodopago.tarjeta", "Tarjeta", "Card");
+        agregarTraduccion(lista, "enum.metodopago.nequi", "Nequi", "Nequi");
+        agregarTraduccion(lista, "enum.metodopago.daviplata", "Daviplata", "Daviplata");
+
+        agregarTraduccion(lista, "enum.tipotransaccion.ingreso", "Ingreso", "Income");
+        agregarTraduccion(lista, "enum.tipotransaccion.egreso", "Egreso", "Expense");
 
         traduccionRepository.saveAll(lista);
     }

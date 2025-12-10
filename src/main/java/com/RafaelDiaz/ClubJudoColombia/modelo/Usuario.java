@@ -56,6 +56,8 @@ public class Usuario implements Serializable {
 
     @Column(name = "email", length = 150)
     private String email;
+
+
     /**
      * Estado del usuario (activo, inactivo, pendiente de verificación).
      * Usamos un booleano para simplicidad (true = activo, false = inactivo).
@@ -168,6 +170,8 @@ public class Usuario implements Serializable {
     public void setActivo(boolean activo) {
         this.activo = activo;
     }
+
+
 
 
     @Override

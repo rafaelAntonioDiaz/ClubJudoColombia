@@ -1,7 +1,9 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.login.LoginForm;
+import com.vaadin.flow.component.login.LoginI18n;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
@@ -9,49 +11,64 @@ import com.vaadin.flow.router.Route;
 
 /**
  * Vista de Login de la aplicación.
- *
- * @Route("login"): Esta es la URL para la página de login (ej. http://localhost:8080/login)
- *
- * BeforeEnterObserver: Interfaz que nos permite ejecutar código
- * antes de que la vista se muestre (para mostrar errores de login).
+ * Actualizada con TraduccionService para internacionalizar el formulario.
  */
 @Route("login")
 public class LoginView extends VerticalLayout implements BeforeEnterObserver {
 
-    // El componente de formulario de login que nos da Vaadin
     private final LoginForm loginForm = new LoginForm();
+    private final TraduccionService traduccionService;
 
-    public LoginView() {
-        addClassName("login-view"); // (Opcional) Para estilizar con CSS
-        setSizeFull(); // Ocupa toda la pantalla
+    // Inyectamos el servicio en el constructor
+    public LoginView(TraduccionService traduccionService) {
+        this.traduccionService = traduccionService;
 
-        // Configura el layout para centrar el formulario
+        addClassName("login-view");
+        setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
 
-        // --- ¡MUY IMPORTANTE! ---
-        // El 'action' le dice al formulario a qué URL debe enviar
-        // los datos (username/password).
-        // Debe ser "login" para que Spring Security lo intercepte.
+        // Configuramos la acción del formulario (Spring Security)
         loginForm.setAction("login");
 
-        // Añadimos un título y el formulario al layout
-        add(new H1("Club de Judo Colombia"), loginForm);
+        // --- INTERNACIONALIZACIÓN DEL FORMULARIO ---
+        configurarTextosFormulario();
+
+        // i18n: Título de la aplicación
+        add(new H1(traduccionService.get("app.nombre")), loginForm);
     }
 
     /**
-     * Este método se ejecuta antes de que la vista se muestre.
+     * Configura el objeto LoginI18n con textos de la base de datos.
      */
+    private void configurarTextosFormulario() {
+        LoginI18n i18n = LoginI18n.createDefault();
+
+        // 1. Textos del Formulario (Inputs y Botones)
+        LoginI18n.Form form = i18n.getForm();
+        form.setTitle(traduccionService.get("login.form.titulo")); // A veces se deja vacío si usas un H1 externo
+        form.setUsername(traduccionService.get("login.lbl.usuario"));
+        form.setPassword(traduccionService.get("login.lbl.password"));
+        form.setSubmit(traduccionService.get("login.btn.ingresar"));
+        form.setForgotPassword(traduccionService.get("login.link.olvido"));
+        i18n.setForm(form);
+
+        // 2. Textos de Error (Cuando fallan las credenciales)
+        LoginI18n.ErrorMessage errorMessage = i18n.getErrorMessage();
+        errorMessage.setTitle(traduccionService.get("login.error.titulo"));
+        errorMessage.setMessage(traduccionService.get("login.error.mensaje"));
+        i18n.setErrorMessage(errorMessage);
+
+        // Aplicamos la configuración al componente
+        loginForm.setI18n(i18n);
+    }
+
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        // Leemos la URL para ver si Spring Security nos ha enviado
-        // un parámetro de "error" (lo que significa que el login falló).
         if (event.getLocation()
                 .getQueryParameters()
                 .getParameters()
                 .containsKey("error")) {
-
-            // Si hay un error, le decimos al formulario que lo muestre.
             loginForm.setError(true);
         }
     }

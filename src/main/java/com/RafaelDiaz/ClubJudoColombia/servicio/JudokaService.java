@@ -59,6 +59,10 @@ public class JudokaService {
     public Judoka save(Judoka judoka) {
         return judokaRepository.save(judoka);
     }
+    // --- Para llenar el Combo de Tesorería ---
+    public List<Judoka> findAllJudokas() {
+        return judokaRepository.findAll();
+    }
     public List<Reflexion> obtenerHistorialReflexiones(Judoka judoka) {
         return reflexionRepository.findByJudokaOrderByFechaCreacionDesc(judoka);
     }

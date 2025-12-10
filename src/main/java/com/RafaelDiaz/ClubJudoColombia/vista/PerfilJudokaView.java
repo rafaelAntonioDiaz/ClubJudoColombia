@@ -37,7 +37,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
@@ -45,7 +44,7 @@ import java.util.List;
 
 @Route("perfil-judoka")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
-@PageTitle("Mi Santuario | Club Judo Colombia")
+@PageTitle("Mi Santuario | Club Judo Colombia") // Nota: Para traducir el PageTitle dinámicamente, se requeriría implementar HasDynamicTitle
 public class PerfilJudokaView extends JudokaLayout {
 
     private final SecurityService securityService;
@@ -54,7 +53,7 @@ public class PerfilJudokaView extends JudokaLayout {
     private final FileStorageService fileStorageService;
 
     private Judoka judokaActual;
-    private Image avatarImage; // Usamos Image en lugar de Avatar para soportar DownloadHandler
+    private Image avatarImage;
     private Div avatarContainer;
 
     @Autowired
@@ -63,7 +62,7 @@ public class PerfilJudokaView extends JudokaLayout {
                             JudokaService judokaService,
                             TraduccionService traduccionService,
                             FileStorageService fileStorageService) {
-        super(securityService, accessChecker);
+        super(securityService, accessChecker, traduccionService);
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.traduccionService = traduccionService;
@@ -110,6 +109,7 @@ public class PerfilJudokaView extends JudokaLayout {
         quoteIcon.getStyle().set("opacity", "0.3").set("margin-right", "10px");
 
         String claveFrase = BibliotecaSabiduria.obtenerClaveDelDia();
+        // i18n: Traducción de la frase del día
         String textoTraducido = traduccionService.get(claveFrase);
         String autor = BibliotecaSabiduria.obtenerAutor(claveFrase);
 
@@ -133,12 +133,12 @@ public class PerfilJudokaView extends JudokaLayout {
 
         String nombre = judokaActual.getUsuario().getNombre();
 
-        // 1. Contenedor de Avatar (Imagen Circular)
+        // 1. Contenedor de Avatar
         avatarContainer = new Div();
         avatarContainer.setWidth("120px");
         avatarContainer.setHeight("120px");
         avatarContainer.getStyle()
-                .set("border-radius", "50%") // Círculo perfecto
+                .set("border-radius", "50%")
                 .set("overflow", "hidden")
                 .set("border", "4px solid white")
                 .set("box-shadow", "0 4px 10px rgba(0,0,0,0.1)")
@@ -147,9 +147,9 @@ public class PerfilJudokaView extends JudokaLayout {
                 .set("align-items", "center")
                 .set("justify-content", "center");
 
-        cargarImagenEnAvatar(); // Lógica con DownloadHandler
+        cargarImagenEnAvatar();
 
-        // 2. Upload (Botón)
+        // 2. Upload
         Upload upload = new Upload();
         upload.setAcceptedFileTypes("image/jpeg", "image/png", "image/jpg");
         upload.setMaxFiles(1);
@@ -157,22 +157,25 @@ public class PerfilJudokaView extends JudokaLayout {
 
         Button uploadBtn = new Button(new Icon(VaadinIcon.CAMERA));
         uploadBtn.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
-        uploadBtn.setTooltipText("Cambiar foto");
+        // i18n: Tooltip traducido
+        uploadBtn.setTooltipText(traduccionService.get("tooltip.cambiar.foto"));
         upload.setUploadButton(uploadBtn);
 
-        // --- HANDLER MODERNO ---
         upload.setUploadHandler(event -> {
             try {
                 judokaService.actualizarFotoPerfil(judokaActual, event.getInputStream(), event.getFileName());
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    cargarImagenEnAvatar(); // Recargar usando la nueva API
-                    Notification.show("Foto actualizada", 2000, Notification.Position.BOTTOM_CENTER)
+                    cargarImagenEnAvatar();
+                    // i18n: Mensaje de éxito
+                    Notification.show(traduccionService.get("msg.foto.actualizada"), 2000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     upload.clearFileList();
                 }));
             } catch (Exception e) {
                 getUI().ifPresent(ui -> ui.access(() ->
-                        Notification.show("Error: " + e.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR)
+                        // i18n: Mensaje de error
+                        Notification.show(traduccionService.get("msg.error.general") + ": " + e.getMessage())
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR)
                 ));
             }
         });
@@ -183,7 +186,8 @@ public class PerfilJudokaView extends JudokaLayout {
         H2 nombreH2 = new H2(nombre + " " + judokaActual.getUsuario().getApellido());
         nombreH2.getStyle().set("margin-bottom", "0").set("text-align", "center");
 
-        Span cinturonBadge = new Span(judokaActual.getGrado().toString());
+        // i18n: Traducción automática del Enum Grado (Cinturón)
+        Span cinturonBadge = new Span(traduccionService.get(judokaActual.getGrado()));
         cinturonBadge.getElement().getThemeList().add("badge");
         cinturonBadge.getStyle().set("background-color", "#2C3E50").set("color", "white").set("padding", "0.5em 1em").set("font-size", "0.9rem");
 
@@ -192,43 +196,36 @@ public class PerfilJudokaView extends JudokaLayout {
         stats.setJustifyContentMode(FlexComponent.JustifyContentMode.EVENLY);
         stats.getStyle().set("margin-top", "20px");
 
-        stats.add(crearStatItem(VaadinIcon.SCALE, judokaActual.getPeso() + " kg", "Peso"));
-        stats.add(crearStatItem(VaadinIcon.ARROWS_LONG_V, judokaActual.getEstatura() + " cm", "Altura"));
-        stats.add(crearStatItem(VaadinIcon.CALENDAR_USER, String.valueOf(judokaActual.getEdad()), "Edad"));
+        // i18n: Etiquetas de estadísticas
+        stats.add(crearStatItem(VaadinIcon.SCALE, judokaActual.getPeso() + " kg", traduccionService.get("lbl.peso")));
+        stats.add(crearStatItem(VaadinIcon.ARROWS_LONG_V, judokaActual.getEstatura() + " cm", traduccionService.get("lbl.altura")));
+        stats.add(crearStatItem(VaadinIcon.CALENDAR_USER, String.valueOf(judokaActual.getEdad()), traduccionService.get("lbl.edad")));
 
         layout.add(avatarWrapper, nombreH2, cinturonBadge, stats);
         return layout;
     }
 
-    /**
-     * Carga la imagen usando la API moderna DownloadHandler de Vaadin 24.8.
-     * Reemplaza StreamResource obsoleto.
-     */
     private void cargarImagenEnAvatar() {
         avatarContainer.removeAll();
         String rutaFoto = judokaActual.getUrlFotoPerfil();
 
         if (rutaFoto != null && !rutaFoto.isEmpty()) {
-            // Creamos el Handler para servir el archivo
             DownloadHandler handler = DownloadHandler.fromInputStream(context -> {
                 try {
-                    // Nota: Asegúrate que fileStorageService guarde en una ruta accesible
-                    // Aquí asumimos "uploads/" relativo
                     Path path = Path.of("uploads", rutaFoto);
                     return new DownloadResponse(new FileInputStream(path.toFile()), rutaFoto, Files.probeContentType(path), Files.size(path));
                 } catch (Exception e) {
                     return new DownloadResponse(new ByteArrayInputStream(new byte[0]), "error", "application/octet-stream", 0);
                 }
-            }).inline(); // .inline() es clave para mostrarla y no descargarla
+            }).inline();
 
-            // Usamos Image que SÍ soporta DownloadHandler en 24.8
-            avatarImage = new Image(handler, "Foto Perfil");
+            // i18n: Alt text
+            avatarImage = new Image(handler, traduccionService.get("alt.foto.perfil"));
             avatarImage.setWidth("100%");
             avatarImage.setHeight("100%");
-            avatarImage.getStyle().set("object-fit", "cover"); // Ajuste perfecto
+            avatarImage.getStyle().set("object-fit", "cover");
             avatarContainer.add(avatarImage);
         } else {
-            // Fallback: Icono o iniciales
             Avatar placeholder = new Avatar(judokaActual.getUsuario().getNombre());
             placeholder.setWidth("100%");
             placeholder.setHeight("100%");
@@ -255,7 +252,6 @@ public class PerfilJudokaView extends JudokaLayout {
         return v;
     }
 
-    // --- BITÁCORA ---
     private Component crearBitacoraReflexion() {
         VerticalLayout layout = new VerticalLayout();
         layout.addClassName("card-blanca");
@@ -265,15 +261,18 @@ public class PerfilJudokaView extends JudokaLayout {
         layout.setPadding(true);
         layout.setSpacing(true);
 
+        // i18n: Título ya estaba traducido, perfecto
         H3 titulo = new H3(traduccionService.get("perfil.notas.titulo"));
         titulo.getStyle().set("margin-top", "0").set("color", "#2C3E50");
 
         TextArea nuevaNotaArea = new TextArea();
         nuevaNotaArea.setWidthFull();
+        // i18n: Placeholder ya estaba traducido
         nuevaNotaArea.setPlaceholder(traduccionService.get("perfil.notas.placeholder"));
         nuevaNotaArea.setMinHeight("100px");
 
-        Button btnPublicar = new Button("Registrar Pensamiento", new Icon(VaadinIcon.PENCIL));
+        // i18n: Botón de acción
+        Button btnPublicar = new Button(traduccionService.get("btn.registrar.pensamiento"), new Icon(VaadinIcon.PENCIL));
         btnPublicar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnPublicar.getStyle().set("background-color", "#27AE60");
 
@@ -285,6 +284,7 @@ public class PerfilJudokaView extends JudokaLayout {
             if (!nuevaNotaArea.isEmpty()) {
                 judokaService.crearReflexion(judokaActual, nuevaNotaArea.getValue());
                 nuevaNotaArea.clear();
+                // i18n: Notificación ya estaba traducida
                 Notification.show(traduccionService.get("perfil.msg.guardado"), 3000, Notification.Position.BOTTOM_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 refrescarTimeline(timelineLayout);
@@ -302,7 +302,8 @@ public class PerfilJudokaView extends JudokaLayout {
         List<Reflexion> historial = judokaService.obtenerHistorialReflexiones(judokaActual);
 
         if (historial.isEmpty()) {
-            Span empty = new Span("Tu diario está vacío. Empieza hoy.");
+            // i18n: Mensaje de estado vacío
+            Span empty = new Span(traduccionService.get("msg.diario.vacio"));
             empty.getStyle().set("color", "gray").set("font-style", "italic").set("margin-top", "20px");
             container.add(empty);
             return;
@@ -334,25 +335,28 @@ public class PerfilJudokaView extends JudokaLayout {
 
             btnEditar.addClickListener(e -> {
                 Dialog editDialog = new Dialog();
-                editDialog.setHeaderTitle("Editar Reflexión");
+                // i18n: Título del diálogo
+                editDialog.setHeaderTitle(traduccionService.get("title.editar.reflexion"));
 
                 TextArea editArea = new TextArea();
                 editArea.setValue(ref.getContenido());
                 editArea.setWidth("100%");
                 editArea.setHeight("200px");
 
-                Button save = new Button("Guardar Cambios", ev -> {
+                // i18n: Botones del diálogo
+                Button save = new Button(traduccionService.get("btn.guardar.cambios"), ev -> {
                     try {
                         judokaService.editarReflexion(ref, editArea.getValue());
                         editDialog.close();
                         refrescarTimeline(containerPadre);
-                        Notification.show("Entrada actualizada.");
+                        // i18n: Notificación
+                        Notification.show(traduccionService.get("msg.entrada.actualizada"));
                     } catch (Exception ex) {
                         Notification.show(ex.getMessage());
                     }
                 });
                 save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-                Button cancel = new Button("Cancelar", ev -> editDialog.close());
+                Button cancel = new Button(traduccionService.get("btn.cancelar"), ev -> editDialog.close());
 
                 editDialog.add(editArea);
                 editDialog.getFooter().add(cancel, save);
@@ -364,7 +368,8 @@ public class PerfilJudokaView extends JudokaLayout {
             lock.setSize("14px");
             lock.setColor("#ccc");
             lock.getStyle().set("position", "absolute").set("top", "10px").set("right", "10px");
-            lock.setTooltipText("Registro permanente");
+            // i18n: Tooltip
+            lock.setTooltipText(traduccionService.get("tooltip.registro.permanente"));
             card.add(lock);
         }
         return card;
