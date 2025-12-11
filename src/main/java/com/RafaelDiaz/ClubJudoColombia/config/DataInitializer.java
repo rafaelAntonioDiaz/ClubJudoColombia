@@ -105,9 +105,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         validarRolesExistentes();
 
         // 2. Traducciones
-        crearTraduccionesFestivos();
-        crearTraduccionesDias();
-        crearTraduccionesDashboard();
+        cargarTraducciones(traduccionRepository);
 
         // 3. Usuarios
         Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune",
@@ -1234,5 +1232,363 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         agregarTraduccion(lista, "error.upload", "Error al subir archivo", "Error uploading file");
 
         traduccionRepository.saveAll(lista);
+    }
+    private void cargarTraducciones(TraduccionRepository repo) {
+        System.out.println("🌍 Verificando traducciones del sistema...");
+        crearTraduccionesDashboard(repo);
+        crearTraduccionesDias(repo);
+        crearTraduccionesFestivos(repo);
+        crearTraduccionesGenerales(repo);
+        // --- DASHBOARD & SALUDOS ---
+        crearSiNoExiste(repo, "dashboard.welcome", "es", "Hola {0}");
+        crearSiNoExiste(repo, "dashboard.welcome", "en", "Hello {0}");
+        crearSiNoExiste(repo, "app.nombre", "es", "Club Judo Colombia");
+
+        // --- KPI CARDS ---
+        crearSiNoExiste(repo, "kpi.tareas_hoy", "es", "Tareas de Hoy");
+        crearSiNoExiste(repo, "kpi.asistencia_mes", "es", "Asistencia Mes");
+        crearSiNoExiste(repo, "kpi.nivel_tecnico", "es", "Nivel Técnico");
+        crearSiNoExiste(repo, "kpi.proximo_evento", "es", "Próximo Evento");
+
+        // --- MENÚS ---
+        crearSiNoExiste(repo, "menu.dashboard", "es", "Dashboard");
+        crearSiNoExiste(repo, "menu.dashboard", "en", "Dashboard");
+        crearSiNoExiste(repo, "menu.mis.planes", "es", "Mis Planes");
+        crearSiNoExiste(repo, "menu.mis.planes", "en", "My Plans");
+        crearSiNoExiste(repo, "menu.comunidad", "es", "Comunidad");
+        crearSiNoExiste(repo, "menu.comunidad", "en", "Community");
+        crearSiNoExiste(repo, "menu.mi.perfil", "es", "Mi Perfil");
+        crearSiNoExiste(repo, "btn.cerrar.sesion", "es", "Cerrar Sesión");
+        crearSiNoExiste(repo, "btn.cerrar.sesion", "en", "Logout");
+
+
+        // --- VISTAS SENSEI ---
+        crearSiNoExiste(repo, "view.sensei.plan.titulo", "es", "Gestión de Planes");
+        crearSiNoExiste(repo, "view.sensei.plan.nuevo", "es", "Nuevo Plan");
+
+        // --- ADMISIONES ---
+        crearSiNoExiste(repo, "admisiones.titulo", "es", "Validación de Ingresos");
+        crearSiNoExiste(repo, "admisiones.descripcion", "es", "Revise los documentos y pagos de los aspirantes.");
+        crearSiNoExiste(repo, "admisiones.grid.registrado", "es", "Registrado");
+        crearSiNoExiste(repo, "admisiones.grid.documentos", "es", "Documentos");
+        crearSiNoExiste(repo, "admisiones.grid.pago", "es", "Pago Matrícula");
+        crearSiNoExiste(repo, "admisiones.btn.marcar_pago", "es", "Marcar Pago Manual");
+        crearSiNoExiste(repo, "admisiones.msg.activado", "es", "¡Judoka activado con éxito!");
+        crearSiNoExiste(repo, "admisiones.msg.rechazado", "es", "Aspirante rechazado.");
+
+        // --- FINANZAS / TESORERÍA ---
+        crearSiNoExiste(repo, "finanzas.titulo", "es", "Gestión Financiera");
+        crearSiNoExiste(repo, "finanzas.tab.ingreso", "es", "Registrar Ingreso");
+        crearSiNoExiste(repo, "finanzas.tab.gasto", "es", "Registrar Gasto");
+        crearSiNoExiste(repo, "finanzas.tab.balance", "es", "Balance y Reportes");
+        crearSiNoExiste(repo, "finanzas.label.alumno", "es", "Alumno (Opcional)");
+        crearSiNoExiste(repo, "finanzas.placeholder.buscar_alumno", "es", "Buscar por nombre...");
+        crearSiNoExiste(repo, "finanzas.label.concepto", "es", "Concepto");
+        crearSiNoExiste(repo, "finanzas.label.valor", "es", "Valor ($)");
+        crearSiNoExiste(repo, "finanzas.label.valor_sugerido", "es", "Valor Sugerido");
+        crearSiNoExiste(repo, "finanzas.label.metodo_pago", "es", "Método de Pago");
+        crearSiNoExiste(repo, "finanzas.label.observacion", "es", "Observación");
+        crearSiNoExiste(repo, "finanzas.label.categoria_gasto", "es", "Categoría de Gasto");
+        crearSiNoExiste(repo, "finanzas.label.valor_pagado", "es", "Valor Pagado ($)");
+        crearSiNoExiste(repo, "finanzas.label.detalle_proveedor", "es", "Detalle / Proveedor");
+        crearSiNoExiste(repo, "finanzas.label.nombre_concepto", "es", "Nombre del Concepto");
+        crearSiNoExiste(repo, "finanzas.btn.registrar_ingreso", "es", "Cobrar e Imprimir Recibo");
+        crearSiNoExiste(repo, "finanzas.btn.registrar_gasto", "es", "Registrar Salida");
+        crearSiNoExiste(repo, "finanzas.btn.foto_factura", "es", "Foto Factura");
+        crearSiNoExiste(repo, "finanzas.msg.ingreso_exito", "es", "Ingreso registrado correctamente");
+        crearSiNoExiste(repo, "finanzas.msg.gasto_exito", "es", "Gasto registrado correctamente");
+        crearSiNoExiste(repo, "finanzas.msg.soporte_cargado", "es", "Soporte cargado");
+        crearSiNoExiste(repo, "finanzas.msg.concepto_creado", "es", "Concepto Financiero Creado");
+        crearSiNoExiste(repo, "finanzas.error.campos_obligatorios", "es", "Por favor complete los campos obligatorios");
+        crearSiNoExiste(repo, "finanzas.kpi.ingresos", "es", "Ingresos Mes");
+        crearSiNoExiste(repo, "finanzas.kpi.egresos", "es", "Egresos Mes");
+        crearSiNoExiste(repo, "finanzas.kpi.balance", "es", "Balance Neto");
+        crearSiNoExiste(repo, "finanzas.grid.fecha", "es", "Fecha");
+        crearSiNoExiste(repo, "finanzas.grid.tipo", "es", "Tipo");
+        crearSiNoExiste(repo, "finanzas.grid.soporte", "es", "Soporte");
+        crearSiNoExiste(repo, "finanzas.dialog.nuevo_concepto_titulo", "es", "Nuevo Concepto de");
+
+        // --- AGENDA GPS ---
+        crearSiNoExiste(repo, "agenda.titulo", "es", "Agenda & GPS");
+        crearSiNoExiste(repo, "agenda.btn.nueva", "es", "Nueva Sesión");
+        crearSiNoExiste(repo, "agenda.grid.sesion", "es", "Sesión");
+        crearSiNoExiste(repo, "agenda.tooltip.gps_activo", "es", "GPS Activo");
+        crearSiNoExiste(repo, "agenda.tooltip.sin_gps", "es", "Sin restricción GPS");
+        crearSiNoExiste(repo, "agenda.dialog.programar", "es", "Programar Sesión");
+        crearSiNoExiste(repo, "agenda.dialog.editar", "es", "Editar Sesión");
+        crearSiNoExiste(repo, "agenda.field.nombre", "es", "Nombre de la Sesión");
+        crearSiNoExiste(repo, "agenda.default.entrenamiento", "es", "Entrenamiento Regular");
+        crearSiNoExiste(repo, "agenda.section.gps", "es", "Configuración GPS (Opcional)");
+        crearSiNoExiste(repo, "agenda.field.latitud", "es", "Latitud");
+        crearSiNoExiste(repo, "agenda.field.longitud", "es", "Longitud");
+        crearSiNoExiste(repo, "agenda.field.radio", "es", "Radio Permitido (metros)");
+
+        // --- CHECK-IN WIDGET ---
+        crearSiNoExiste(repo, "checkin.titulo", "es", "Control de Asistencia GPS");
+        crearSiNoExiste(repo, "checkin.status.ready", "es", "Listo para verificar ubicación.");
+        crearSiNoExiste(repo, "checkin.btn.marcar", "es", "Marcar Asistencia");
+        crearSiNoExiste(repo, "checkin.status.locating", "es", "Localizando...");
+        crearSiNoExiste(repo, "checkin.status.requesting", "es", "Solicitando permiso GPS...");
+        crearSiNoExiste(repo, "checkin.btn.retry", "es", "Reintentar Check-in");
+        crearSiNoExiste(repo, "checkin.error.denied", "es", "Error GPS: Permiso denegado.");
+        crearSiNoExiste(repo, "checkin.error.browser", "es", "ERROR: Debes habilitar el GPS y dar permiso.");
+        crearSiNoExiste(repo, "checkin.status.validating", "es", "Coordenadas recibidas. Validando distancia...");
+        crearSiNoExiste(repo, "checkin.btn.success", "es", "¡Asistencia Marcada!");
+        crearSiNoExiste(repo, "checkin.status.registered", "es", "Te has registrado correctamente.");
+        crearSiNoExiste(repo, "checkin.msg.oss", "es", "¡Asistencia registrada! Oss.");
+
+        // --- INVENTARIO ---
+        crearSiNoExiste(repo, "inventario.titulo", "es", "Tienda del Dojo");
+        crearSiNoExiste(repo, "inventario.btn.nuevo", "es", "Nuevo Producto");
+        crearSiNoExiste(repo, "inventario.grid.articulo", "es", "Artículo");
+        crearSiNoExiste(repo, "inventario.grid.stock", "es", "Stock");
+        crearSiNoExiste(repo, "inventario.grid.venta", "es", "Precio Venta");
+        crearSiNoExiste(repo, "inventario.grid.costo", "es", "Costo");
+        crearSiNoExiste(repo, "inventario.status.agotado", "es", "AGOTADO");
+        crearSiNoExiste(repo, "inventario.tooltip.add_stock", "es", "Agregar Stock");
+        crearSiNoExiste(repo, "inventario.dialog.venta", "es", "Registrar Venta");
+        crearSiNoExiste(repo, "inventario.msg.venta_ok", "es", "Venta registrada y descontada del inventario");
+        crearSiNoExiste(repo, "inventario.dialog.stock", "es", "Reabastecer Stock");
+        crearSiNoExiste(repo, "inventario.field.cantidad_ingreso", "es", "Cantidad a Ingresar");
+        crearSiNoExiste(repo, "inventario.dialog.nuevo", "es", "Nuevo Producto");
+        crearSiNoExiste(repo, "inventario.dialog.editar", "es", "Editar Producto");
+        crearSiNoExiste(repo, "inventario.field.costo", "es", "Costo Compra ($)");
+        crearSiNoExiste(repo, "inventario.field.precio", "es", "Precio Venta ($)");
+        crearSiNoExiste(repo, "inventario.field.stock_inicial", "es", "Stock Inicial");
+
+        // --- GESTIÓN DE GRUPOS ---
+        crearSiNoExiste(repo, "grupos.titulo", "es", "Gestión de Grupos");
+        crearSiNoExiste(repo, "grupos.btn.nuevo", "es", "Nuevo Grupo");
+        crearSiNoExiste(repo, "grupos.grid.nombre", "es", "Nombre Grupo");
+        crearSiNoExiste(repo, "grupos.grid.descripcion", "es", "Descripción");
+        crearSiNoExiste(repo, "grupos.grid.miembros", "es", "Miembros");
+        crearSiNoExiste(repo, "grupos.label.alumnos", "es", "alumnos");
+        crearSiNoExiste(repo, "grupos.tooltip.gestionar_miembros", "es", "Gestionar Miembros");
+        crearSiNoExiste(repo, "grupos.dialog.miembros.titulo", "es", "Miembros de");
+        crearSiNoExiste(repo, "grupos.field.buscar_alumno", "es", "Buscar alumno para agregar...");
+        crearSiNoExiste(repo, "grupos.section.agregar", "es", "Agregar Nuevo Miembro");
+        crearSiNoExiste(repo, "grupos.section.actuales", "es", "Miembros Actuales");
+
+        // --- CAMPEONATOS ---
+        crearSiNoExiste(repo, "campeonatos.titulo", "es", "Gestión de Campeonatos");
+        crearSiNoExiste(repo, "campeonatos.btn.nueva_convocatoria", "es", "Nueva Convocatoria");
+        crearSiNoExiste(repo, "campeonatos.grid.evento", "es", "Evento");
+        crearSiNoExiste(repo, "campeonatos.grid.resultado", "es", "Resultado");
+        crearSiNoExiste(repo, "campeonatos.dialog.convocatoria.titulo", "es", "Crear Convocatoria");
+        crearSiNoExiste(repo, "campeonatos.field.nombre_evento", "es", "Nombre del Evento");
+        crearSiNoExiste(repo, "campeonatos.field.lugar", "es", "Lugar/Ciudad");
+        crearSiNoExiste(repo, "campeonatos.field.nivel", "es", "Nivel Competitivo");
+        crearSiNoExiste(repo, "campeonatos.field.seleccionar_atletas", "es", "Seleccionar Atletas");
+        crearSiNoExiste(repo, "campeonatos.msg.inscritos", "es", "atletas inscritos exitosamente.");
+        crearSiNoExiste(repo, "campeonatos.dialog.resultado.titulo", "es", "Resultado:");
+        crearSiNoExiste(repo, "campeonatos.field.medalla", "es", "Medalla / Puesto");
+        crearSiNoExiste(repo, "campeonatos.field.link_video", "es", "Link Video (YouTube)");
+
+        // --- CAMPOS DE ENTRENAMIENTO ---
+        crearSiNoExiste(repo, "campos.titulo", "es", "Campos de Entrenamiento");
+        crearSiNoExiste(repo, "campos.btn.programar", "es", "Programar Campo");
+        crearSiNoExiste(repo, "campos.grid.nombre", "es", "Campo / Evento");
+        crearSiNoExiste(repo, "campos.estado.en_curso", "es", "En Curso");
+        crearSiNoExiste(repo, "campos.btn.certificar", "es", "Certificar Cumplimiento");
+        crearSiNoExiste(repo, "campos.dialog.programar.titulo", "es", "Programar Campo");
+        crearSiNoExiste(repo, "campos.field.nombre", "es", "Nombre del Campo");
+        crearSiNoExiste(repo, "campos.placeholder.ej_campamento", "es", "Ej: Campamento de Altura");
+        crearSiNoExiste(repo, "campos.field.lugar", "es", "Ubicación");
+        crearSiNoExiste(repo, "campos.field.objetivo", "es", "Enfoque / Objetivo");
+        crearSiNoExiste(repo, "campos.placeholder.ej_tactico", "es", "Ej: Táctico Competitivo");
+        crearSiNoExiste(repo, "campos.field.convocados", "es", "Convocados");
+        crearSiNoExiste(repo, "campos.msg.programado", "es", "Campo programado para");
+        crearSiNoExiste(repo, "campos.dialog.certificar.titulo", "es", "Certificar:");
+        crearSiNoExiste(repo, "campos.label.pregunta_cumplimiento", "es", "¿El judoka completó satisfactoriamente el campo?");
+        crearSiNoExiste(repo, "campos.field.puntos_ascenso", "es", "Puntos de Ascenso a Otorgar");
+        crearSiNoExiste(repo, "campos.btn.confirmar_puntos", "es", "Certificar y Otorgar Puntos");
+
+        // --- COMUNIDAD ---
+        crearSiNoExiste(repo, "comunidad.tab.muro", "es", "Muro del Dojo", "Dojo Wall");
+        crearSiNoExiste(repo, "comunidad.tab.chat", "es", "Chat Grupal", "Group Chat");
+        crearSiNoExiste(repo, "comunidad.post.placeholder", "es", "Comparte algo con el dojo...", "Share something...");
+        crearSiNoExiste(repo, "comunidad.btn.subir_foto", "es", "Subir Foto/Video", "Upload Photo/Video");
+        crearSiNoExiste(repo, "comunidad.label.drop", "es", "Arrastra archivos aquí...", "Drag files here...");
+        crearSiNoExiste(repo, "comunidad.btn.publicar", "es", "Publicar", "Post");
+        crearSiNoExiste(repo, "comunidad.msg.publicado", "es", "¡Publicado en el muro!", "Posted on the wall!");
+        crearSiNoExiste(repo, "comunidad.msg.archivo_listo", "es", "Archivo listo", "File ready");
+        crearSiNoExiste(repo, "comunidad.warn.empty_post", "es", "Escribe algo o sube una foto", "Write something or upload a photo");
+        crearSiNoExiste(repo, "comunidad.btn.comentar", "es", "Comentar", "Comment");
+        crearSiNoExiste(repo, "comunidad.comment.placeholder", "es", "Escribe una respuesta...", "Write a reply...");
+        crearSiNoExiste(repo, "comunidad.msg.comment_sent", "es", "Comentario enviado", "Comment sent");
+        crearSiNoExiste(repo, "comunidad.label.image_of", "es", "Imagen de", "Image of");
+        crearSiNoExiste(repo, "comunidad.chat.escribir", "es", "Escribe un mensaje...", "Type a message...");
+        crearSiNoExiste(repo, "comunidad.chat.enviar", "es", "Enviar", "Send");
+
+        // --- ADMINISTRACIÓN ---
+        crearSiNoExiste(repo, "admin.titulo", "es", "Configuración del Sistema");
+        crearSiNoExiste(repo, "admin.descripcion", "es", "Ajuste los parámetros globales de la organización.");
+        crearSiNoExiste(repo, "admin.field.nombre_org", "es", "Nombre de la Organización");
+        crearSiNoExiste(repo, "admin.field.nivel", "es", "Nivel Organizacional");
+        crearSiNoExiste(repo, "admin.helper.nivel", "es", "Define el alcance (Club, Liga o Federación)");
+        crearSiNoExiste(repo, "admin.field.telefono", "es", "Teléfono de Contacto");
+        crearSiNoExiste(repo, "admin.field.email", "es", "Email de Soporte");
+        crearSiNoExiste(repo, "admin.field.moneda", "es", "Moneda (ISO 4217)");
+        crearSiNoExiste(repo, "admin.note.title", "es", "Nota Importante:");
+        crearSiNoExiste(repo, "admin.note.text", "es", "Los cambios en el 'Nivel Organizacional' pueden habilitar o deshabilitar módulos específicos.\nAsegúrese de guardar antes de salir.");
+        crearSiNoExiste(repo, "msg.success.config_saved", "es", "Configuración guardada correctamente.");
+
+        // --- MENSAJES DE ÉXITO Y ERROR ---
+        crearSiNoExiste(repo, "msg.success.saved", "es", "Guardado exitosamente");
+        crearSiNoExiste(repo, "msg.success.updated", "es", "Actualizado exitosamente");
+        crearSiNoExiste(repo, "msg.success.deleted", "es", "Eliminado exitosamente");
+        crearSiNoExiste(repo, "msg.success.added", "es", "Agregado exitosamente");
+        crearSiNoExiste(repo, "msg.success.removed", "es", "Removido exitosamente");
+        crearSiNoExiste(repo, "msg.success.payment_manual", "es", "Pago registrado manualmente.");
+        crearSiNoExiste(repo, "error.generic", "es", "Ha ocurrido un error");
+        crearSiNoExiste(repo, "error.upload", "es", "Error al subir archivo");
+        crearSiNoExiste(repo, "error.archivo_perdido", "es", "Archivo físico no encontrado");
+        crearSiNoExiste(repo, "error.grupo_no_guardado", "es", "Primero guarde el grupo antes de eliminarlo.");
+        crearSiNoExiste(repo, "error.campos_obligatorios", "es", "Campos obligatorios incompletos");
+
+        // --- ENUMS (Traducciones de sistema) ---
+        crearSiNoExiste(repo, "enum.tipotransaccion.ingreso", "es", "Ingreso");
+        crearSiNoExiste(repo, "enum.tipotransaccion.egreso", "es", "Egreso/Gasto");
+        crearSiNoExiste(repo, "enum.metodopago.efectivo", "es", "Efectivo");
+        crearSiNoExiste(repo, "enum.metodopago.transferencia", "es", "Transferencia");
+        crearSiNoExiste(repo, "enum.metodopago.tarjeta", "es", "Tarjeta");
+        crearSiNoExiste(repo, "enum.resultadocompetencia.participacion", "es", "Participación");
+        crearSiNoExiste(repo, "enum.resultadocompetencia.oro", "es", "Oro 🥇");
+        crearSiNoExiste(repo, "enum.resultadocompetencia.plata", "es", "Plata 🥈");
+        crearSiNoExiste(repo, "enum.resultadocompetencia.bronce", "es", "Bronce 🥉");
+        crearSiNoExiste(repo, "enum.nivelcompetencia.departamental", "es", "Departamental");
+        crearSiNoExiste(repo, "enum.nivelcompetencia.nacional", "es", "Nacional");
+        crearSiNoExiste(repo, "enum.nivelcompetencia.internacional", "es", "Internacional");
+        crearSiNoExiste(repo, "enum.nivelcompetencia.club", "es", "Interno (Club)");
+        crearSiNoExiste(repo, "enum.nivelorganizacional.club.nombre", "es", "Club");
+        crearSiNoExiste(repo, "enum.nivelorganizacional.liga.nombre", "es", "Liga");
+        crearSiNoExiste(repo, "enum.nivelorganizacional.federacion.nombre", "es", "Federación");
+    }
+    /**
+     * Método auxiliar robusto para evitar Duplicate Entry.
+     * Verifica si la clave ya existe antes de insertar.
+     */
+    private void crearTraduccionesDashboard(TraduccionRepository repo) {
+        // Saludos y Títulos
+        crearSiNoExiste(repo, "dashboard.titulo", "es","Tablero Sensei");
+        crearSiNoExiste(repo, "dashboard.welcome", "es", "Hola {0}");
+        crearSiNoExiste(repo, "app.nombre", "es", "Club Judo Colombia");
+
+        // Tarjetas KPI (Indicadores Clave)
+        crearSiNoExiste(repo, "kpi.tareas_hoy", "es", "Tareas de Hoy");
+        crearSiNoExiste(repo, "kpi.asistencia_mes", "es", "Asistencia Mes");
+        crearSiNoExiste(repo, "kpi.nivel_tecnico", "es", "Nivel Técnico");
+        crearSiNoExiste(repo, "kpi.proximo_evento", "es", "Próximo Evento");
+        crearSiNoExiste(repo, "kpi.estado_fisico", "es", "Estado Físico");
+        crearSiNoExiste(repo, "kpi.tecnica", "es", "Técnica");
+
+        // Gráficos
+        crearSiNoExiste(repo, "chart.poder_combate", "es", "Poder de Combate");
+        crearSiNoExiste(repo, "chart.asistencia", "es", "Histórico de Asistencia");
+        crearSiNoExiste(repo, "chart.progreso_tecnico", "es", "Progreso Técnico");
+        crearSiNoExiste(repo, "menu.sensei.dashboard", "es", "Dashboard");
+        crearSiNoExiste(repo, "menu.sensei.comunidad", "es", "Dojo virtual");
+        crearSiNoExiste(repo, "menu.sensei.admisiones", "es", "Admisiones");
+        crearSiNoExiste(repo, "menu.sensei.grupos", "es", "Gestión de grupos");
+        crearSiNoExiste(repo, "menu.sensei.asistencia", "es", "Control Asistencia");
+
+        // Layout
+        crearSiNoExiste(repo, "menu.asistencia", "es", "Control Asistencia");
+        crearSiNoExiste(repo, "menu.biblioteca", "es", "Biblioteca Ejercicios");
+        crearSiNoExiste(repo, "menu.resultados", "es", "Resultados Tests");
+    }
+
+    private void crearTraduccionesDias(TraduccionRepository repo) {
+        // Días de la semana (Usados en Calendario y Planes)
+        crearSiNoExiste(repo, "MONDAY", "es", "Lunes");
+        crearSiNoExiste(repo, "TUESDAY", "es", "Martes");
+        crearSiNoExiste(repo, "WEDNESDAY", "es", "Miércoles");
+        crearSiNoExiste(repo, "THURSDAY", "es", "Jueves");
+        crearSiNoExiste(repo, "FRIDAY", "es", "Viernes");
+        crearSiNoExiste(repo, "SATURDAY", "es", "Sábado");
+        crearSiNoExiste(repo, "SUNDAY", "es", "Domingo");
+
+        // Meses (Opcional, si usas formatos personalizados)
+        crearSiNoExiste(repo, "month.january", "es", "Enero");
+        // ... etc
+    }
+
+    private void crearTraduccionesFestivos(TraduccionRepository repo) {
+        // Festivos de Colombia (Para que el calendario los muestre bonitos)
+        crearSiNoExiste(repo, "holiday.ano_nuevo", "es", "Año Nuevo");
+        crearSiNoExiste(repo, "holiday.reyes_magos", "es", "Reyes Magos");
+        crearSiNoExiste(repo, "holiday.san_jose", "es", "Día de San José");
+        crearSiNoExiste(repo, "holiday.jueves_santo", "es", "Jueves Santo");
+        crearSiNoExiste(repo, "holiday.viernes_santo", "es", "Viernes Santo");
+        crearSiNoExiste(repo, "holiday.dia_trabajo", "es", "Día del Trabajo");
+        crearSiNoExiste(repo, "holiday.ascension", "es", "Ascensión del Señor");
+        crearSiNoExiste(repo, "holiday.corpus_christi", "es", "Corpus Christi");
+        crearSiNoExiste(repo, "holiday.sagrado_corazon", "es", "Sagrado Corazón");
+        crearSiNoExiste(repo, "holiday.san_pedro", "es", "San Pedro y San Pablo");
+        crearSiNoExiste(repo, "holiday.independencia", "es", "Día de la Independencia");
+        crearSiNoExiste(repo, "holiday.batalla_boyaca", "es", "Batalla de Boyacá");
+        crearSiNoExiste(repo, "holiday.asuncion", "es", "La Asunción");
+        crearSiNoExiste(repo, "holiday.raza", "es", "Día de la Raza");
+        crearSiNoExiste(repo, "holiday.todos_santos", "es", "Todos los Santos");
+        crearSiNoExiste(repo, "holiday.independencia_cartagena", "es", "Independencia de Cartagena");
+        crearSiNoExiste(repo, "holiday.inmaculada", "es", "Inmaculada Concepción");
+        crearSiNoExiste(repo, "holiday.navidad", "es", "Navidad");
+    }
+
+    private void crearTraduccionesGenerales(TraduccionRepository repo) {
+        // --- BOTONES GENÉRICOS ---
+        crearSiNoExiste(repo, "btn.guardar", "es", "Guardar");
+        crearSiNoExiste(repo, "btn.cancelar", "es", "Cancelar");
+        crearSiNoExiste(repo, "btn.editar", "es", "Editar");
+        crearSiNoExiste(repo, "btn.eliminar", "es", "Eliminar");
+        crearSiNoExiste(repo, "btn.crear", "es", "Crear");
+        crearSiNoExiste(repo, "btn.ver_pdf", "es", "Ver PDF");
+        crearSiNoExiste(repo, "btn.activar", "es", "Activar");
+        crearSiNoExiste(repo, "btn.rechazar", "es", "Rechazar");
+        crearSiNoExiste(repo, "btn.agregar", "es", "Agregar");
+        crearSiNoExiste(repo, "btn.quitar", "es", "Quitar");
+        crearSiNoExiste(repo, "btn.cerrar", "es", "Cerrar");
+        crearSiNoExiste(repo, "btn.vender", "es", "Vender");
+        crearSiNoExiste(repo, "btn.confirmar", "es", "Confirmar");
+        crearSiNoExiste(repo, "btn.actualizar", "es", "Actualizar");
+        crearSiNoExiste(repo, "btn.guardar_cambios", "es", "Guardar Cambios");
+
+        // --- TEXTOS GENÉRICOS ---
+        crearSiNoExiste(repo, "generic.fecha", "es", "Fecha");
+        crearSiNoExiste(repo, "generic.nombre", "es", "Nombre");
+        crearSiNoExiste(repo, "generic.descripcion", "es", "Descripción");
+        crearSiNoExiste(repo, "generic.acciones", "es", "Acciones");
+        crearSiNoExiste(repo, "generic.estado", "es", "Estado");
+        crearSiNoExiste(repo, "generic.cantidad", "es", "Cantidad");
+        crearSiNoExiste(repo, "generic.judoka", "es", "Judoka");
+        crearSiNoExiste(repo, "generic.grupo", "es", "Grupo");
+        crearSiNoExiste(repo, "generic.horario", "es", "Horario");
+        crearSiNoExiste(repo, "generic.tipo", "es", "Tipo");
+        crearSiNoExiste(repo, "generic.inicio", "es", "Inicio");
+        crearSiNoExiste(repo, "generic.fin", "es", "Fin");
+        crearSiNoExiste(repo, "generic.fecha_inicio", "es", "Fecha Inicio");
+        crearSiNoExiste(repo, "generic.fecha_fin", "es", "Fecha Fin");
+        crearSiNoExiste(repo, "generic.pts", "es", "pts");
+        crearSiNoExiste(repo, "generic.pendiente", "es", "Pendiente");
+        crearSiNoExiste(repo, "generic.pagado", "es", "Pagado");
+        crearSiNoExiste(repo, "generic.no_registrado", "es", "No registrado");
+        crearSiNoExiste(repo, "generic.aspirante", "es", "Aspirante");
+        crearSiNoExiste(repo, "generic.decision", "es", "Decisión");
+        crearSiNoExiste(repo, "generic.cinturon", "es", "Cinturón");
+        crearSiNoExiste(repo, "generic.placeholder.escribe_nombre", "es", "Escribe el nombre...");
+        crearSiNoExiste(repo, "btn.guardar", "es", "Guardar");
+    }
+    private void crearSiNoExiste(TraduccionRepository repo, String clave, String idioma, String texto) {
+        if (repo.findByClaveAndIdioma(clave, idioma).isEmpty()) {
+            repo.save(new Traduccion(clave, idioma, texto));
+        }
+    }
+
+    // Sobrecarga para soportar el caso donde pasas también texto en inglés en la misma línea (opcional)
+    private void crearSiNoExiste(TraduccionRepository repo, String clave, String idioma, String texto, String textoEn) {
+        crearSiNoExiste(repo, clave, idioma, texto);
+        if (textoEn != null) {
+            crearSiNoExiste(repo, clave, "en", textoEn);
+        }
     }
 }

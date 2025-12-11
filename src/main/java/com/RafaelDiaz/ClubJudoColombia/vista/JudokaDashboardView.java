@@ -200,15 +200,16 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     }
 
     private void actualizarTextos() {
+        // 1. Obtener el nombre de forma segura (Evita NullPointerException)
         String nombre = (judokaActual != null && judokaActual.getUsuario() != null)
-                ? judokaActual.getUsuario().getNombre() : "";
+                ? judokaActual.getUsuario().getNombre() : "Judoka";
 
-        // i18n: Bienvenida con formato usando el servicio
-        // Se asume que la clave "dashboard.welcome" es "Hola, {0}" o similar
-        String welcomeMsg = String.format(traduccionService.get("dashboard.welcome"), nombre);
-        tituloNombre.setText(welcomeMsg);
+        // 2. CORRECCIÓN: Usar el servicio directamente
+        // El servicio buscará "dashboard.welcome" ("Hola {0}") y reemplazará {0} por el nombre.
+        // No uses String.format() aquí.
+        tituloNombre.setText(traduccionService.get("dashboard.welcome", nombre));
 
-        // i18n: Texto del botón agenda
+        // 3. Otros textos
         btnAgenda.setText(traduccionService.get("kpi.tareas_hoy"));
     }
 

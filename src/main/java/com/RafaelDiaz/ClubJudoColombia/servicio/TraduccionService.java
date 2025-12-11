@@ -5,6 +5,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.TraduccionRepository;
 import com.vaadin.flow.component.UI;
 import org.springframework.stereotype.Service;
 
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
@@ -110,5 +111,20 @@ public class TraduccionService {
                 .map(p -> Character.toUpperCase(p.charAt(0))
                         + p.substring(1).toLowerCase())
                 .collect(Collectors.joining(" "));
+    }
+    /**
+     * --- NUEVO MÉTODO PARA PARÁMETROS ---
+     * Permite: traduccionService.get("dashboard.welcome", "Rafael")
+     */
+    public String get(String clave, Object... params) {
+        String texto = get(clave);
+        if (params != null && params.length > 0) {
+            try {
+                return MessageFormat.format(texto, params);
+            } catch (Exception e) {
+                return texto; // Si falla el formato, devolvemos el texto original
+            }
+        }
+        return texto;
     }
 }
