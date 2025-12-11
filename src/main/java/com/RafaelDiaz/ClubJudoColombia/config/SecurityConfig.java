@@ -42,13 +42,19 @@ public class SecurityConfig extends VaadinWebSecurity {
      * Al heredar de VaadinWebSecurity, ya no usamos un SecurityFilterChain Bean,
      * sino que sobrescribimos este método.
      */
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-
-        // 1. (Opcional) Permitir acceso a recursos públicos.
-        // Si tuvieras una carpeta /images/public, la pondrías aquí.
-        // http.authorizeHttpRequests(auth ->
-        //     auth.requestMatchers("/images/public/**").permitAll());
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            // PERMITIR ACCESO A REGISTRO
+            http.authorizeHttpRequests(auth ->
+                    auth.requestMatchers(
+                            "/registro",       // <--- NUEVA RUTA PÚBLICA
+                            "/images/**",
+                            "/icons/**",
+                            "/manifest.webmanifest",
+                            "/sw.js",
+                            "/offline.html"
+                    ).permitAll()
+            );
 
         // 2. Llama a la configuración base de Vaadin.
         // ESTO ES OBLIGATORIO.

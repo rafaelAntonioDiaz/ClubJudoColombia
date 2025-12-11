@@ -1552,7 +1552,13 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "btn.confirmar", "es", "Confirmar");
         crearSiNoExiste(repo, "btn.actualizar", "es", "Actualizar");
         crearSiNoExiste(repo, "btn.guardar_cambios", "es", "Guardar Cambios");
-
+        crearSiNoExiste(repo, "registro.titulo", "es", "Registro de Aspirante");
+        crearSiNoExiste(repo, "registro.subtitulo", "es", "Únete a nuestro Dojo");
+        crearSiNoExiste(repo, "registro.btn.siguiente", "es", "Siguiente");
+        crearSiNoExiste(repo, "registro.btn.volver", "es", "Ya tengo cuenta");
+        crearSiNoExiste(repo, "registro.exito", "es", "Registro Exitoso. ¡Bienvenido!");
+        crearSiNoExiste(repo, "error.usuario.existe", "es", "Este correo ya está registrado.");
+        crearSiNoExiste(repo, "login.btn.registrar", "es", "¿No tienes cuenta? Regístrate aquí.");
         // --- TEXTOS GENÉRICOS ---
         crearSiNoExiste(repo, "generic.fecha", "es", "Fecha");
         crearSiNoExiste(repo, "generic.nombre", "es", "Nombre");

@@ -1,6 +1,8 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.login.LoginForm;
 import com.vaadin.flow.component.login.LoginI18n;
@@ -30,12 +32,15 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver {
 
         // Configuramos la acción del formulario (Spring Security)
         loginForm.setAction("login");
-
+        // NUEVO: Botón de Registro
+        Button btnRegistro = new Button(traduccionService.get("login.btn.registrar", "Crear una Cuenta"));
+        btnRegistro.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        btnRegistro.addClickListener(e -> btnRegistro.getUI().ifPresent(ui -> ui.navigate("registro")));
         // --- INTERNACIONALIZACIÓN DEL FORMULARIO ---
         configurarTextosFormulario();
 
         // i18n: Título de la aplicación
-        add(new H1(traduccionService.get("app.nombre")), loginForm);
+        add(new H1(traduccionService.get("app.nombre")), loginForm, btnRegistro);
     }
 
     /**

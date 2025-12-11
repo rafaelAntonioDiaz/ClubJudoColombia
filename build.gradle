@@ -44,6 +44,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // Para tener un servidor web (necesario para Vaadin)
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Para enviar correos
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
     // Herramientas de desarrollo (reinicios automáticos, etc.)
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 

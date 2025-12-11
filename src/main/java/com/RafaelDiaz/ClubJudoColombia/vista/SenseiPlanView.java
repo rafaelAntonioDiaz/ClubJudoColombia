@@ -131,37 +131,45 @@ public class SenseiPlanView extends VerticalLayout {
 
     private HorizontalLayout configurarContenido() {
         panelIzquierdoBibliotecas = new VerticalLayout();
+        // CAMBIO 1: Aseguramos que la biblioteca tenga espacio suficiente
         panelIzquierdoBibliotecas.setWidth("50%");
+        panelIzquierdoBibliotecas.setMinWidth("450px"); // Evita que se vuelva ilegible
         panelIzquierdoBibliotecas.setHeightFull();
 
         configurarGridPruebas();
         configurarGridTareas();
 
-        // i18n: Títulos de sección traducidos
         panelIzquierdoBibliotecas.add(new H3(
-                traduccionService.get("header.bibliotecas")), pruebasGrid, tareasGrid);
+                traduccionService.get("menu.biblioteca")), pruebasGrid, tareasGrid);
 
         panelDerechoPlan = new VerticalLayout();
         panelDerechoPlan.setWidth("50%");
+        // CAMBIO 2: Aseguramos que el panel del plan también tenga un mínimo decente
+        panelDerechoPlan.setMinWidth("400px");
+        panelDerechoPlan.setHeightFull();
 
         configurarGridPlanActual();
 
-        btnGuardarPlan = new Button(traduccionService.get("btn.guardar.cambios"),
+        btnGuardarPlan = new Button(traduccionService.get("btn.guardar"),
                 event -> guardarPlan());
         btnGuardarPlan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        btnCompletarPlan = new Button(traduccionService.get("btn.completar.plan"), event -> completarPlan());
+        btnCompletarPlan = new Button(traduccionService.get("msg.exito.plan.completado"), event -> completarPlan());
         btnCompletarPlan.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
         btnCompletarPlan.setVisible(false);
 
         HorizontalLayout botonesPlan = new HorizontalLayout(btnGuardarPlan, btnCompletarPlan);
 
-        panelDerechoPlan.add(new H3(traduccionService.get("header.plan.actual")), planGrid, botonesPlan);
+        panelDerechoPlan.add(new H3(traduccionService.get("view.sensei.plan.titulo")), planGrid, botonesPlan);
         panelDerechoPlan.setVisible(false);
 
-        return new HorizontalLayout(panelIzquierdoBibliotecas, panelDerechoPlan);
-    }
+        // CAMBIO 3: Configuramos el contenedor principal para usar todo el espacio disponible
+        HorizontalLayout layoutPrincipal = new HorizontalLayout(panelIzquierdoBibliotecas, panelDerechoPlan);
+        layoutPrincipal.setSizeFull(); // ¡Esto estira la vista a lo ancho y alto!
+        layoutPrincipal.setSpacing(true);
 
+        return layoutPrincipal;
+    }
     private void configurarGridPruebas() {
         pruebasGrid = new Grid<>(PruebaEstandar.class);
         pruebasGrid.setHeight("300px");
