@@ -20,7 +20,10 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.github.appreciated.apexcharts.config.xaxis.Labels;
+import com.github.appreciated.apexcharts.config.xaxis.labels.Style;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -90,12 +93,11 @@ public class CombatRadarWidget extends VerticalLayout {
         Markers markers = new Markers();
         markers.setSize(new Double[]{0.0});
 
-        // Configurar "DropShadow" para el gráfico (Efecto Neón en las líneas)
         DropShadow dropShadow = new DropShadow();
         dropShadow.setEnabled(true);
         dropShadow.setTop(0.0);
         dropShadow.setLeft(0.0);
-        dropShadow.setBlur(6.0); // Difuminado
+        dropShadow.setBlur(6.0);
         dropShadow.setOpacity(0.5);
 
         Toolbar toolbar = new Toolbar();
@@ -105,23 +107,20 @@ public class CombatRadarWidget extends VerticalLayout {
         chartConfig.setType(Type.RADAR);
         chartConfig.setHeight("350px");
         chartConfig.setToolbar(toolbar);
-        chartConfig.setDropShadow(dropShadow); // Aplicar sombra al chart
+        chartConfig.setDropShadow(dropShadow);
 
-        // Relleno más intenso
         Fill fill = new Fill();
-        fill.setOpacity(0.7); // Más sólido para que el color vibre
+        fill.setOpacity(0.7);
         fill.setColors(List.of(COLOR_RADAR_RELLENO));
 
-        // Borde brillante y grueso
         Stroke stroke = new Stroke();
-        stroke.setWidth(4.0); // Más grueso
+        stroke.setWidth(4.0);
         stroke.setColors(List.of(COLOR_RADAR_BORDE));
-        // stroke.setDashArray(0.0); // Línea sólida
 
-        // Polígonos de fondo (Blancos o muy claros para contraste)
+        // MEJORA 1: Polígonos (Mantenemos tu código actual)
         Polygons polygons = new Polygons();
-        polygons.setStrokeColor(List.of("#FFCCBC")); // Un rosado/naranja muy pálido
-        polygons.setConnectorColors(List.of("#FFCCBC"));
+        polygons.setStrokeColor(List.of("#78909C"));
+        polygons.setConnectorColors(List.of("#78909C"));
 
         Radar radar = new Radar();
         radar.setPolygons(polygons);
@@ -129,12 +128,23 @@ public class CombatRadarWidget extends VerticalLayout {
         PlotOptions plotOptions = new PlotOptions();
         plotOptions.setRadar(radar);
 
+        // --- CORRECCIÓN ETIQUETAS EJE X ---
         XAxis xaxis = new XAxis();
         xaxis.setCategories(List.of(categorias));
-        // Hacer las etiquetas del eje más oscuras para legibilidad
-        /* * Nota: ApexCharts Java wrapper a veces complica el estilo de labels x-axis.
-         * Lo dejamos default por ahora, se verán gris oscuro.
-         */
+
+        Labels labels = new Labels();
+        Style style = new Style();
+
+        // EL TRUCO: Creamos una lista con el color oscuro repetido N veces
+        // donde N es la cantidad de categorías (Fuerza, Velocidad, etc.)
+        int totalCategorias = categorias.length;
+        style.setColors(Collections.nCopies(totalCategorias, "#37474F"));
+
+        style.setFontSize("14px");
+
+        labels.setStyle(style);
+        xaxis.setLabels(labels);
+        // ----------------------------------
 
         YAxis yaxis = new YAxis();
         yaxis.setShow(false);

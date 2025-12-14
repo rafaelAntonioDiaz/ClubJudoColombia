@@ -31,6 +31,8 @@ import com.github.appreciated.apexcharts.config.legend.Position;
 import com.github.appreciated.apexcharts.config.stroke.Curve;
 import com.github.appreciated.apexcharts.config.subtitle.Align;
 import com.github.appreciated.apexcharts.helper.Series;
+import com.github.appreciated.apexcharts.config.YAxis;
+import com.github.appreciated.apexcharts.config.yaxis.Title;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -236,7 +238,6 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         Optional<PruebaEstandar> pruebaOpt = dashboardService.buscarPrueba(clavePrueba);
 
         if (pruebaOpt.isPresent()) {
-            // i18n: Título de la prueba
             String tituloCategoria = traduccionService.get(clavePrueba);
 
             List<Map<String, Object>> datos = dashboardService.getHistorialPrueba(judokaActual, pruebaOpt.get());
@@ -245,7 +246,11 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
             if (datos.isEmpty()) {
                 detailChartContainer.add(crearEstadoVacio(tituloCategoria));
             } else {
-                ApexCharts chart = crearGraficoHistorial(datos, normas, tituloCategoria);
+                // 1. Detectamos la unidad
+                String unidad = obtenerUnidadMedida(clavePrueba);
+
+                // 2. La pasamos al creador del gráfico
+                ApexCharts chart = crearGraficoHistorial(datos, normas, tituloCategoria, unidad);
                 chart.setWidth("100%");
                 detailChartContainer.add(chart);
 
@@ -253,15 +258,15 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                         "setTimeout(() => window.dispatchEvent(new Event('resize')), 200);");
             }
         } else {
-            // i18n: Mensaje de error técnico
             String errorMsg = traduccionService.get("err.config.no_encontrada") + ": " + clavePrueba;
             detailChartContainer.add(new Span(errorMsg));
         }
     }
-
+    // Nota el nuevo parámetro: String unidadMedida
     private ApexCharts crearGraficoHistorial(List<Map<String, Object>> datos,
                                              List<Map<String, Object>> normas,
-                                             String titulo) {
+                                             String titulo,
+                                             String unidadMedida) {
 
         List<String> fechas = datos.stream().map(m -> (String) m.get("fecha")).distinct().collect(Collectors.toList());
         String metricaPrincipal = datos.get(0).get("metrica").toString();
@@ -271,7 +276,6 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                 .map(m -> Double.valueOf(m.get("valor").toString()))
                 .toArray(Double[]::new);
 
-        // i18n: Leyenda Progreso
         Series<Double> serieUsuario = new Series<>(traduccionService.get("legend.progreso"), valoresUsuario);
 
         Series<Double> serieMeta = null;
@@ -280,7 +284,6 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                 Double valorMeta = Double.valueOf(normas.get(0).get("valor").toString());
                 Double[] valoresMeta = new Double[fechas.size()];
                 Arrays.fill(valoresMeta, valorMeta);
-                // i18n: Leyenda Meta
                 serieMeta = new Series<>(traduccionService.get("legend.meta"), valoresMeta);
             } catch (Exception e) {
                 System.err.println("Error al procesar meta: " + e.getMessage());
@@ -319,6 +322,14 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         XAxis xaxis = new XAxis();
         xaxis.setCategories(fechas);
 
+        // --- AQUÍ ESTÁ EL AJUSTE DEL EJE Y ---
+        YAxis yaxis = new YAxis();
+        Title titleY = new Title();
+        titleY.setText(unidadMedida); // Ej: "Repeticiones"
+        titleY.setRotate(-90.0);      // Texto vertical para que se lea bien
+        yaxis.setTitle(titleY);
+        // -------------------------------------
+
         return ApexChartsBuilder.get()
                 .withChart(chartConfig)
                 .withColors(colores)
@@ -326,9 +337,9 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                 .withLegend(legend)
                 .withSeries(seriesChart)
                 .withXaxis(xaxis)
+                .withYaxis(yaxis) // ¡No olvidar agregarlo!
                 .build();
     }
-
     private ApexCharts crearChartSinDatos(String titulo) {
         TitleSubtitle title = new TitleSubtitle();
         // i18n: Título gráfico vacío
@@ -390,5 +401,35 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     public void localeChange(LocaleChangeEvent event) {
         actualizarTextos();
         actualizarDatos();
+    }
+    // --- NUEVO MÉTODO AUXILIAR ---
+    private String obtenerUnidadMedida(String clavePrueba) {
+        if (clavePrueba == null) return "";
+
+        // Tiempos (Carreras, Agilidad, etc.)
+        if (clavePrueba.contains("carrera") || clavePrueba.contains("agilidad") ||
+                clavePrueba.contains("velocidad") || clavePrueba.contains("tiempo")) {
+            return "Tiempo (s)";
+        }
+
+        // Distancias (Saltos, Flexibilidad)
+        if (clavePrueba.contains("salto") || clavePrueba.contains("lanzamiento") ||
+                clavePrueba.contains("flexibilidad") || clavePrueba.contains("alcance")) {
+            return "Distancia (cm)";
+        }
+
+        // Conteos (Fuerza, Repeticiones)
+        if (clavePrueba.contains("fuerza") || clavePrueba.contains("abdominales") ||
+                clavePrueba.contains("flexiones") || clavePrueba.contains("burpees") ||
+                clavePrueba.contains("sentadillas")) {
+            return "Repeticiones";
+        }
+
+        // Índices (SJFT)
+        if (clavePrueba.contains("sjft")) {
+            return "Índice";
+        }
+
+        return "Valor"; // Fallback
     }
 }

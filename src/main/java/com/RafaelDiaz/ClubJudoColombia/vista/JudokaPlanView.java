@@ -17,7 +17,6 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.router.PageTitle;
@@ -87,11 +86,11 @@ public class JudokaPlanView extends JudokaLayout {
         mainLayout.setPadding(false);
 
         // 1. Cabecera con Selector de Plan
-        // i18n: Título de la vista
+        // i18n: Usamos clave "view.judoka.plan.titulo" (Entrenamiento de Hoy)
         H2 titulo = new H2(traduccionService.get("view.judoka.plan.titulo"));
         titulo.getStyle().set("color", "var(--judo-negro)");
 
-        // i18n: Etiqueta del selector
+        // i18n: Usamos clave "lbl.selecciona.plan" (Selecciona tu Plan)
         planSelector = new ComboBox<>(traduccionService.get("lbl.selecciona.plan"));
         planSelector.setItemLabelGenerator(PlanEntrenamiento::getNombre);
         planSelector.setWidthFull();
@@ -104,7 +103,7 @@ public class JudokaPlanView extends JudokaLayout {
         VerticalLayout progressSection = new VerticalLayout();
         progressSection.addClassName("progress-section");
 
-        // i18n: Texto inicial de progreso
+        // i18n: Usamos clave "lbl.progreso.cero" (0% Completado)
         textoProgreso = new Span(traduccionService.get("lbl.progreso.cero"));
         textoProgreso.addClassName("progress-label");
 
@@ -138,7 +137,7 @@ public class JudokaPlanView extends JudokaLayout {
     private void cargarTareasDelPlan() {
         tareasContainer.removeAll();
         barraProgreso.setValue(0);
-        // i18n: Reset texto progreso
+        // i18n: Reset con texto traducido
         textoProgreso.setText(traduccionService.get("lbl.progreso.cero"));
 
         if (planSeleccionado == null) return;
@@ -175,7 +174,7 @@ public class JudokaPlanView extends JudokaLayout {
         card.addClassName("task-card");
         if (yaCompletada) card.addClassName("completed");
 
-        // Título (Nombre de la tarea, generalmente creado por el Sensei, no se traduce automáticamente a menos que sea una clave)
+        // Título (Nombre de la tarea, generalmente creado por el Sensei)
         H3 titulo = new H3(ep.getTareaDiaria().getNombre());
         titulo.addClassName("task-title");
 
@@ -189,11 +188,13 @@ public class JudokaPlanView extends JudokaLayout {
             Anchor videoLink = new Anchor(videoUrl, new Icon(VaadinIcon.YOUTUBE));
             videoLink.setTarget("_blank");
             videoLink.addClassName("video-link");
+            // i18n: Tooltip para video
+            videoLink.getElement().setAttribute("title", traduccionService.get("biblioteca.grid.tooltip.tiene_video"));
             card.add(videoLink);
         }
 
         // Botón de Acción
-        // i18n: Texto del botón según estado
+        // i18n: Texto dinámico (Completado / Marcar como Hecho)
         String textoBoton = yaCompletada ?
                 traduccionService.get("btn.completado") :
                 traduccionService.get("btn.marcar.hecho");
@@ -231,7 +232,7 @@ public class JudokaPlanView extends JudokaLayout {
             ejecucionService.registrarEjecucion(ejecucion);
 
             // Feedback Visual Inmediato
-            // i18n: Texto actualizado del botón
+            // i18n: Actualización inmediata a texto traducido
             btn.setText(traduccionService.get("btn.completado"));
             btn.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
             btn.setIcon(new Icon(VaadinIcon.CHECK));
@@ -241,12 +242,12 @@ public class JudokaPlanView extends JudokaLayout {
             // Actualizar barra de progreso
             actualizarProgresoDinamico();
 
-            // i18n: Notificación de éxito
+            // i18n: Mensaje de éxito
             Notification.show(traduccionService.get("msg.excelente.trabajo"), 2000, Notification.Position.BOTTOM_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
         } catch (Exception e) {
-            // i18n: Notificación de error
+            // i18n: Mensaje de error
             Notification.show(traduccionService.get("msg.error.guardar") + ": " + e.getMessage(), 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
@@ -267,11 +268,11 @@ public class JudokaPlanView extends JudokaLayout {
         barraProgreso.setValue(valor);
         int porcentaje = (int) (valor * 100);
 
-        // i18n: Texto de progreso
+        // i18n: Texto "X% Completado del día"
         textoProgreso.setText(porcentaje + "% " + traduccionService.get("lbl.progreso.dia"));
 
         if (porcentaje == 100) {
-            // i18n: Mensaje final de éxito
+            // i18n: Mensaje final "¡Entrenamiento finalizado!"
             textoProgreso.setText(traduccionService.get("msg.entrenamiento.finalizado"));
             textoProgreso.getStyle().set("color", "var(--judo-success)");
         }
@@ -285,7 +286,7 @@ public class JudokaPlanView extends JudokaLayout {
     private void mostrarMensajeSinTareas() {
         Div box = new Div();
         box.addClassName("empty-state-card");
-        // i18n: Mensaje de día libre
+        // i18n: "Hoy es día de descanso"
         box.setText(traduccionService.get("msg.dia.descanso"));
         tareasContainer.add(box);
     }

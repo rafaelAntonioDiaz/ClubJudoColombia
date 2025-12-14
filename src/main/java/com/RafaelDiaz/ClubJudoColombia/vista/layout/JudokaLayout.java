@@ -65,7 +65,8 @@ public class JudokaLayout extends AppLayout {
 
         // 2. SALUDO PERSONALIZADO (Corregido)
         // Usamos el método sobrecargado que añadimos al servicio
-        Span saludo = new Span(traduccionService.get("dashboard.welcome", nombreCompleto));
+        Span saludo = new Span(traduccionService.
+                get("dashboard.welcome", nombreCompleto));
         saludo.addClassName("layout-welcome-text");
         saludo.getStyle()
                 .set("font-size", "0.9rem")
@@ -85,7 +86,8 @@ public class JudokaLayout extends AppLayout {
         var subMenu = menuItem.getSubMenu();
 
         subMenu.addItem(traduccionService.get("menu.mi.perfil"),
-                e -> getUI().ifPresent(ui -> ui.navigate("perfil-judoka")));
+                e -> getUI().ifPresent(
+                        ui -> ui.navigate("perfil-judoka")));
 
         subMenu.addItem(traduccionService.get("btn.cerrar.sesion"), e -> logout());
 
