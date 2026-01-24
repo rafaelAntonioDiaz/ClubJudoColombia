@@ -1275,6 +1275,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "admisiones.btn.marcar_pago", "es", "Marcar Pago Manual");
         crearSiNoExiste(repo, "admisiones.msg.activado", "es", "¡Judoka activado con éxito!");
         crearSiNoExiste(repo, "admisiones.msg.rechazado", "es", "Aspirante rechazado.");
+        crearSiNoExiste(repo, "menu.invitar", "es", "Invitar Aspirante.");
 
         // --- FINANZAS / TESORERÍA ---
         crearSiNoExiste(repo, "finanzas.titulo", "es", "Gestión Financiera");
@@ -1583,6 +1584,27 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "generic.cinturon", "es", "Cinturón");
         crearSiNoExiste(repo, "generic.placeholder.escribe_nombre", "es", "Escribe el nombre...");
         crearSiNoExiste(repo, "btn.guardar", "es", "Guardar");
+        // --- ASISTENTE DE ADMISIÓN (WIZARD) ---
+        crearSiNoExiste(repo, "vista.wizard.titulo", "es", "Completar Perfil");
+        crearSiNoExiste(repo, "vista.wizard.titulo", "en", "Complete Profile");
+
+        crearSiNoExiste(repo, "label.fecha_nacimiento", "es", "Fecha de Nacimiento");
+        crearSiNoExiste(repo, "label.fecha_nacimiento", "en", "Date of Birth");
+
+        crearSiNoExiste(repo, "label.peso_kg", "es", "Peso (kg)");
+        crearSiNoExiste(repo, "label.peso_kg", "en", "Weight (kg)");
+        crearSiNoExiste(repo, "admisiones.grid.documentos.waiver", "es", "Autorización Acudientes");
+
+        crearSiNoExiste(repo, "admisiones.grid.documentos.eps", "es", "EPS/Salud");
+
+// --- MENSAJES DE UPLOAD ---
+        crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu WAIVER (PDF)");
+        crearSiNoExiste(repo, "msg.waiver.instruccion", "en", "Drag your WAIVER (PDF) here");
+        crearSiNoExiste(repo, "msg.eps.instruccion", "es", "Arrastra aquí tu Certificado EPS (PDF)");
+        crearSiNoExiste(repo, "msg.eps.instruccion", "en", "Drag your Social Security certificate (PDF) here");
+
+        crearSiNoExiste(repo, "msg.exito.archivo_subido", "es", "Documento guardado correctamente en la nube.");
+        crearSiNoExiste(repo, "msg.exito.archivo_subido", "en", "Document successfully saved to the cloud.");
     }
     private void crearSiNoExiste(TraduccionRepository repo, String clave, String idioma, String texto) {
         if (repo.findByClaveAndIdioma(clave, idioma).isEmpty()) {

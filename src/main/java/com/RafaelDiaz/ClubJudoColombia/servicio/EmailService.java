@@ -64,4 +64,27 @@ public class EmailService {
             logger.error("❌ Error inesperado enviando correo: {}", e.getMessage());
         }
     }
+
+    @Async
+    public void enviarInvitacionMagicLink(String destinatario, String nombre, String token, String baseUrl) {
+        String asunto = "¡Invitación exclusiva! Únete al Club Judo Colombia";
+        String urlRegistro = baseUrl + "/registro/" + token;
+
+        String cuerpo = String.format("""
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #000;">¡Hola %s! Bienvenido al Dojo.</h2>
+                <p>El Sensei te ha invitado a formar parte del Club Judo Colombia. Para completar tu registro y activar tu cuenta, haz clic en el siguiente botón:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="%s" style="background-color: #d32f2f; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+                        Completar mi Registro
+                    </a>
+                </div>
+                <p style="font-size: 12px; color: #666;">* Este enlace es único y expirará en 48 horas por seguridad.</p>
+                <br>
+                <p><em>Club de Judo Colombia</em></p>
+            </div>
+            """, nombre, urlRegistro);
+
+        enviarCorreo(destinatario, asunto, cuerpo);
+    }
 }

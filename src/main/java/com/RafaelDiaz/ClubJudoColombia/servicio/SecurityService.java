@@ -77,6 +77,12 @@ public class SecurityService {
         }
         return judokaRepository.findByUsuario(usuarioOpt.get());
     }
+    public boolean isSensei() {
+        return getAuthenticatedUserDetails()
+                .map(user -> user.getAuthorities().stream()
+                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_SENSEI")))
+                .orElse(false);
+    }
 
     /**
      * Cierra la sesión del usuario actual.

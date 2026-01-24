@@ -84,7 +84,9 @@ public class ValidacionIngresoView extends VerticalLayout {
         gridAspirantes.addColumn(new ComponentRenderer<>(this::crearComponenteWaiver))
                 .setHeader(traduccionService.get("admisiones.grid.documentos"))
                 .setAutoWidth(true);
-
+        gridAspirantes.addColumn(new ComponentRenderer<>(this::crearComponenteEps))
+                .setHeader(traduccionService.get("admisiones.grid.documentos.eps")) // "Certificado EPS"
+                .setAutoWidth(true);
         gridAspirantes.addColumn(new ComponentRenderer<>(this::crearComponentePago))
                 .setHeader(traduccionService.get("admisiones.grid.pago"))
                 .setAutoWidth(true);
@@ -100,34 +102,54 @@ public class ValidacionIngresoView extends VerticalLayout {
                 .findFirst();
 
         if (waiverOpt.isPresent()) {
-            String rutaArchivo = waiverOpt.get().getUrlArchivo();
-            File file = new File(rutaArchivo);
+            String urlEnLaNube = waiverOpt.get().getUrlArchivo();
 
-            if (file.exists()) {
-                DownloadHandler handler = DownloadHandler.forFile(file);
-                Anchor link = new Anchor(handler, traduccionService.get("btn.ver_pdf"));
-                link.getElement().setAttribute("target", "_blank");
+            // Creamos un link directo a la URL de Amazon S3
+            Anchor link = new Anchor(urlEnLaNube, traduccionService.get("btn.ver_pdf"));
+            link.getElement().setAttribute("target", "_blank"); // Abre en nueva pestaña
 
-                Button btnVer = new Button(new Icon(VaadinIcon.FILE_TEXT));
-                btnVer.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
-                link.add(btnVer);
+            Button btnVer = new Button(new Icon(VaadinIcon.FILE_TEXT));
+            btnVer.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+            link.add(btnVer);
 
-                HorizontalLayout hl = new HorizontalLayout(new Icon(VaadinIcon.CHECK_CIRCLE), link);
-                hl.setAlignItems(Alignment.CENTER);
-                hl.getElement().getThemeList().add("badge success");
-                return hl;
-            } else {
-                Span span = new Span(traduccionService.get("error.archivo_perdido"));
-                span.getElement().getThemeList().add("badge error");
-                return span;
-            }
+            HorizontalLayout hl = new HorizontalLayout(new Icon(VaadinIcon.CHECK_CIRCLE), link);
+            hl.setAlignItems(Alignment.CENTER);
+            hl.getElement().getThemeList().add("badge success");
+            return hl;
+
         } else {
             Span span = new Span(traduccionService.get("generic.pendiente"));
             span.getElement().getThemeList().add("badge error");
             return span;
         }
     }
+    private Component crearComponenteEps(Judoka judoka) {
+        Optional<DocumentoRequisito> epsOpt = judoka.getDocumentos().stream()
+                .filter(d -> d.getTipo() == TipoDocumento.EPS) // Asegúrate que coincida con tu Enum
+                .findFirst();
 
+        if (epsOpt.isPresent()) {
+            String urlEnLaNube = epsOpt.get().getUrlArchivo();
+
+            // Link directo a la nube (AWS S3)
+            Anchor link = new Anchor(urlEnLaNube, traduccionService.get("btn.ver_pdf"));
+            link.getElement().setAttribute("target", "_blank");
+
+            Button btnVer = new Button(new Icon(VaadinIcon.AMBULANCE)); // Icono de medicina para EPS
+            btnVer.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+            link.add(btnVer);
+
+            HorizontalLayout hl = new HorizontalLayout(new Icon(VaadinIcon.CHECK_CIRCLE), link);
+            hl.setAlignItems(Alignment.CENTER);
+            hl.getElement().getThemeList().add("badge success");
+            return hl;
+
+        } else {
+            Span span = new Span(traduccionService.get("generic.pendiente"));
+            span.getElement().getThemeList().add("badge error");
+            return span;
+        }
+    }
     private Component crearComponentePago(Judoka judoka) {
         if (judoka.isMatriculaPagada()) {
             Span span = new Span(traduccionService.get("generic.pagado"));

@@ -154,7 +154,6 @@ public class RegistroJudokaView extends VerticalLayout {
                 u.setEmail(email.getValue());
                 u.setNombre(nombre.getValue());
                 u.setApellido(apellido.getValue());
-                // CORRECCIÓN: Usamos el método que SÍ existe en Usuario.java
                 u.setPasswordHash(password.getValue());
 
                 Judoka j = new Judoka();
