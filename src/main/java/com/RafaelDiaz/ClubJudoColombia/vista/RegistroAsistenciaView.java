@@ -37,8 +37,7 @@ import java.util.List;
 import java.util.Set;
 
 @Route(value = "asistencia", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
-@PageTitle("Control de Clase | Club Judo Colombia")
+@RolesAllowed("ROLE_SENSEI") // Ambos@PageTitle("Control de Clase | Club Judo Colombia")
 public class RegistroAsistenciaView extends SenseiLayout {
 
     private final GrupoEntrenamientoService grupoService;
@@ -56,7 +55,7 @@ public class RegistroAsistenciaView extends SenseiLayout {
                                   AccessAnnotationChecker accessChecker,
                                   ConfiguracionService configuracionService,
                                   AuthenticationContext authenticationContext,
-                                  TraduccionService traduccionService) { // NUEVO: Parámetro añadido
+                                  TraduccionService traduccionService) {
         super(securityService, accessChecker, configuracionService, authenticationContext);
         this.grupoService = grupoService;
         this.traduccionService = traduccionService; // NUEVO: Inicialización

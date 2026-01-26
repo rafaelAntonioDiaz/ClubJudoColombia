@@ -5,6 +5,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -20,19 +21,20 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.server.streams.UploadEvent;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import jakarta.annotation.security.RolesAllowed;
+import jakarta.annotation.security.PermitAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 @PageTitle("Completar Perfil | Club Judo Colombia")
 @Route("completar-perfil")
-@RolesAllowed("ROLE_JUDOKA")
+@PermitAll
 public class AsistenteAdmisionView extends VerticalLayout {
+
+    private static final Logger log = LoggerFactory.getLogger(AsistenteAdmisionView.class);
 
     private final AdmisionesService admisionesService;
     private final TraduccionService traduccionService;
@@ -43,18 +45,25 @@ public class AsistenteAdmisionView extends VerticalLayout {
     private final VerticalLayout contenidoPaso = new VerticalLayout();
     private int pasoActual = 1;
 
+    // --- VARIABLES DE CONTROL UX ---
+    private boolean waiverSubido = false;
+    private boolean epsSubida = false;
+    private boolean pagoSubido = false;
+    private Button btnFinalizar;
+
     private final DatePicker fechaNacimientoField = new DatePicker();
     private final NumberField pesoField = new NumberField();
 
     public AsistenteAdmisionView(AdmisionesService admisionesService,
                                  TraduccionService traduccionService,
-                                 AlmacenamientoCloudService almacenamientoCloudService) {
+                                 AlmacenamientoCloudService almacenamientoCloudService,
+                                 SecurityService securityService) {
         this.admisionesService = admisionesService;
         this.traduccionService = traduccionService;
         this.almacenamientoCloudService = almacenamientoCloudService;
 
-        this.judokaActual = new Judoka();
-        this.judokaActual.setId(1L);
+        this.judokaActual = securityService.getAuthenticatedJudoka()
+                .orElseThrow(() -> new RuntimeException("Error: Ningún aspirante ha iniciado sesión."));
 
         configurarVista();
         renderizarPaso();
@@ -78,8 +87,8 @@ public class AsistenteAdmisionView extends VerticalLayout {
     }
 
     private void mostrarPaso1DatosPersonales() {
-        H3 tituloPaso = new H3("Paso 1: Datos Físicos");
-        Paragraph desc = new Paragraph("Para competir, necesitamos conocer tu categoría.");
+        H3 tituloPaso = new H3(traduccionService.get("vista.wizard.paso1.titulo"));
+        Paragraph desc = new Paragraph(traduccionService.get("vista.wizard.paso1.desc"));
 
         fechaNacimientoField.setLabel(traduccionService.get("label.fecha_nacimiento"));
         pesoField.setLabel(traduccionService.get("label.peso_kg"));
@@ -87,11 +96,12 @@ public class AsistenteAdmisionView extends VerticalLayout {
 
         FormLayout formLayout = new FormLayout(fechaNacimientoField, pesoField);
 
-        Button btnSiguiente = new Button("Siguiente Paso", VaadinIcon.ARROW_RIGHT.create());
+        Button btnSiguiente = new Button(traduccionService.get("btn.siguiente.paso"), VaadinIcon.ARROW_RIGHT.create());
         btnSiguiente.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnSiguiente.addClickListener(e -> {
             if(pesoField.isEmpty() || fechaNacimientoField.isEmpty()){
-                Notification.show("Por favor completa los campos", 3000, Notification.Position.TOP_CENTER);
+                Notification.show(traduccionService.get("msg.error.campos.incompletos"), 3000, Notification.Position.TOP_CENTER)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
             pasoActual = 2;
@@ -101,90 +111,106 @@ public class AsistenteAdmisionView extends VerticalLayout {
         contenidoPaso.add(tituloPaso, desc, formLayout, btnSiguiente);
     }
 
-    // --- PASO 2: DOCUMENTACIÓN CORREGIDO (Vaadin 24.8+) ---
-// --- PASO 2: DOCUMENTACIÓN (Waiver + EPS) ---
     private void mostrarPaso2Documentos() {
-        H3 tituloPaso = new H3(traduccionService.get("vista.wizard.paso2.titulo")); // "Paso 2: Documentos Obligatorios"
-        Paragraph desc = new Paragraph(traduccionService.get("vista.wizard.paso2.desc")); // "Sube tu Exoneración (Waiver) y Certificado de EPS en PDF."
+        H3 tituloPaso = new H3(traduccionService.get("vista.wizard.paso2.titulo"));
+        Paragraph desc = new Paragraph(traduccionService.get("vista.wizard.paso2.desc.completa"));
 
-        // 1. UPLOAD: WAIVER (Exoneración de Responsabilidad)
-        Upload uploadWaiver = configurarUploadComponente(
-                "msg.waiver.instruccion",
-                TipoDocumento.WAIVER
-        );
+        Upload uploadWaiver = configurarUploadComponente("msg.waiver.instruccion", TipoDocumento.WAIVER);
+        Upload uploadEps = configurarUploadComponente("msg.eps.instruccion", TipoDocumento.EPS);
+        Upload uploadPago = configurarUploadComponente(
+                "msg.pago.instruccion", TipoDocumento.COMPROBANTE_PAGO);
 
-        // 2. UPLOAD: EPS (Certificado Médico/Salud)
-        // Asumimos que tienes TipoDocumento.EPS_CERTIFICADO o CERTIFICADO_MEDICO en tu Enum
-        Upload uploadEps = configurarUploadComponente(
-                "msg.eps.instruccion",
-                TipoDocumento.CERTIFICADO_MEDICO
-        );
-
-        // Maquetación en dos columnas para pantallas grandes
         FormLayout gridDocumentos = new FormLayout();
-        gridDocumentos.add(uploadWaiver, uploadEps);
+        gridDocumentos.add(uploadWaiver, uploadEps, uploadPago);
         gridDocumentos.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
-                new FormLayout.ResponsiveStep("500px", 2)
+                new FormLayout.ResponsiveStep("600px", 3)
         );
 
-        // Botones de Navegación
         HorizontalLayout botonesNavegacion = new HorizontalLayout();
-        Button btnAtras = new Button(traduccionService.get("btn.atras"), VaadinIcon.ARROW_LEFT.create(), e -> { pasoActual = 1; renderizarPaso(); });
-        Button btnFinalizar = new Button(traduccionService.get("btn.finalizar"), VaadinIcon.CHECK.create(), e -> { pasoActual = 3; renderizarPaso(); });
+        Button btnAtras = new Button(traduccionService.get("btn.atras"),
+                VaadinIcon.ARROW_LEFT.create(), e -> { pasoActual = 1; renderizarPaso(); });
+
+        btnFinalizar = new Button(traduccionService.get("btn.finalizar"),
+                VaadinIcon.CHECK.create(), e -> { pasoActual = 3; renderizarPaso(); });
         btnFinalizar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+
+        btnFinalizar.setEnabled(waiverSubido && epsSubida && pagoSubido);
+
         botonesNavegacion.add(btnAtras, btnFinalizar);
 
         contenidoPaso.add(tituloPaso, desc, gridDocumentos, botonesNavegacion);
     }
 
     private void mostrarPaso3Confirmacion() {
-        VaadinIcon icon = VaadinIcon.CHECK_CIRCLE;
+        VaadinIcon icon = VaadinIcon.HOURGLASS;
         Span iconSpan = new Span(icon.create());
-        iconSpan.getStyle().set("color", "var(--lumo-success-color)").set("font-size", "48px");
+        iconSpan.getStyle().set("color", "var(--lumo-primary-color)").set("font-size", "48px");
 
-        H3 titulo = new H3("¡Solicitud Completada!");
-        Paragraph mensaje = new Paragraph("Has terminado. El Sensei revisará tu documentación y te notificará cuando estés ACTIVO para entrenar.");
+        H3 titulo = new H3(traduccionService.get("vista.wizard.paso3.titulo"));
+        Paragraph mensaje = new Paragraph(traduccionService.get("vista.wizard.paso3.mensaje"));
+        mensaje.getStyle().set("text-align", "center");
 
-        Button btnDashboard = new Button("Ir al Dashboard", e -> getUI().ifPresent(ui -> ui.navigate("dashboard")));
+        Button btnCerrarSesion = new Button(traduccionService.get("btn.cerrar.sesion"),
+                VaadinIcon.SIGN_OUT.create(), e -> {
+            com.vaadin.flow.server.VaadinSession.getCurrent().getSession().invalidate();
+            getUI().ifPresent(ui -> ui.getPage().setLocation("/login"));
+        });
+        btnCerrarSesion.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-        contenidoPaso.setHorizontalComponentAlignment(Alignment.CENTER, iconSpan, titulo, mensaje, btnDashboard);
-        contenidoPaso.add(iconSpan, titulo, mensaje, btnDashboard);
+        contenidoPaso.setHorizontalComponentAlignment(Alignment.CENTER,
+                iconSpan, titulo, mensaje, btnCerrarSesion);
+        contenidoPaso.add(iconSpan, titulo, mensaje, btnCerrarSesion);
     }
-    /**
-     * Método Helper para no repetir código. Crea un Upload moderno y lo conecta a la Nube.
-     */
-    private Upload configurarUploadComponente(String i18nLabelKey, TipoDocumento tipoDoc) {
+
+    private Upload configurarUploadComponente(String i18nLabelKey,
+                                              TipoDocumento tipoDoc) {
         Upload upload = new Upload();
-        upload.setAcceptedFileTypes("application/pdf");
+        upload.setAcceptedFileTypes("application/pdf", "image/png", "image/jpeg"); // Importante: Aceptar imágenes para Nequi
         upload.setDropLabel(new Span(traduccionService.get(i18nLabelKey)));
+        upload.setMaxFiles(1);
 
-        // Manejador moderno (Vaadin 24.8+)
-        upload.setUploadHandler((UploadEvent event) -> {
-            String fileName = event.getFileName();
+        upload.setUploadHandler(event -> {
+            log.info(">>>> Iniciando intento de subida para el archivo: {}", event.getFileName());
 
-            try (InputStream in = event.getInputStream();
-                 OutputStream out = almacenamientoCloudService.crearStreamDeSalida(judokaActual.getId(), fileName)) {
+            try {
+                InputStream in = event.getInputStream();
+                String originalFileName = event.getFileName();
 
-                in.transferTo(out);
-
-                // Guardamos la URL en la base de datos
-                String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), fileName);
+                String keyEnLaNube = almacenamientoCloudService.subirArchivo(judokaActual.getId(), originalFileName, in);
+                String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), keyEnLaNube);
                 admisionesService.cargarRequisito(judokaActual, tipoDoc, urlEnLaNube);
 
+                log.info("<<<< ÉXITO: Archivo {} subido a la nube correctamente.", originalFileName);
+
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    Notification.show(traduccionService.get("msg.exito.archivo_subido"), 3000, Notification.Position.TOP_CENTER)
+                    Notification.show(traduccionService.get("msg.exito.archivo_subido"),
+                                    3000, Notification.Position.TOP_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+                    if (tipoDoc == TipoDocumento.WAIVER) waiverSubido = true;
+                    if (tipoDoc == TipoDocumento.EPS) epsSubida = true;
+                    if (tipoDoc == TipoDocumento.COMPROBANTE_PAGO) pagoSubido = true;
+
+                    // Si los 3 están subidos, habilitamos el botón
+                    if (waiverSubido && epsSubida && pagoSubido && btnFinalizar != null) {
+                        btnFinalizar.setEnabled(true);
+                        // --- I18n APLICADO AQUÍ ---
+                        Notification.show(traduccionService.get("msg.exito.puede_continuar"),
+                                        2000, Notification.Position.MIDDLE)
+                                .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                    }
                 }));
 
-            } catch (IOException ex) {
+            } catch (Exception ex) {
+                log.error("!!!! ERROR CRÍTICO al subir a la nube !!!!", ex);
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    Notification.show(traduccionService.get("error.upload") + ": " + ex.getMessage(), 4000, Notification.Position.TOP_CENTER)
+                    Notification.show(traduccionService.get("msg.error.nube")
+                                    + ": " + ex.getMessage(), 4000, Notification.Position.TOP_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 }));
             }
         });
-
         return upload;
     }
 }

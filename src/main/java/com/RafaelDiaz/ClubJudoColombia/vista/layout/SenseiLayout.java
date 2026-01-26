@@ -4,6 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.*;
+import com.RafaelDiaz.ClubJudoColombia.vista.sensei.InvitarSenseiView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -100,7 +101,9 @@ public class SenseiLayout extends AppLayout {
         agregarTab(tabs, getTexto("menu.comunidad", "Comunidad"), VaadinIcon.USERS, ComunidadSenseiView.class);
 
         // --- 2. GESTIÓN DE PERSONAS ---
+        agregarTab(tabs, getTexto("menu.invitar.sensei", "Invitar Sensei"), VaadinIcon.USER_STAR, InvitarSenseiView.class);
         agregarTab(tabs, getTexto("menu.invitar", "Invitar Aspirante"), VaadinIcon.PAPERPLANE, com.RafaelDiaz.ClubJudoColombia.vista.sensei.InvitarAspiranteView.class);
+        agregarTab(tabs, getTexto("menu.admisiones", "Admisiones"), VaadinIcon.CLIPBOARD_USER, ValidacionIngresoView.class);
         agregarTab(tabs, getTexto("grupos.titulo", "Grupos"), VaadinIcon.GROUP, SenseiGruposView.class);
         agregarTab(tabs, getTexto("menu.asistencia", "Asistencia"), VaadinIcon.CHECK_SQUARE_O, RegistroAsistenciaView.class);
 

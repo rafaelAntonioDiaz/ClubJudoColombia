@@ -17,28 +17,37 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
 
     Optional<Judoka> findByUsuario(Usuario usuario);
 
-    // --- MÉTODOS PARA ADMISIONES Y LIMPIEZA ---
+    // --- 1. MÉTODOS PARA EL SENSEI (Aislamiento de Datos) ---
 
-    // 1. Para CleanupService (No necesita detalles pesados, solo fechas)
-    List<Judoka> findByEstadoAndFechaPreRegistroBefore(EstadoJudoka estado, LocalDateTime fechaLimite);
+    // REEMPLAZO DE findAllWithUsuario(): El Sensei SOLO ve sus propios Judokas
+    @Query("SELECT DISTINCT j FROM Judoka j JOIN FETCH j.usuario WHERE j.sensei.id = :senseiId")
+    List<Judoka> findBySenseiIdWithUsuario(@Param("senseiId") Long senseiId);
 
-    // 2. Para ValidacionIngresoView (NECESITA Usuario y Documentos cargados)
-    // Usamos JOIN FETCH para evitar LazyInitializationException
+    // Solo contar los judokas de su propio dojo (Para el Dashboard del Sensei)
+    long countBySenseiId(Long senseiId);
+
+
+    // --- 2. MÉTODOS PARA EL MASTER (Vista Global) ---
+
+    // Para ValidacionIngresoView (El Master ve a todos los pendientes de la plataforma)
+    // CAMBIO: Añadido "JOIN FETCH j.sensei" para que el Master sepa de quién es el judoka.
     @Query("SELECT DISTINCT j FROM Judoka j " +
-            "JOIN FETCH j.usuario " +           // Carga obligatoria del Usuario
-            "LEFT JOIN FETCH j.documentos " +   // Carga opcional de Documentos (si tiene)
+            "JOIN FETCH j.usuario " +           // Datos del aspirante
+            "JOIN FETCH j.sensei " +            // <--- VITAL: Saber qué Sensei lo invitó
+            "LEFT JOIN FETCH j.documentos " +   // Documentos para revisión
             "WHERE j.estado = :estado")
     List<Judoka> findByEstadoWithDetails(@Param("estado") EstadoJudoka estado);
 
-    // Mantenemos el método simple por compatibilidad, pero la vista usará el de arriba
-    List<Judoka> findByEstado(EstadoJudoka estado);
-    // 1. Traer TODOS los judokas con sus datos de usuario cargados (Para el ComboBox 'Agregar')
-    @Query("SELECT DISTINCT j FROM Judoka j JOIN FETCH j.usuario")
-    List<Judoka> findAllWithUsuario();
 
-    // 2. Traer solo los judokas de un GRUPO específico con sus datos (Para la Grilla 'Miembros')
-    // Asume que la relación en Judoka se llama 'grupos' (ManyToMany o OneToMany inverso)
-    // Si la relación está mapeada desde Grupo, usamos esta variante segura:
+    // --- 3. MÉTODOS DE MANTENIMIENTO (Cleanup Service) ---
+
+    // Para limpiar tokens/aspirantes caducados en toda la plataforma
+    List<Judoka> findByEstadoAndFechaPreRegistroBefore(EstadoJudoka estado, LocalDateTime fechaLimite);
+
+
+    // --- 4. MÉTODOS ESPECÍFICOS (Grupos) ---
+
+    // Este se mantiene igual, asumiendo que el Sensei solo puede consultar sus propios grupos.
     @Query("SELECT DISTINCT j FROM GrupoEntrenamiento g JOIN g.judokas j JOIN FETCH j.usuario WHERE g.id = :grupoId")
     List<Judoka> findByGrupoIdWithUsuario(@Param("grupoId") Long grupoId);
 }

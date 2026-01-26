@@ -28,7 +28,7 @@ import java.util.Map;
 
 @Route(value = "dashboard-sensei", layout = SenseiLayout.class)
 @PageTitle("Dashboard Sensei | Club Judo Colombia")
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 public class SenseiDashboardView extends VerticalLayout {
 
     private static final Logger logger = LoggerFactory.getLogger(SenseiDashboardView.class);

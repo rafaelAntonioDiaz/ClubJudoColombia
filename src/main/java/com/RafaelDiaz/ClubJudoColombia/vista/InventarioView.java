@@ -30,7 +30,7 @@ import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Route(value = "inventario", layout = SenseiLayout.class)
-@RolesAllowed({"ROLE_SENSEI", "ROLE_ADMIN"})
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 @PageTitle("Tienda del Dojo | Club Judo Colombia")
 public class InventarioView extends VerticalLayout {
 

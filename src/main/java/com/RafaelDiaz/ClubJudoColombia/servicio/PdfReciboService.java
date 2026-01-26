@@ -15,9 +15,11 @@ import java.time.format.DateTimeFormatter;
 public class PdfReciboService {
 
     private final ConfiguracionService configuracionService;
+    private final TraduccionService traduccionService; // <-- 1. INYECTAMOS EL SERVICIO DE TRADUCCIÓN
 
-    public PdfReciboService(ConfiguracionService configuracionService) {
+    public PdfReciboService(ConfiguracionService configuracionService, TraduccionService traduccionService) {
         this.configuracionService = configuracionService;
+        this.traduccionService = traduccionService;
     }
 
     public byte[] generarReciboPdf(MovimientoCaja movimiento) {
@@ -36,7 +38,7 @@ public class PdfReciboService {
             titulo.setAlignment(Element.ALIGN_CENTER);
             document.add(titulo);
 
-            document.add(new Paragraph("NIT/ID: 123456789", fontNormal)); // Dato quemado o de config
+            document.add(new Paragraph("NIT/ID: 123456789", fontNormal));
             document.add(new Paragraph("RECIBO DE CAJA N° " + movimiento.getId(), fontBold));
             document.add(new Paragraph("Fecha: " + movimiento.getFecha().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), fontNormal));
 
@@ -51,7 +53,9 @@ public class PdfReciboService {
                     : "Anónimo / General");
 
             agregarFilaTabla(table, "Concepto:", movimiento.getConcepto().getNombre());
-            agregarFilaTabla(table, "Método:", movimiento.getMetodoPago().getNombre());
+
+            // --- 2. AQUÍ ESTÁ LA CORRECCIÓN MÁGICA (I18N) ---
+            agregarFilaTabla(table, "Método:", traduccionService.get(movimiento.getMetodoPago().getDescripcion()));
 
             if (movimiento.getObservacion() != null && !movimiento.getObservacion().isEmpty()) {
                 agregarFilaTabla(table, "Nota:", movimiento.getObservacion());

@@ -35,7 +35,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Route(value = "gestion-planes", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 public class SenseiPlanView extends VerticalLayout {
 
     private final PlanEntrenamientoService planEntrenamientoService;

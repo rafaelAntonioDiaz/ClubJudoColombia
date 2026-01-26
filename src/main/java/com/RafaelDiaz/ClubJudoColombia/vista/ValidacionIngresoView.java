@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Route(value = "admisiones", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed("ROLE_MASTER")
 @PageTitle("Admisiones | Club Judo Colombia")
 public class ValidacionIngresoView extends VerticalLayout {
 
@@ -125,7 +125,7 @@ public class ValidacionIngresoView extends VerticalLayout {
     }
     private Component crearComponenteEps(Judoka judoka) {
         Optional<DocumentoRequisito> epsOpt = judoka.getDocumentos().stream()
-                .filter(d -> d.getTipo() == TipoDocumento.EPS) // Asegúrate que coincida con tu Enum
+                .filter(d -> d.getTipo() == TipoDocumento.EPS)
                 .findFirst();
 
         if (epsOpt.isPresent()) {

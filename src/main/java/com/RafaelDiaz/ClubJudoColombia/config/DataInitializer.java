@@ -4,13 +4,15 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ChatService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.PublicacionService;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
 
 import java.time.*;
 import java.util.*;
@@ -40,6 +42,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private final MensajeChatRepository mensajeChatRepository;
     private final ParticipacionCompetenciaRepository palmaresRepo;
     private ChatService chatService;
+    private final PublicacionService publicacionService;
+    private final PublicacionRepository publicacionRepository;
 
     public DataInitializer(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository, UsuarioService usuarioService,
                            PlanEntrenamientoService planService,
@@ -59,7 +63,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                            MensajeChatRepository mensajeChatRepository,
                            ChatService chatService,
                            JudokaInsigniaRepository judokaInsigniaRepository,
-                           InsigniaRepository insigniaRepository, ParticipacionCompetenciaRepository palmaresRepo) {
+                           InsigniaRepository insigniaRepository, ParticipacionCompetenciaRepository palmaresRepo,
+                           PublicacionService publicacionService, PublicacionRepository publicacionRepository) {
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.usuarioService = usuarioService;
@@ -82,45 +87,57 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         this.insigniaRepository = insigniaRepository;
         this.judokaInsigniaRepository = judokaInsigniaRepository;
         this.palmaresRepo = palmaresRepo;
+        this.publicacionService = publicacionService;
+        this.publicacionRepository = publicacionRepository;
     }
 
     // 2. Método run transaccional: Mantiene la sesión abierta todo el tiempo
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        // Verificación simple para no duplicar datos
+        System.out.println(">>> INICIANDO VERIFICACIÓN DE ARQUITECTURA SaaS (MULTI-TENANT)");
+
+        // --- 1. Validar Roles (Asegúrate de que ROLE_MASTER y ROLE_SENSEI estén en este método) ---
+        validarRolesExistentes();
+
+        // --- CHEQUEO 1: EL DOBLE SOMBRERO (CREACIÓN DEL MASTER / CLIENTE #0) ---
+        // Esto se ejecuta siempre, garantizando que el dueño de la plataforma exista y tenga su Sensei ID.
+        Sensei masterSensei = configurarUsuarioMaster();
+
+        // --- CHEQUEO 2: VERIFICACIÓN DE DATOS DEMOSTRATIVOS ---
+        // Verificación simple para no duplicar datos (Tu código original)
         if (judokaRepository.count() > 0) {
-            System.out.println(">>> BASE DE DATOS YA POBLADA. SALTANDO INITIALIZER.");
+            System.out.println(">>> BASE DE DATOS YA POBLADA. SALTANDO INITIALIZER DE DATOS DEMO.");
+
+            // Mantenemos la carga de Julián y María porque tu comentario dice que es segura.
+            cargarDatosJulianYMaria(judokaRepository.findAll(), masterSensei);
             return;
         }
 
         System.out.println(">>> INICIANDO CARGA DE DATOS MAESTROS - CLUB JUDO COLOMBIA");
-// DIAGNÓSTICO DE PRUEBAS EXISTENTES
+
+        // DIAGNÓSTICO DE PRUEBAS EXISTENTES
         System.out.println("--- LISTADO DE PRUEBAS EN BD ---");
         pruebaEstandarRepository.findAll().forEach(p ->
                 System.out.println("ID: " + p.getId() + " | Key: " + p.getNombreKey())
         );
         System.out.println("--------------------------------");
-        // 1. Validar Roles
-        validarRolesExistentes();
 
         // 2. Traducciones
         cargarTraducciones(traduccionRepository);
 
-        // 3. Usuarios
+        // 3. Usuarios (Tus "Otros Clientes" del SaaS)
         Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune",
                 "123456", GradoCinturon.NEGRO_5_DAN);
-        crearSensei("toshiro", "Toshiro", "Diago",
+        Sensei toshiro = crearSensei("toshiro", "Toshiro", "Diago", // Corregí para guardar la variable
                 "123456", GradoCinturon.NEGRO_5_DAN);
 
-        List<Judoka> judokas = crearJudokas();
-
+        List<Judoka> judokas = crearJudokas(kiuzo);
         // 4. Grupos
-        crearGruposYAsignar(judokas);
-
+        crearGruposYAsignar(judokas, kiuzo);
         // 5. Tareas
         crearTareasAcondicionamiento(kiuzo);
-
+        cargarPruebasYMetricas();
         // 6. PLAN 1
         PlanEntrenamiento planFisico = crearPlanAcondicionamiento(kiuzo);
 
@@ -145,10 +162,51 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         judokas = judokaRepository.findAll();
 
         // 3. Generar Historia (Julián y actualización de María)
-        // Este método YA TIENE su propio chequeo
-        //  (if exists julian return), así que es seguro llamarlo siempre.
-        cargarDatosJulianYMaria(judokas);
+        // Este método YA TIENE su propio chequeo (if exists julian return)
+        cargarDatosJulianYMaria(judokas, kiuzo);
         System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
+    }
+    /**
+     * CHEQUEO 1: Asegura que el Master/Dueño siempre exista en el sistema.
+     * Retorna el Perfil Sensei del Master (El Cliente #0).
+     */
+    private Sensei configurarUsuarioMaster() {
+        String masterUsername = "master_admin";
+        Optional<Usuario> masterExistente = usuarioRepository.findByUsername(masterUsername);
+
+        if (masterExistente.isPresent()) {
+            System.out.println(">>> [OK] Usuario Master ya configurado.");
+            // Si ya existe, retornamos su perfil de Sensei.
+            return senseiRepository.findByUsuario(masterExistente.get()).orElseThrow();
+        }
+
+        System.out.println("⚙️ Creando Usuario Máster (Cliente #0) con doble sombrero...");
+
+        // Traemos los roles (ya asegurados por validarRolesExistentes)
+        Rol rolMaster = rolRepository.findByNombre("ROLE_MASTER").orElseThrow();
+        Rol rolSensei = rolRepository.findByNombre("ROLE_SENSEI").orElseThrow();
+
+        // 1. Crear Usuario (Credenciales)
+        Usuario masterUser = new Usuario(
+                masterUsername,
+                passwordEncoder.encode("contraseña"), // Credencial temporal
+                "Rafael",
+                "Díaz"
+        );
+
+        // Le asignamos AMBOS sombreros
+        masterUser.getRoles().add(rolMaster);
+        masterUser.getRoles().add(rolSensei);
+        masterUser = usuarioRepository.save(masterUser);
+
+        // 2. Crear Perfil de Tatami (Aquí nace tu Sensei ID)
+        Sensei masterSenseiProfile = new Sensei();
+        masterSenseiProfile.setUsuario(masterUser);
+        masterSenseiProfile.setGrado(GradoCinturon.NEGRO_4_DAN);
+        masterSenseiProfile.setAnosPractica(25);
+        masterSenseiProfile.setBiografia("Director de la Plataforma SaaS y Sensei Titular del Club Matriz.");
+
+        return senseiRepository.save(masterSenseiProfile);
     }
 
     private void crearBibliotecaSabiduria() {
@@ -249,9 +307,78 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
     // --- MÉTODOS PRIVADOS  ---
 
+// --- NUEVOS MÉTODOS PARA CREAR PRUEBAS MAESTRAS ---
+
+    private void cargarPruebasYMetricas() {
+        System.out.println(">>> CARGANDO PRUEBAS ESTÁNDAR Y MÉTRICAS...");
+
+        // 1. Crear el Test SJFT
+        if (pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre").isEmpty() &&
+                pruebaEstandarRepository.findByNombreKey("ejercicio.sjft").isEmpty()) {
+
+            PruebaEstandar sjft = new PruebaEstandar();
+            sjft.setNombreKey("ejercicio.sjft.nombre");
+            sjft.setDescripcionKey("ejercicio.sjft.desc");
+            sjft.setObjetivoKey("ejercicio.sjft.objetivo"); // <-- OBLIGATORIO
+            sjft.setCategoria(CategoriaEjercicio.RESISTENCIA_DINAMICA); // <-- USANDO TU ENUM REAL
+            pruebaEstandarRepository.save(sjft);
+
+            Metrica metricaTotal = new Metrica();
+            metricaTotal.setNombreKey("metrica.sjft_proyecciones_total.nombre");
+            metricaTotal.setUnidad("reps");
+            metricaRepository.save(metricaTotal);
+
+            Metrica metricaIndice = new Metrica();
+            metricaIndice.setNombreKey("metrica.sjft_indice.nombre");
+            metricaIndice.setUnidad("pts");
+            metricaRepository.save(metricaIndice);
+        }
+
+        // 2. Crear las demás pruebas para el Radar de Combate
+        // (Ajusta los nombres del Enum si en tu código son diferentes a POTENCIA, FUERZA, etc.)
+        crearPruebaSimple("ejercicio.salto_horizontal_proesp", "metrica.distancia.nombre", "cm", CategoriaEjercicio.POTENCIA);
+        crearPruebaSimple("ejercicio.lanzamiento_balon", "metrica.lanzamiento_balon.nombre", "cm", CategoriaEjercicio.POTENCIA);
+        crearPruebaSimple("ejercicio.abdominales_1min", "metrica.abdominales_1min.nombre", "reps", CategoriaEjercicio.POTENCIA);
+        crearPruebaSimple("ejercicio.carrera_6min", "metrica.distancia_6min.nombre", "m", CategoriaEjercicio.APTITUD_AEROBICA);
+        crearPruebaSimple("ejercicio.agilidad_4x4", "metrica.agilidad_4x4.nombre", "s", CategoriaEjercicio.AGILIDAD);
+        crearPruebaSimple("ejercicio.carrera_20m", "metrica.velocidad_20m.nombre", "s", CategoriaEjercicio.VELOCIDAD);
+    }
+
+    // Método actualizado para cumplir con todas las reglas de la base de datos
+    private void crearPruebaSimple(String keyPrueba, String keyMetrica, String unidad, CategoriaEjercicio categoria) {
+        if (pruebaEstandarRepository.findByNombreKey(keyPrueba).isEmpty()) {
+            PruebaEstandar p = new PruebaEstandar();
+            p.setNombreKey(keyPrueba);
+            p.setCategoria(categoria); // <-- Enum CategoriaEjercicio
+
+            // Evitamos el error de NULL en la base de datos autogenerando las claves
+            p.setDescripcionKey(keyPrueba + ".desc");
+            p.setObjetivoKey(keyPrueba + ".objetivo");
+
+            pruebaEstandarRepository.save(p);
+
+            Metrica m = new Metrica();
+            m.setNombreKey(keyMetrica);
+            m.setUnidad(unidad);
+            metricaRepository.save(m);
+        }
+    }
     private void validarRolesExistentes() {
-        if (rolRepository.findByNombre("ROLE_SENSEI").isEmpty()) {
-            throw new RuntimeException("ERROR CRÍTICO: Roles no encontrados.");
+        System.out.println(">>> VERIFICANDO ROLES DEL SISTEMA...");
+        crearRolSiNoExiste("ROLE_SENSEI");
+        crearRolSiNoExiste("ROLE_JUDOKA");
+        crearRolSiNoExiste("ROLE_COMPETIDOR");
+        crearRolSiNoExiste("ROLE_ADMIN");
+        crearRolSiNoExiste("ROLE_MASTER");
+
+    }
+
+    private void crearRolSiNoExiste(String nombreRol) {
+        if (rolRepository.findByNombre(nombreRol).isEmpty()) {
+            Rol rol = new Rol();
+            rol.setNombre(nombreRol);
+            rolRepository.save(rol);
+            System.out.println("   -> Rol creado exitosamente: " + nombreRol);
         }
     }
     private void crearTraduccionesDias() {
@@ -695,19 +822,22 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         s.setAnosPractica(25);
         return senseiRepository.save(s);
     }
-    private List<Judoka> crearJudokas() {
+
+    private List<Judoka> crearJudokas(Sensei sensei) { // <-- RECIBE SENSEI
         List<Judoka> lista = new ArrayList<>();
-        lista.add(crearJudokaIndividual("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López"));
-        lista.add(crearJudokaIndividual("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez"));
-        lista.add(crearJudokaIndividual("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null));
-        lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null));
+        lista.add(crearJudokaIndividual("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López", sensei));
+        lista.add(crearJudokaIndividual("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez", sensei));
+        lista.add(crearJudokaIndividual("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null, sensei));
+        lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null, sensei));
         return judokaRepository.saveAll(lista);
     }
-    private Judoka crearJudokaIndividual(String user,
-                                         String nom, String ape,
+
+    private Judoka crearJudokaIndividual(String user, String nom, String ape,
                                          int anio, int mes, int dia,
                                          Sexo sexo, GradoCinturon grado,
-                                         boolean competidor, String acudiente) {
+                                         boolean competidor, String acudiente,
+                                         Sensei sensei) { // <-- RECIBE SENSEI
+        // ... (Tu código de creación de usuario que ya tienes) ...
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setActivo(true);
         u.getRoles().add(rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow());
@@ -716,6 +846,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         Judoka j = new Judoka();
         j.setUsuario(u);
+        j.setSensei(sensei); // <--- ¡EL CANDADO SAAS SE CIERRA AQUÍ!
         j.setFechaNacimiento(LocalDate.of(anio, mes, dia));
         j.setSexo(sexo);
         j.setGrado(grado);
@@ -723,25 +854,39 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         j.setNombreAcudiente(acudiente);
         j.setPeso(sexo == Sexo.MASCULINO ? 73.0 : 57.0);
         j.setEstatura(sexo == Sexo.MASCULINO ? 175.0 : 160.0);
-        return j; // El usuario ya se guarda por cascada/servicio
+        return j;
     }
-    private void crearGruposYAsignar(List<Judoka> judokas) {
-        GrupoEntrenamiento cadetes = new GrupoEntrenamiento();
-        cadetes.setNombre("Judokas Cadetes");
-        cadetes.setDescripcion("Grupo enfocado en desarrollo técnico sub-18");
-        cadetes.setJudokas(new HashSet<>());
-        cadetes.getJudokas().add(judokas.get(0));
-        cadetes.getJudokas().add(judokas.get(1));
+    /**
+     * Crea los grupos de entrenamiento de prueba y los ASIGNA A UN SENSEI (SaaS).
+     */
+    private void crearGruposYAsignar(List<Judoka> judokas, Sensei senseiDuenio) {
+        System.out.println("--- CREANDO GRUPOS DE ENTRENAMIENTO PARA EL DOJO DE: " + senseiDuenio.getUsuario().getNombre() + " ---");
 
-        GrupoEntrenamiento mayores = new GrupoEntrenamiento();
-        mayores.setNombre("Selección Mayores");
-        mayores.setDescripcion("Equipo de competencia Élite");
-        mayores.setJudokas(new HashSet<>());
-        mayores.getJudokas().add(judokas.get(3));
+        // 1. Grupo Infantil
+        GrupoEntrenamiento grupoInfantil = new GrupoEntrenamiento();
+        grupoInfantil.setNombre("Infantil Novatos");
+        grupoInfantil.setDescripcion("Iniciación al Judo para menores de 12 años.");
+        grupoInfantil.setSensei(senseiDuenio);
+        // 2. Grupo Mayores
+        GrupoEntrenamiento grupoMayores = new GrupoEntrenamiento();
+        grupoMayores.setNombre("Selección Mayores");
+        grupoMayores.setDescripcion("Grupo de alto rendimiento y competencia.");
+        grupoMayores.setSensei(senseiDuenio);
 
-        grupoRepository.saveAll(List.of(cadetes, mayores));
+        // Asignamos algunos judokas a los grupos para la demo
+        // (Asumiendo que tienes al menos 3 judokas en la lista)
+        if (judokas.size() >= 3) {
+            grupoInfantil.getJudokas().add(judokas.get(0));
+            grupoMayores.getJudokas().add(judokas.get(1));
+            grupoMayores.getJudokas().add(judokas.get(2));
+        }
+
+        // Guardamos en la base de datos
+        grupoRepository.save(grupoInfantil);
+        grupoRepository.save(grupoMayores);
+
+        System.out.println(">>> Grupos creados y asignados al Sensei con éxito.");
     }
-
     private void crearTareasAcondicionamiento(Sensei sensei) {
         if(tareaDiariaRepository.count() > 0) return;
 
@@ -760,8 +905,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     }
 
     private PlanEntrenamiento crearPlanAcondicionamiento(Sensei sensei) {
-        GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
-
+        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores").orElseThrow();
         PlanEntrenamiento plan = new PlanEntrenamiento();
         plan.setNombre("Programa Intensivo - Pretemporada 2025");
         plan.setSensei(sensei);
@@ -795,8 +939,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         return planService.guardarPlan(plan);
     }
     private PlanEntrenamiento crearPlanEvaluacion(Sensei sensei) {
-        GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
-        PlanEntrenamiento plan = new PlanEntrenamiento();
+        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores").orElseThrow();        PlanEntrenamiento plan = new PlanEntrenamiento();
         plan.setNombre("Test SJFT - Trimestre 1");
         plan.setSensei(sensei);
         plan.setFechaAsignacion(LocalDate.now());
@@ -820,8 +963,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         return planService.guardarPlan(plan);
     }
     private void programarSesiones(Sensei sensei) {
-        GrupoEntrenamiento grupo = grupoRepository.findByNombre("Judokas Cadetes").orElseThrow();
-        LocalDateTime base = LocalDateTime.now().plusDays(1).withHour(18).withMinute(0);
+        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores").orElseThrow();        LocalDateTime base = LocalDateTime.now().plusDays(1).withHour(18).withMinute(0);
         List<SesionProgramada> sesiones = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             SesionProgramada s = new SesionProgramada();
@@ -1025,14 +1167,18 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private void crearChatInicial() {
         if (mensajeChatRepository.count() > 0) return;
 
-        System.out.println(">>> INICIALIZANDO CHAT...");
+        System.out.println(">>> INICIALIZANDO CHAT SAAS...");
         Usuario kiuzo = usuarioService.findByUsername("kiuzo").orElseThrow();
         Usuario maria = usuarioService.findByUsername("maria.lopez").orElseThrow();
 
-        chatService.enviarMensaje(kiuzo, "¡Bienvenidos al Chat Oficial del Club!");
-        chatService.enviarMensaje(kiuzo, "Aquí publicaremos anuncios importantes sobre los torneos.");
-        chatService.enviarMensaje(maria, "¡Entendido Sensei! ¿A qué hora es el pesaje el sábado?");
+        // Obtenemos el perfil de Sensei de Kiuzo para el ID del Dojo
+        Sensei kiuzoSensei = senseiRepository.findByUsuario(kiuzo).orElseThrow();
+
+        // MÉTODO CORREGIDO: enviarMensajeAlDojo (autor, texto, idDojo)
+        chatService.enviarMensajeAlDojo(kiuzo, "¡Bienvenidos al Chat Oficial del Club!", kiuzoSensei.getId());
+        chatService.enviarMensajeAlDojo(maria, "¡Entendido Sensei!", kiuzoSensei.getId());
     }
+
     private void otorgarInsigniasDemo(List<Judoka> judokas) {
         // 1. Buscar a María
         Judoka maria = judokas.stream()
@@ -1072,7 +1218,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     //  DATOS DEMO: MARÍA (VETERANA) Y JULIÁN (PROMESA)
     //  Refactorizado: Ambos con Acudiente/Contacto de Emergencia.
     // -------------------------------------------------------------------------
-    private void cargarDatosJulianYMaria(List<Judoka> judokas) {
+    private void cargarDatosJulianYMaria(List<Judoka> judokas, Sensei sensei) {
         // Validación para no repetir
         if (usuarioRepository.findByUsername("julian.bohorquez").isPresent()) return;
 
@@ -1085,11 +1231,29 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                 .orElse(null);
 
         if (maria != null) {
+            // --- DATOS FÍSICOS (Aseguramos que no sean nulos para el Wizard) ---
+            maria.setPeso(58.5);
+            maria.setEstatura(1.65);
+            maria.setFechaNacimiento(LocalDate.of(2010, 3, 15));
+            maria.setSexo(Sexo.FEMENINO);
+
+            // --- DATOS DE DOJO ---
             maria.setGradoCinturon(GradoCinturon.AZUL);
+            maria.setSensei(sensei);
+
+            // --- DATOS LEGALES Y CONTACTO ---
             maria.setEps("Sura");
             maria.setNombreAcudiente("Jorge López (Hermano)");
             maria.setTelefonoAcudiente("315 987 6543");
-            judokaRepository.save(maria);
+
+            // --- LEGALIZACIÓN COMPLETA (EL BYPASS DEL WIZARD) ---
+            maria.setEstado(EstadoJudoka.ACTIVO); // Ya no es PENDIENTE
+            maria.setMatriculaPagada(true);       // Finanzas en verde
+            maria.setRutaCertificadoEps("documentos/eps/maria_eps_2025.pdf");
+            maria.setRutaAutorizacionWaiver("documentos/waivers/maria_waiver_firmado.pdf");
+
+            // Forzamos el guardado inmediato en disco
+            judokaRepository.saveAndFlush(maria);
 
             // Insignias María...
             insigniaRepository.findByClave("GI_CINTURON").ifPresent(insignia -> {
@@ -1127,7 +1291,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
                 .orElseThrow(() -> new RuntimeException("ERROR CRÍTICO: No existe el rol ROLE_JUDOKA en la BD"));
 
-        // --- CORRECCIÓN: Usar HashSet para que la colección sea mutable ---
         userJulian.setRoles(new HashSet<>(Set.of(rolJudoka)));
 
         usuarioRepository.save(userJulian);
@@ -1135,6 +1298,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         // B. Crear Perfil Judoka
         Judoka julian = new Judoka();
         julian.setUsuario(userJulian);
+        julian.setSensei(sensei);
         julian.setGradoCinturon(GradoCinturon.BLANCO);
         julian.setFechaNacimiento(LocalDate.now().minusYears(10));
         julian.setPeso(34.0);
@@ -1164,9 +1328,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             logro.setFechaObtencion(LocalDateTime.now().minusDays(1));
             judokaInsigniaRepository.save(logro);
         });
-// --- CARGAR PALMARES ---
-        // --- NUEVO: CARGAR PALMARÉS ---
-
+        // --- CARGAR PALMARES ---
         // 1. Palmarés de María (Experimentada)
         if (maria != null && palmaresRepo.findByJudokaOrderByFechaDesc(maria).isEmpty()) {
             System.out.println(">>> GENERANDO PALMARÉS PARA MARÍA...");
@@ -1447,6 +1609,18 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "error.grupo_no_guardado", "es", "Primero guarde el grupo antes de eliminarlo.");
         crearSiNoExiste(repo, "error.campos_obligatorios", "es", "Campos obligatorios incompletos");
 
+        // InvitarAspiranteView
+        crearSiNoExiste(repo,"vista.invitar.titulo", "es","Invitar al Club","Invite to the Club");
+        crearSiNoExiste(repo,"vista.invitar.descripcion","es", "Envía un enlace a su email", "Send email link");
+        crearSiNoExiste(repo,"label.nombre", "es","Nombre","First Name");
+        crearSiNoExiste(repo,"label.apellido", "es","Apellido","Last Name");
+
+        crearSiNoExiste(repo,"label.email", "es","Correo Electrónico","E mail");
+
+        crearSiNoExiste(repo,"boton.enviar_invitacion", "es","Enviar","Send");
+        crearSiNoExiste(repo,"error.campos_incompletos", "es","Por favor, llene todos los campos !","Please fill all the blanks !");
+        crearSiNoExiste(repo,"exito.invitacion_enviada", "es","Invitación enviada con éxito","Invitation sent successfully");
+        crearSiNoExiste(repo,"error.sistema", "es","Error del sistema, trata de nuevo por favor.","System error, please try again.");
         // --- ENUMS (Traducciones de sistema) ---
         crearSiNoExiste(repo, "enum.tipotransaccion.ingreso", "es", "Ingreso");
         crearSiNoExiste(repo, "enum.tipotransaccion.egreso", "es", "Egreso/Gasto");
@@ -1584,19 +1758,36 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "generic.cinturon", "es", "Cinturón");
         crearSiNoExiste(repo, "generic.placeholder.escribe_nombre", "es", "Escribe el nombre...");
         crearSiNoExiste(repo, "btn.guardar", "es", "Guardar");
-        // --- ASISTENTE DE ADMISIÓN (WIZARD) ---
-        crearSiNoExiste(repo, "vista.wizard.titulo", "es", "Completar Perfil");
-        crearSiNoExiste(repo, "vista.wizard.titulo", "en", "Complete Profile");
-
+        // --- ASISTENTE DE ADMISIÓN (WIZARD - ACTUALIZADO) ---
+        // Paso 1: Datos Físicos
+        crearSiNoExiste(repo, "vista.wizard.titulo", "es", "Asistente de Admisión");
+        crearSiNoExiste(repo, "vista.wizard.paso1.titulo", "es", "Paso 1: Datos Físicos");
+        crearSiNoExiste(repo, "vista.wizard.paso1.desc", "es", "Para personalizar tu entrenamiento, necesitamos conocer tu categoría.");
         crearSiNoExiste(repo, "label.fecha_nacimiento", "es", "Fecha de Nacimiento");
-        crearSiNoExiste(repo, "label.fecha_nacimiento", "en", "Date of Birth");
+        crearSiNoExiste(repo, "label.peso_kg", "es", "Peso (Kg)");
+        crearSiNoExiste(repo, "btn.siguiente.paso", "es", "Siguiente Paso");
+        crearSiNoExiste(repo, "msg.error.campos.incompletos", "es", "Por favor, completa todos los campos requeridos.");
 
-        crearSiNoExiste(repo, "label.peso_kg", "es", "Peso (kg)");
-        crearSiNoExiste(repo, "label.peso_kg", "en", "Weight (kg)");
-        crearSiNoExiste(repo, "admisiones.grid.documentos.waiver", "es", "Autorización Acudientes");
+        // Paso 2: Documentos y Pago
+        crearSiNoExiste(repo, "vista.wizard.paso2.titulo", "es", "Paso 2: Documentos Legales y Pago");
+        crearSiNoExiste(repo, "vista.wizard.paso2.desc.completa", "es", "Sube tu Exoneración de Responsabilidad, Certificado de EPS y el Comprobante de Pago (Pantallazo de Nequi).");
+        crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu PDF de Exoneración (Waiver) firmado.");
+        crearSiNoExiste(repo, "msg.eps.instruccion", "es", "Arrastra aquí tu Certificado de Afiliación a la EPS.");
+        crearSiNoExiste(repo, "msg.pago.instruccion", "es", "Arrastra aquí el pantallazo de tu pago por Nequi o Consignación.");
+        crearSiNoExiste(repo, "btn.atras", "es", "Atrás");
+        crearSiNoExiste(repo, "btn.finalizar", "es", "Finalizar Registro");
 
-        crearSiNoExiste(repo, "admisiones.grid.documentos.eps", "es", "EPS/Salud");
+        // Paso 3: Confirmación
+        crearSiNoExiste(repo, "vista.wizard.paso3.titulo", "es", "¡Casi listo!");
+        crearSiNoExiste(repo, "vista.wizard.paso3.mensaje", "es", "Tus documentos han sido enviados exitosamente. Tu Sensei revisará la información y activará tu cuenta pronto.");
 
+        // Mensajes de Sistema (Uploads y UX)
+        crearSiNoExiste(repo, "msg.exito.archivo_subido", "es", "¡Archivo subido y guardado con éxito!");
+        crearSiNoExiste(repo, "msg.exito.puede_continuar", "es", "¡Excelente! Ya puedes finalizar el registro.");
+        crearSiNoExiste(repo, "msg.error.nube", "es", "Error al conectar con la Nube");
+
+        // Enum del nuevo tipo de documento
+        crearSiNoExiste(repo, "enum.tipo_documento.comprobante_pago", "es", "Comprobante de Pago / Nequi");
 // --- MENSAJES DE UPLOAD ---
         crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu WAIVER (PDF)");
         crearSiNoExiste(repo, "msg.waiver.instruccion", "en", "Drag your WAIVER (PDF) here");
@@ -1618,5 +1809,51 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         if (textoEn != null) {
             crearSiNoExiste(repo, clave, "en", textoEn);
         }
+    }
+    private void ejecutarTestSeveroSaaS(Sensei master, Sensei kiuzo) {
+        System.out.println("\n🔥 INICIANDO TEST ÁCIDO DE SEGURIDAD SAAS 🔥");
+
+        // 1. EL MÁSTER CREA DATOS TOP SECRET (Forzamos guardado inmediato con Flush)
+        GrupoEntrenamiento grupoMaster = new GrupoEntrenamiento();
+        grupoMaster.setSensei(master);
+        grupoMaster.setNombre("Finanzas Master 2025");
+        grupoRepository.saveAndFlush(grupoMaster); // <-- CAMBIO CLAVE
+
+        Publicacion postMaster = new Publicacion(master.getUsuario(), "Reporte Confidencial Plataforma", null);
+        postMaster.setSensei(master);
+        postMaster.setFecha(LocalDateTime.now());
+        publicacionRepository.saveAndFlush(postMaster); // <-- CAMBIO CLAVE
+
+        chatService.enviarMensajeAlDojo(master.getUsuario(), "Clave de bóveda: 999", master.getId());
+
+        // 2. AUDITORÍA DEL SENSEI KIUZO (Intento de Hackeo)
+        System.out.println("   -> Simulando inicio de sesión de KIUZO...");
+
+        boolean vioGrupoMaster = grupoRepository.findBySenseiId(kiuzo.getId(), Pageable.unpaged())
+                .getContent().stream().anyMatch(g -> g.getNombre().contains("Finanzas Master"));
+
+        boolean vioPostMaster = publicacionRepository.findBySenseiIdOrderByFechaDesc(kiuzo.getId())
+                .stream().anyMatch(p -> p.getContenido().contains("Confidencial"));
+
+        boolean vioChatMaster = chatService.obtenerHistorialDelDojo(kiuzo.getId())
+                .stream().anyMatch(m -> m.getContenido().contains("bóveda"));
+
+        // 3. EL VEREDICTO DE SEGURIDAD (IPPON SI FALLA)
+        if (vioGrupoMaster || vioPostMaster || vioChatMaster) {
+            System.err.println("❌ ERROR: KIUZO PUDO VER LOS DATOS DEL MASTER.");
+            throw new SecurityException("LA ARQUITECTURA SAAS HA FALLADO.");
+        }
+
+        // 4. NUEVO: VERIFICACIÓN POSITIVA (El Máster DEBE ver sus datos)
+        boolean masterVeSuGrupo = grupoRepository.findBySenseiId(master.getId(), Pageable.unpaged())
+                .getContent().stream().anyMatch(g -> g.getNombre().contains("Finanzas"));
+
+        if (!masterVeSuGrupo) {
+            System.err.println("❌ ERROR: EL MASTER NO PUEDE VER SUS PROPIOS DATOS.");
+            throw new SecurityException("FALLO EN LA PERSISTENCIA DE DATOS DEL MASTER.");
+        }
+
+        System.out.println("✅ TEST SUPERADO: Aislamiento verificado. El Master ve lo suyo, Kiuzo no puede hackearlo.");
+        System.out.println("===============================================================\n");
     }
 }

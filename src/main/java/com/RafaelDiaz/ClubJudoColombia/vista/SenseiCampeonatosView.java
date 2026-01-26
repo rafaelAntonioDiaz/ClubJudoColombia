@@ -6,6 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.NivelCompetencia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ResultadoCompetencia;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.CompetenciaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- INYECCIÓN
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
@@ -39,23 +40,26 @@ import java.time.LocalDate;
 import java.util.Set;
 
 @Route(value = "gestion-campeonatos", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 @PageTitle("Campeonatos | Club Judo Colombia")
 public class SenseiCampeonatosView extends VerticalLayout {
 
     private final CompetenciaService competenciaService;
     private final JudokaRepository judokaRepository;
-    private final TraduccionService traduccionService; // <--- I18n
+    private final TraduccionService traduccionService;
+    private final SecurityService securityService;
 
     private Grid<ParticipacionCompetencia> grid;
 
     @Autowired
     public SenseiCampeonatosView(CompetenciaService competenciaService,
                                  JudokaRepository judokaRepository,
-                                 TraduccionService traduccionService) {
+                                 TraduccionService traduccionService,
+                                 SecurityService securityService) {
         this.competenciaService = competenciaService;
         this.judokaRepository = judokaRepository;
         this.traduccionService = traduccionService;
+        this.securityService = securityService;
 
         setSizeFull();
         setPadding(true);
@@ -152,8 +156,10 @@ public class SenseiCampeonatosView extends VerticalLayout {
         nivel.setItemLabelGenerator(traduccionService::get);
         nivel.setValue(NivelCompetencia.DEPARTAMENTAL);
 
-        MultiSelectComboBox<Judoka> judokas = new MultiSelectComboBox<>(traduccionService.get("campeonatos.field.seleccionar_atletas"));
-        judokas.setItems(judokaRepository.findAllWithUsuario());
+        MultiSelectComboBox<Judoka> judokas =
+                new MultiSelectComboBox<>(traduccionService.get("campeonatos.field.seleccionar_atletas"));
+        Long miSenseiId = securityService.getSenseiIdActual();
+        judokas.setItems(judokaRepository.findBySenseiIdWithUsuario(miSenseiId));
         judokas.setItemLabelGenerator(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido());
         judokas.setWidthFull();
 

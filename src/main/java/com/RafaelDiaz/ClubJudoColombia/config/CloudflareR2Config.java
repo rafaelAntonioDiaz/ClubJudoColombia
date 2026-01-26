@@ -8,26 +8,30 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-@Configuration
-public class AwsS3Config {
+import java.net.URI;
 
-    @Value("${aws.accessKeyId}")
+@Configuration
+public class CloudflareR2Config {
+
+    @Value("${cloudflare.r2.access-key:DUMMY_KEY}")
     private String accessKey;
 
-    @Value("${aws.secretAccessKey}")
+    @Value("${cloudflare.r2.secret-key:DUMMY_SECRET}")
     private String secretKey;
 
-    @Value("${aws.region:us-east-1}")
-    private String region;
+    @Value("${cloudflare.r2.endpoint:https://dummy.r2.cloudflarestorage.com}")
+    private String endpoint;
 
     @Bean
     public S3Client s3Client() {
-        // Configuramos las credenciales explícitas para desarrollo local
+        // AWS SDK fallará si las credenciales están vacías.
+        // Si no las has configurado en el IDE, usará los DUMMY_KEY definidos arriba.
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
 
         return S3Client.builder()
-                .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .endpointOverride(URI.create(endpoint))
+                .region(Region.US_EAST_1) // Cloudflare usa esto por compatibilidad
                 .build();
     }
 }

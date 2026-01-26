@@ -17,7 +17,7 @@ import jakarta.annotation.security.RolesAllowed;
 import java.time.format.DateTimeFormatter;
 
 @Route("revision-tareas")
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 public class SenseiRevisionView extends VerticalLayout {
 
     private final EjecucionTareaService ejecucionTareaService;

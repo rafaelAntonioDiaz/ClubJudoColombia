@@ -18,6 +18,10 @@ public class GrupoEntrenamiento implements Serializable {
     @Column(name = "id_grupo")
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei", nullable = false)
+    private Sensei sensei;
+
     @Column(name = "nombre", nullable = false, unique = true, length = 150)
     private String nombre;
 
@@ -62,7 +66,8 @@ public class GrupoEntrenamiento implements Serializable {
     public void setJudokas(Set<Judoka> judokas) { this.judokas = judokas; }
     public Set<PlanEntrenamiento> getPlanesAsignados() { return planesAsignados; }
     public void setPlanesAsignados(Set<PlanEntrenamiento> planesAsignados) { this.planesAsignados = planesAsignados; }
-
+    public Sensei getSensei() { return sensei; }
+    public void setSensei(Sensei sensei) { this.sensei = sensei; }
     // --- hashCode y equals ---
     @Override
     public int hashCode() {

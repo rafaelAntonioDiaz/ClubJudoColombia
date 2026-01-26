@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
  * Se puede incrustar en cualquier Layout (Sensei o Judoka).
  */
 public class ComunidadComponent extends VerticalLayout {
-
+    private final Long dojoId; // El ID del Sensei que actúa como "ID del Dojo"
     private static final Logger logger = LoggerFactory.getLogger(ComunidadComponent.class);
 
     private final SecurityService securityService;
@@ -66,11 +66,12 @@ public class ComunidadComponent extends VerticalLayout {
     private MessageList messageList;
     private String ultimoArchivoSubido;
 
-    public ComunidadComponent(SecurityService securityService,
+    public ComunidadComponent(Long senseiId, SecurityService securityService,
                               TraduccionService traduccionService,
                               FileStorageService fileStorageService,
                               PublicacionService publicacionService,
                               ChatService chatService) {
+        this.dojoId = senseiId;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
         this.fileStorageService = fileStorageService;
@@ -173,8 +174,7 @@ public class ComunidadComponent extends VerticalLayout {
             try {
                 Usuario autor = securityService.getAuthenticatedUsuario().orElseThrow();
                 Publicacion nueva = new Publicacion(autor, textoPost.getValue(), ultimoArchivoSubido);
-                publicacionService.guardar(nueva);
-
+                publicacionService.crearPublicacion(nueva, this.dojoId);
                 Notification.show(traduccionService.get("comunidad.msg.publicado")).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 textoPost.clear();
                 upload.clearFileList();
@@ -190,7 +190,7 @@ public class ComunidadComponent extends VerticalLayout {
 
     private void cargarPublicaciones() {
         listaPublicacionesLayout.removeAll();
-        List<Publicacion> publicaciones = publicacionService.obtenerTodas();
+        List<Publicacion> publicaciones = publicacionService.obtenerMuroDelDojo(this.dojoId);
         for (Publicacion p : publicaciones) {
             listaPublicacionesLayout.add(crearTarjetaPublicacion(p));
         }
@@ -321,7 +321,7 @@ public class ComunidadComponent extends VerticalLayout {
             if (e.getValue() != null && !e.getValue().isBlank()) {
                 try {
                     Usuario autor = securityService.getAuthenticatedUsuario().orElseThrow();
-                    chatService.enviarMensaje(autor, e.getValue());
+                    chatService.enviarMensajeAlDojo(autor, e.getValue(), this.dojoId);
                     cargarMensajesChat();
                 } catch (Exception ex) { Notification.show("Error envío").addThemeVariants(NotificationVariant.LUMO_ERROR); }
             }
@@ -332,7 +332,7 @@ public class ComunidadComponent extends VerticalLayout {
     }
 
     private void cargarMensajesChat() {
-        List<MensajeChat> historial = chatService.obtenerHistorialChat();
+        List<MensajeChat> historial = chatService.obtenerHistorialDelDojo(this.dojoId);
         List<MessageListItem> items = historial.stream().map(msg -> {
             MessageListItem item = new MessageListItem(msg.getContenido(),
                     msg.getFecha().toInstant(ZoneOffset.UTC),

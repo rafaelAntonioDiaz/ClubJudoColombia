@@ -3,6 +3,10 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEnterEvent;
 import com.vaadin.flow.router.BeforeEnterObserver;
@@ -11,46 +15,56 @@ import jakarta.annotation.security.PermitAll;
 
 import java.util.Optional;
 
-/**
- * El "Semáforo" del Dojo.
- * Esta vista no tiene diseño visual. Su único trabajo es redirigir al usuario
- * a su dashboard correcto apenas inicia sesión.
- */
 @Route("") // Ruta raíz (http://localhost:8080/)
-@PermitAll // Cualquier usuario logueado llega aquí primero
+@PermitAll
 public class MainRouterView extends VerticalLayout implements BeforeEnterObserver {
 
     private final SecurityService securityService;
+    private final TraduccionService traduccionService; // <--- Traído de MainView
 
-    public MainRouterView(SecurityService securityService) {
+    public MainRouterView(SecurityService securityService, TraduccionService traduccionService) {
         this.securityService = securityService;
+        this.traduccionService = traduccionService;
+
+        setSizeFull();
+        setJustifyContentMode(JustifyContentMode.CENTER);
+        setAlignItems(Alignment.CENTER);
     }
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
 
-        // 1. ¿Es el SENSEI? -> Lo mandamos a su panel de control principal
+        // 1. ¿Es el SENSEI? -> Al Dashboard Principal del Sensei
         if (securityService.isSensei()) {
-            event.forwardTo("sensei/admisiones"); // O "dashboard-sensei" si prefieres
+            event.forwardTo(SenseiDashboardView.class);
             return;
         }
 
-        // 2. ¿Es un JUDOKA? -> Depende de su estado de admisión
+        // 2. ¿Es un JUDOKA? -> El Semáforo de Admisiones
         Optional<Judoka> judokaOpt = securityService.getAuthenticatedJudoka();
         if (judokaOpt.isPresent()) {
             Judoka judoka = judokaOpt.get();
 
             if (judoka.getEstado() == EstadoJudoka.ACTIVO) {
-                // ¡ÉXITO! El Sensei lo aprobó, entra al Dashboard completo
-                event.forwardTo("dashboard-judoka");
+                event.forwardTo(JudokaDashboardView.class);
             } else {
-                // Aún es PENDIENTE o RECHAZADO, se queda en el Asistente de Admisión
                 event.forwardTo("completar-perfil");
             }
             return;
         }
 
-        // 3. Fallback de seguridad por si alguien queda en el limbo
-        event.forwardTo("login");
+        // 3. Fallback: Usuario logueado pero sin rol reconocido
+        String username = securityService.getAuthenticatedUserDetails()
+                .map(u -> u.getUsername()).orElse("Usuario");
+        mostrarPantallaSinRol(username);
+    }
+
+    // --- Pantalla de error segura y traducida ---
+    private void mostrarPantallaSinRol(String nombre) {
+        removeAll();
+        add(new H1(traduccionService.get("main.bienvenido", nombre)));
+        add(new Paragraph(traduccionService.get("main.error.sin_rol_1")));
+        add(new Paragraph(traduccionService.get("main.error.sin_rol_2")));
+        add(new Anchor("logout", traduccionService.get("btn.cerrar.sesion")));
     }
 }

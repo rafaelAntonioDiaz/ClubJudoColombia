@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Route(value = "gestion-grupos", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 @PageTitle("Gestión de Grupos | Club Judo Colombia")
 public class SenseiGruposView extends VerticalLayout implements Serializable {
 

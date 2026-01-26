@@ -4,7 +4,8 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.CampoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.CampoService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- INYECCIÓN
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.Component;
@@ -34,22 +35,25 @@ import java.time.LocalDate;
 import java.util.Set;
 
 @Route(value = "gestion-campos", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 @PageTitle("Campos de Entrenamiento | Club Judo Colombia")
 public class SenseiCamposView extends VerticalLayout {
 
     private final CampoService campoService;
     private final JudokaRepository judokaRepository;
     private final TraduccionService traduccionService; // <--- I18n
+    private final SecurityService securityService;
     private Grid<CampoEntrenamiento> grid;
 
     @Autowired
     public SenseiCamposView(CampoService campoService,
                             JudokaRepository judokaRepository,
-                            TraduccionService traduccionService) {
+                            TraduccionService traduccionService,
+                            SecurityService securityService) {
         this.campoService = campoService;
         this.judokaRepository = judokaRepository;
         this.traduccionService = traduccionService;
+        this.securityService = securityService;
 
         setSizeFull();
         setPadding(true);
@@ -147,7 +151,8 @@ public class SenseiCamposView extends VerticalLayout {
         fechas.add(inicio, fin);
 
         MultiSelectComboBox<Judoka> judokas = new MultiSelectComboBox<>(traduccionService.get("campos.field.convocados"));
-        judokas.setItems(judokaRepository.findAllWithUsuario());
+        Long miSenseiId = securityService.getSenseiIdActual();
+        judokas.setItems(judokaRepository.findBySenseiIdWithUsuario(miSenseiId));
         judokas.setItemLabelGenerator(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido());
         judokas.setWidthFull();
 

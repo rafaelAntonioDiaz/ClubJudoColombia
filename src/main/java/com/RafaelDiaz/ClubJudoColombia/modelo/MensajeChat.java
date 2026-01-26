@@ -14,6 +14,10 @@ public class MensajeChat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei", nullable = false)
+    private Sensei sensei;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_autor", nullable = false)
     private Usuario autor;
@@ -43,4 +47,6 @@ public class MensajeChat {
     public void setContenido(String contenido) { this.contenido = contenido; }
     public LocalDateTime getFecha() { return fecha; }
     public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
+    public Sensei getSensei() { return sensei; }
+    public void setSensei(Sensei sensei) { this.sensei = sensei; }
 }

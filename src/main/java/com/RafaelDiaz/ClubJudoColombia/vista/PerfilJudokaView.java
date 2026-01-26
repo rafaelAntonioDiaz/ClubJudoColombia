@@ -2,13 +2,13 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Reflexion;
-import com.RafaelDiaz.ClubJudoColombia.servicio.FileStorageService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService; // <--- Nuevo
 import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.util.BibliotecaSabiduria;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
-// --- IMPORTS LIMPIOS ---
+
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
@@ -25,32 +25,25 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.upload.Upload;
-// USAMOS LA NUEVA API DE VAADIN 24.8
-import com.vaadin.flow.server.streams.DownloadHandler;
-import com.vaadin.flow.server.streams.DownloadResponse;
-// -----------------------
+
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Route("perfil-judoka")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
-@PageTitle("Mi Santuario | Club Judo Colombia") // Nota: Para traducir el PageTitle dinámicamente, se requeriría implementar HasDynamicTitle
+@PageTitle("Mi Santuario | Club Judo Colombia")
 public class PerfilJudokaView extends JudokaLayout {
 
     private final SecurityService securityService;
     private final JudokaService judokaService;
     private final TraduccionService traduccionService;
-    private final FileStorageService fileStorageService;
+    private final AlmacenamientoCloudService almacenamientoCloudService; // <--- Nuevo
 
     private Judoka judokaActual;
     private Image avatarImage;
@@ -61,12 +54,12 @@ public class PerfilJudokaView extends JudokaLayout {
                             AccessAnnotationChecker accessChecker,
                             JudokaService judokaService,
                             TraduccionService traduccionService,
-                            FileStorageService fileStorageService) {
+                            AlmacenamientoCloudService almacenamientoCloudService) { // <--- Inyección
         super(securityService, accessChecker, traduccionService);
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.traduccionService = traduccionService;
-        this.fileStorageService = fileStorageService;
+        this.almacenamientoCloudService = almacenamientoCloudService;
 
         this.judokaActual = securityService.getAuthenticatedJudoka()
                 .orElseThrow(() -> new RuntimeException("Judoka no encontrado"));
@@ -109,7 +102,6 @@ public class PerfilJudokaView extends JudokaLayout {
         quoteIcon.getStyle().set("opacity", "0.3").set("margin-right", "10px");
 
         String claveFrase = BibliotecaSabiduria.obtenerClaveDelDia();
-        // i18n: Traducción de la frase del día
         String textoTraducido = traduccionService.get(claveFrase);
         String autor = BibliotecaSabiduria.obtenerAutor(claveFrase);
 
@@ -149,7 +141,7 @@ public class PerfilJudokaView extends JudokaLayout {
 
         cargarImagenEnAvatar();
 
-        // 2. Upload
+        // 2. Upload (Usa el UploadHandler Moderno)
         Upload upload = new Upload();
         upload.setAcceptedFileTypes("image/jpeg", "image/png", "image/jpg");
         upload.setMaxFiles(1);
@@ -157,23 +149,22 @@ public class PerfilJudokaView extends JudokaLayout {
 
         Button uploadBtn = new Button(new Icon(VaadinIcon.CAMERA));
         uploadBtn.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
-        // i18n: Tooltip traducido
         uploadBtn.setTooltipText(traduccionService.get("tooltip.cambiar.foto"));
         upload.setUploadButton(uploadBtn);
 
         upload.setUploadHandler(event -> {
             try {
+                // El JudokaService ahora se encarga de subir a la nube
                 judokaService.actualizarFotoPerfil(judokaActual, event.getInputStream(), event.getFileName());
                 getUI().ifPresent(ui -> ui.access(() -> {
+                    // Refrescamos la imagen que ahora vendrá de la nube
                     cargarImagenEnAvatar();
-                    // i18n: Mensaje de éxito
                     Notification.show(traduccionService.get("msg.foto.actualizada"), 2000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     upload.clearFileList();
                 }));
             } catch (Exception e) {
                 getUI().ifPresent(ui -> ui.access(() ->
-                        // i18n: Mensaje de error
                         Notification.show(traduccionService.get("msg.error.general") + ": " + e.getMessage())
                                 .addThemeVariants(NotificationVariant.LUMO_ERROR)
                 ));
@@ -186,7 +177,6 @@ public class PerfilJudokaView extends JudokaLayout {
         H2 nombreH2 = new H2(nombre + " " + judokaActual.getUsuario().getApellido());
         nombreH2.getStyle().set("margin-bottom", "0").set("text-align", "center");
 
-        // i18n: Traducción automática del Enum Grado (Cinturón)
         Span cinturonBadge = new Span(traduccionService.get(judokaActual.getGrado()));
         cinturonBadge.getElement().getThemeList().add("badge");
         cinturonBadge.getStyle().set("background-color", "#2C3E50").set("color", "white").set("padding", "0.5em 1em").set("font-size", "0.9rem");
@@ -196,7 +186,6 @@ public class PerfilJudokaView extends JudokaLayout {
         stats.setJustifyContentMode(FlexComponent.JustifyContentMode.EVENLY);
         stats.getStyle().set("margin-top", "20px");
 
-        // i18n: Etiquetas de estadísticas
         stats.add(crearStatItem(VaadinIcon.SCALE, judokaActual.getPeso() + " kg", traduccionService.get("lbl.peso")));
         stats.add(crearStatItem(VaadinIcon.ARROWS_LONG_V, judokaActual.getEstatura() + " cm", traduccionService.get("lbl.altura")));
         stats.add(crearStatItem(VaadinIcon.CALENDAR_USER, String.valueOf(judokaActual.getEdad()), traduccionService.get("lbl.edad")));
@@ -205,22 +194,15 @@ public class PerfilJudokaView extends JudokaLayout {
         return layout;
     }
 
+    // --- REFACTORIZACIÓN ESTRELLA ---
     private void cargarImagenEnAvatar() {
         avatarContainer.removeAll();
-        String rutaFoto = judokaActual.getUrlFotoPerfil();
+        // Ahora esto devuelve la URL pública (ej: https://pub-xxx.r2.dev/judokas/1/foto.jpg)
+        String urlFotoCloud = judokaActual.getUrlFotoPerfil();
 
-        if (rutaFoto != null && !rutaFoto.isEmpty()) {
-            DownloadHandler handler = DownloadHandler.fromInputStream(context -> {
-                try {
-                    Path path = Path.of("uploads", rutaFoto);
-                    return new DownloadResponse(new FileInputStream(path.toFile()), rutaFoto, Files.probeContentType(path), Files.size(path));
-                } catch (Exception e) {
-                    return new DownloadResponse(new ByteArrayInputStream(new byte[0]), "error", "application/octet-stream", 0);
-                }
-            }).inline();
-
-            // i18n: Alt text
-            avatarImage = new Image(handler, traduccionService.get("alt.foto.perfil"));
+        if (urlFotoCloud != null && !urlFotoCloud.isEmpty()) {
+            // Ya no hay streams locales. Vaadin carga la imagen directo de la URL.
+            avatarImage = new Image(urlFotoCloud, traduccionService.get("alt.foto.perfil"));
             avatarImage.setWidth("100%");
             avatarImage.setHeight("100%");
             avatarImage.getStyle().set("object-fit", "cover");
@@ -261,17 +243,14 @@ public class PerfilJudokaView extends JudokaLayout {
         layout.setPadding(true);
         layout.setSpacing(true);
 
-        // i18n: Título ya estaba traducido, perfecto
         H3 titulo = new H3(traduccionService.get("perfil.notas.titulo"));
         titulo.getStyle().set("margin-top", "0").set("color", "#2C3E50");
 
         TextArea nuevaNotaArea = new TextArea();
         nuevaNotaArea.setWidthFull();
-        // i18n: Placeholder ya estaba traducido
         nuevaNotaArea.setPlaceholder(traduccionService.get("perfil.notas.placeholder"));
         nuevaNotaArea.setMinHeight("100px");
 
-        // i18n: Botón de acción
         Button btnPublicar = new Button(traduccionService.get("btn.registrar.pensamiento"), new Icon(VaadinIcon.PENCIL));
         btnPublicar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnPublicar.getStyle().set("background-color", "#27AE60");
@@ -284,7 +263,6 @@ public class PerfilJudokaView extends JudokaLayout {
             if (!nuevaNotaArea.isEmpty()) {
                 judokaService.crearReflexion(judokaActual, nuevaNotaArea.getValue());
                 nuevaNotaArea.clear();
-                // i18n: Notificación ya estaba traducida
                 Notification.show(traduccionService.get("perfil.msg.guardado"), 3000, Notification.Position.BOTTOM_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 refrescarTimeline(timelineLayout);
@@ -302,7 +280,6 @@ public class PerfilJudokaView extends JudokaLayout {
         List<Reflexion> historial = judokaService.obtenerHistorialReflexiones(judokaActual);
 
         if (historial.isEmpty()) {
-            // i18n: Mensaje de estado vacío
             Span empty = new Span(traduccionService.get("msg.diario.vacio"));
             empty.getStyle().set("color", "gray").set("font-style", "italic").set("margin-top", "20px");
             container.add(empty);
@@ -335,7 +312,6 @@ public class PerfilJudokaView extends JudokaLayout {
 
             btnEditar.addClickListener(e -> {
                 Dialog editDialog = new Dialog();
-                // i18n: Título del diálogo
                 editDialog.setHeaderTitle(traduccionService.get("title.editar.reflexion"));
 
                 TextArea editArea = new TextArea();
@@ -343,13 +319,11 @@ public class PerfilJudokaView extends JudokaLayout {
                 editArea.setWidth("100%");
                 editArea.setHeight("200px");
 
-                // i18n: Botones del diálogo
                 Button save = new Button(traduccionService.get("btn.guardar.cambios"), ev -> {
                     try {
                         judokaService.editarReflexion(ref, editArea.getValue());
                         editDialog.close();
                         refrescarTimeline(containerPadre);
-                        // i18n: Notificación
                         Notification.show(traduccionService.get("msg.entrada.actualizada"));
                     } catch (Exception ex) {
                         Notification.show(ex.getMessage());
@@ -368,7 +342,6 @@ public class PerfilJudokaView extends JudokaLayout {
             lock.setSize("14px");
             lock.setColor("#ccc");
             lock.getStyle().set("position", "absolute").set("top", "10px").set("right", "10px");
-            // i18n: Tooltip
             lock.setTooltipText(traduccionService.get("tooltip.registro.permanente"));
             card.add(lock);
         }

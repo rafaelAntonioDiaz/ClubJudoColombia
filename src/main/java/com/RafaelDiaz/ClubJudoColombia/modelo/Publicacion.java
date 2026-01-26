@@ -15,6 +15,10 @@ public class Publicacion {
     @JoinColumn(name = "id_autor", nullable = false)
     private Usuario autor;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei", nullable = false)
+    private Sensei sensei;
+
     @Column(columnDefinition = "TEXT")
     private String contenido;
 
@@ -50,4 +54,7 @@ public class Publicacion {
     public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
     public int getLikes() { return likes; }
     public void setLikes(int likes) { this.likes = likes; }
+    public Sensei getSensei() { return sensei; }
+    public void setSensei(Sensei sensei) { this.sensei = sensei; }
+
 }

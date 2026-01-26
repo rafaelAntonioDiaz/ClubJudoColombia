@@ -8,5 +8,5 @@ import java.util.List;
 @Repository
 public interface PublicacionRepository extends JpaRepository<Publicacion, Long> {
     // Traer los posts más recientes primero
-    List<Publicacion> findAllByOrderByFechaDesc();
+    List<Publicacion> findBySenseiIdOrderByFechaDesc(Long senseiId);
 }

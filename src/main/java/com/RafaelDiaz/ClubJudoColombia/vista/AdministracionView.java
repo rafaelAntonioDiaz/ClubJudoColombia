@@ -23,7 +23,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
 @Route(value = "admin-sistema", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_ADMIN")
+@RolesAllowed("ROLE_MASTER")
 @PageTitle("Configuración del Sistema | Club Judo Colombia")
 public class AdministracionView extends VerticalLayout {
 

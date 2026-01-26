@@ -1,19 +1,16 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
-import java.io.OutputStream;
+import java.io.InputStream;
 
 public interface AlmacenamientoCloudService {
-
     /**
-     * Crea un canal de flujo de datos directo a la nube.
-     * @param judokaId ID del judoka (se usa para crear carpetas, ej: /judokas/1/waiver.pdf)
-     * @param nombreArchivo Nombre original del archivo
-     * @return OutputStream al que Vaadin le inyectará los bytes en tiempo real.
+     * Sube el archivo directamente a la nube usando el flujo moderno de Vaadin.
      */
-    OutputStream crearStreamDeSalida(Long judokaId, String nombreArchivo);
+    String subirArchivo(Long judokaId, String nombreArchivo, InputStream inputStream);
 
-    /**
-     * Devuelve la URL pública (o firmada) para ver el archivo después.
-     */
     String obtenerUrl(Long judokaId, String nombreArchivo);
+    /**
+     * Elimina un archivo de la nube dado su URL o Key.
+     */
+    boolean eliminarArchivo(String urlArchivoEnLaNube);
 }

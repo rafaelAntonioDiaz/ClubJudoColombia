@@ -3,9 +3,9 @@ package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TokenInvitacionRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
+import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -24,22 +24,20 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
-
 @PageTitle("Completar Registro | Club Judo Colombia")
 @Route("registro")
-@AnonymousAllowed // Cualquier persona con el link debe poder acceder
+@AnonymousAllowed
 public class CompletarRegistroView extends VerticalLayout implements HasUrlParameter<String> {
 
+    private final AdmisionesService admisionesService;
     private final TokenInvitacionRepository tokenRepository;
     private final UsuarioRepository usuarioRepository;
-    private final JudokaRepository judokaRepository;
     private final PasswordEncoder passwordEncoder;
     private final TraduccionService traduccionService;
 
-    // Estado local
-    private TokenInvitacion tokenActual;
+    // --- Variables para recordar quién es el usuario ---
+    private Usuario usuarioActual;
+    private String tokenUuidActual;
 
     // Componentes visuales
     private final H2 titulo = new H2();
@@ -49,51 +47,44 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     private final PasswordField confirmarPasswordField = new PasswordField();
     private final Button btnActivar = new Button();
 
-    public CompletarRegistroView(TokenInvitacionRepository tokenRepository,
+    public CompletarRegistroView(AdmisionesService admisionesService,
+                                 TokenInvitacionRepository tokenRepository,
                                  UsuarioRepository usuarioRepository,
-                                 JudokaRepository judokaRepository,
                                  PasswordEncoder passwordEncoder,
                                  TraduccionService traduccionService) {
         this.tokenRepository = tokenRepository;
         this.usuarioRepository = usuarioRepository;
-        this.judokaRepository = judokaRepository;
         this.passwordEncoder = passwordEncoder;
         this.traduccionService = traduccionService;
+        this.admisionesService = admisionesService;
 
         setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
     }
 
-    /**
-     * Este método se ejecuta automáticamente cuando el usuario entra a /registro/EL-TOKEN
-     */
     @Override
-    public void setParameter(BeforeEvent event, String tokenString) {
-        Optional<TokenInvitacion> tokenOpt = tokenRepository.findByToken(tokenString);
+    public void setParameter(BeforeEvent event, String tokenUuid) {
+        try {
+            // 1. Buscamos el Judoka
+            Judoka judoka = admisionesService.obtenerJudokaPorToken(tokenUuid);
 
-        if (tokenOpt.isEmpty()) {
-            mostrarError(traduccionService.get("error.token_invalido")); // "El enlace es inválido o no existe."
-            return;
+            // --- Guardamos los datos para usarlos en el botón "Activar" ---
+            this.usuarioActual = judoka.getUsuario();
+            this.tokenUuidActual = tokenUuid;
+
+            removeAll();
+            construirFormulario(this.usuarioActual);
+
+        } catch (RuntimeException e) {
+
+            mostrarError(e.getMessage());
         }
-
-        TokenInvitacion token = tokenOpt.get();
-
-        // Verificar expiración (48 horas)
-        if (token.getFechaCreacion().plusHours(48).isBefore(LocalDateTime.now())) {
-            mostrarError(traduccionService.get("error.token_expirado")); // "El enlace ha expirado. Solicite uno nuevo al Sensei."
-            tokenRepository.delete(token); // Limpieza de token expirado
-            return;
-        }
-
-        // Si el token es válido, mostramos el formulario
-        this.tokenActual = token;
-        construirFormulario(token.getJudoka().getUsuario());
     }
 
     private void construirFormulario(Usuario usuario) {
-        titulo.setText(traduccionService.get("vista.registro.titulo") + " " + usuario.getNombre()); // "Bienvenido al Dojo, Rafael"
-        descripcion.setText(traduccionService.get("vista.registro.descripcion")); // "Crea tu contraseña para activar tu cuenta."
+        titulo.setText(traduccionService.get("vista.registro.titulo") + " " + usuario.getNombre());
+        descripcion.setText(traduccionService.get("vista.registro.descripcion"));
 
         passwordField.setLabel(traduccionService.get("label.contrasena"));
         passwordField.setRequired(true);
@@ -125,28 +116,23 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
             return;
         }
 
-        if (pass.length() < 6) {
-            Notificar(traduccionService.get("error.contrasena_corta"), NotificationVariant.LUMO_ERROR);
-            return;
-        }
+        // --- Usar la variable segura que guardamos al inicio ---
+        usuarioActual.setPasswordHash(passwordEncoder.encode(pass));
+        usuarioActual.setActivo(true);
+        usuarioRepository.save(usuarioActual);
 
-        // 1. Cifrar y guardar la contraseña
-        Usuario usuario = tokenActual.getJudoka().getUsuario();
-        usuario.setPasswordHash(passwordEncoder.encode(pass)); // <- Corregido a setPasswordHash
-        // Aún no lo activamos del todo, sigue en PENDIENTE hasta que suba los documentos,
-        // pero su usuario ya tiene clave para poder loguearse al Asistente.
-        usuarioRepository.save(usuario);
-
-        // 2. Eliminar el token de un solo uso
-        tokenRepository.delete(tokenActual);
+        // 2. Eliminar el token de un solo uso (Buscándolo de nuevo para evitar errores de Lazy)
+        tokenRepository.findByToken(tokenUuidActual).ifPresent(tokenRepository::delete);
 
         Notificar(traduccionService.get("exito.cuenta_creada"), NotificationVariant.LUMO_SUCCESS);
 
-        // 3. Redirigir al Login para que entre al Asistente de Admisión
+        // 3. Redirigir al Login
         UI.getCurrent().navigate("login");
     }
 
+    // --- Método mostrarError limpio ---
     private void mostrarError(String mensaje) {
+        removeAll(); // Limpiamos la pantalla por si acaso
         add(new H2(traduccionService.get("error.titulo_ops")));
         add(new Paragraph(mensaje));
     }

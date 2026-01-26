@@ -8,7 +8,7 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import com.vaadin.flow.component.html.H3;
 @Route(value = "comunidad-sensei", layout = SenseiLayout.class) // Layout del SENSEI
 @RolesAllowed("ROLE_SENSEI")
 @PageTitle("Comunidad del Dojo | Panel Sensei")
@@ -24,9 +24,12 @@ public class ComunidadSenseiView extends VerticalLayout {
         setSizeFull();
         setPadding(false);
         setSpacing(false);
-
-        // Reutilizamos el mismo componente (Magia pura)
-        ComunidadComponent comunidad = new ComunidadComponent(
+        Long miSenseiId = securityService.getSenseiIdActual();
+        if (miSenseiId == null) {
+            add(new H3("Error: No tienes un perfil de Sensei activo."));
+            return;
+        }
+        ComunidadComponent comunidad = new ComunidadComponent(miSenseiId,
                 securityService, traduccionService, fileStorageService, publicacionService, chatService);
 
         add(comunidad);

@@ -34,7 +34,7 @@ import java.io.Serializable;
 import java.util.stream.Stream;
 
 @Route(value = "biblioteca-tareas", layout = SenseiLayout.class)
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 @PageTitle("Biblioteca de Ejercicios | Club Judo Colombia")
 public class BibliotecaView extends VerticalLayout implements Serializable {
 

@@ -63,12 +63,6 @@ public class SenseiDashboardService {
                         .orElseThrow(() -> new RuntimeException("Sensei no autenticado")));
     }
 
-    /**
-     * ✅ CORREGIDO: Pasar ID del sensei autenticado al repositorio
-     */
-    /**
-     * ✅ CORREGIDO: Calcular fecha de inicio y pasar senseiId
-     */
     public int calcularAsistenciaPromedio() {
         Sensei sensei = securityService.getAuthenticatedSensei()
                 .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));

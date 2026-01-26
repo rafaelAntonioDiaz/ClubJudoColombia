@@ -16,6 +16,10 @@ public class TokenInvitacion implements Serializable {
     @Column(nullable = false, unique = true, length = 36)
     private String token;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei", nullable = false)
+    private Sensei sensei;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_judoka", nullable = false)
     private Judoka judoka;

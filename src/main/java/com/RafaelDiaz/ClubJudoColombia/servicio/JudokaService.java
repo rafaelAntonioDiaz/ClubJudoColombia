@@ -3,7 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Reflexion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon; // Importar
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.ReflexionRepository;
 import org.springframework.stereotype.Service;
@@ -16,20 +16,22 @@ import java.util.Optional;
 
 @Service
 public class JudokaService {
-    private final FileStorageService fileStorageService;
+    // --- CAMBIO 1: Inyectamos el servicio de la Nube ---
+    private final AlmacenamientoCloudService almacenamientoCloudService;
     private final JudokaRepository judokaRepository;
-    private final GamificationService gamificationService; // <--- INYECCIÓN
+    private final GamificationService gamificationService;
     private final ReflexionRepository reflexionRepository;
-    public JudokaService(FileStorageService fileStorageService, JudokaRepository judokaRepository,
+
+    public JudokaService(AlmacenamientoCloudService almacenamientoCloudService,
+                         JudokaRepository judokaRepository,
                          GamificationService gamificationService,
                          ReflexionRepository reflexionRepository) {
-        this.fileStorageService = fileStorageService;
+        this.almacenamientoCloudService = almacenamientoCloudService;
         this.judokaRepository = judokaRepository;
         this.gamificationService = gamificationService;
         this.reflexionRepository = reflexionRepository;
     }
 
-    // ... (findByUsuario y findAllJudokasWithUsuario se quedan igual) ...
     @Transactional(readOnly = true)
     public Optional<Judoka> findByUsuario(Usuario usuario) {
         return judokaRepository.findByUsuario(usuario);
@@ -42,27 +44,23 @@ public class JudokaService {
         return judokas;
     }
 
-    // --- NUEVO MÉTODO PARA ASCENDER (CON SENSOR GI) ---
     @Transactional
     public Judoka ascenderGrado(Judoka judoka, GradoCinturon nuevoGrado) {
         judoka.setGrado(nuevoGrado);
         Judoka guardado = judokaRepository.save(judoka);
-
-        // --- SENSOR DE GAMIFICACIÓN (GI) ---
         gamificationService.verificarLogrosGrado(guardado);
-
         return guardado;
     }
 
-    // Método genérico guardar (si lo usas en otros lados)
     @Transactional
     public Judoka save(Judoka judoka) {
         return judokaRepository.save(judoka);
     }
-    // --- Para llenar el Combo de Tesorería ---
+
     public List<Judoka> findAllJudokas() {
         return judokaRepository.findAll();
     }
+
     public List<Reflexion> obtenerHistorialReflexiones(Judoka judoka) {
         return reflexionRepository.findByJudokaOrderByFechaCreacionDesc(judoka);
     }
@@ -76,26 +74,33 @@ public class JudokaService {
     @Transactional
     public void editarReflexion(Reflexion reflexion, String nuevoContenido) {
         if (!reflexion.esEditable()) {
-            throw new
-                    RuntimeException("El tiempo de edición (24h) ha expirado. " +
-                    "Esta entrada ya es permanente.");
+            throw new RuntimeException("El tiempo de edición (24h) ha expirado. Esta entrada ya es permanente.");
         }
         reflexion.setContenido(nuevoContenido);
         reflexion.setFechaUltimaEdicion(LocalDateTime.now());
         reflexionRepository.save(reflexion);
     }
-    @Transactional
-    public void actualizarFotoPerfil(Judoka judoka,
-             InputStream inputStream, String filename) {
-        try {
-            // 1. Guardar archivo físico (reutilizando tu lógica existente)
-            String rutaGuardada = fileStorageService.save(inputStream, filename);
 
-            // 2. Actualizar referencia en BD
-            judoka.setUrlFotoPerfil(rutaGuardada);
+    // --- CAMBIO 2: Método refactorizado para enviar la foto a la Nube ---
+    @Transactional
+    public void actualizarFotoPerfil(Judoka judoka, InputStream inputStream, String filename) {
+        try {
+            // 1. Enviar a Cloudflare R2 (Usamos -1L para el Streaming puro)
+            String nombreFinalGuardado = almacenamientoCloudService.subirArchivo(
+                    judoka.getId(),
+                    filename,
+                    inputStream
+            );
+
+            // 2. Obtener la URL pública de la nube
+            String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judoka.getId(), nombreFinalGuardado);
+
+            // 3. Actualizar referencia en BD
+            judoka.setUrlFotoPerfil(urlEnLaNube);
             judokaRepository.save(judoka);
+
         } catch (Exception e) {
-            throw new RuntimeException("Error al guardar la foto de perfil: " + e.getMessage());
+            throw new RuntimeException("Error al guardar la foto de perfil en la nube: " + e.getMessage());
         }
     }
 }

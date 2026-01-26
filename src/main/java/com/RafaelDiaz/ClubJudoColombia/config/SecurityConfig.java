@@ -7,11 +7,14 @@ import com.vaadin.flow.spring.security.VaadinWebSecurity;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest; // <--- Importante
 /**
  * Configuración de Seguridad de Spring (Versión final).
  *
@@ -42,30 +45,45 @@ public class SecurityConfig extends VaadinWebSecurity {
      * Al heredar de VaadinWebSecurity, ya no usamos un SecurityFilterChain Bean,
      * sino que sobrescribimos este método.
      */
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            // PERMITIR ACCESO A REGISTRO
-            http.authorizeHttpRequests(auth ->
-                    auth.requestMatchers(
-                            "/registro",       // <--- NUEVA RUTA PÚBLICA
-                            "/images/**",
-                            "/icons/**",
-                            "/manifest.webmanifest",
-                            "/sw.js",
-                            "/offline.html"
-                    ).permitAll()
-            );
+    protected void configure(HttpSecurity http) throws Exception {
+        // --- 1. CONFIGURACIÓN MODERNA PARA H2 CONSOLE ---
+        // Deshabilitamos CSRF y permitimos iFrames usando la ruta nativa de H2
+        http.csrf(csrf -> csrf.ignoringRequestMatchers(PathRequest.toH2Console()));
+        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
-        // 2. Llama a la configuración base de Vaadin.
-        // ESTO ES OBLIGATORIO.
+        // --- 2. RUTAS PÚBLICAS (Sin AntPathRequestMatcher) ---
+        http.authorizeHttpRequests(auth ->
+                auth.requestMatchers(PathRequest.toH2Console()).permitAll() // Permiso nativo H2
+                        .requestMatchers(
+                                "/registro/**",  // Permite /registro y /registro/{token}
+                                "/images/**",
+                                "/icons/**",
+                                "/manifest.webmanifest",
+                                "/sw.js",
+                                "/offline.html"
+                        ).permitAll()
+        );
+
+        // Llamamos a la configuración base de Vaadin
         super.configure(http);
 
-        // 3. Configura nuestra vista de login personalizada.
-        // Esta línea mágica le dice a Spring Security:
-        // - Que nuestra página de login está en la ruta de LoginView.class (o sea, "/login")
-        // - Que intercepte las peticiones POST a "/login"
-        // - Que redirija a "/login?error" si el login falla.
-        // - Que configure automáticamente un logout en "/logout".
+        // Configuramos la vista de Login
         setLoginView(http, LoginView.class);
     }
+
+    // --- 3. EXCEPCIÓN PARA EL ENRUTADOR DE VAADIN ---
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        super.configure(web);
+        // Le decimos a Vaadin que ignore la consola H2 usando la utilidad de Spring
+        web.ignoring().requestMatchers(PathRequest.toH2Console());
+    }
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
+        // El MASTER puede hacer todo lo del SENSEI, el SENSEI todo lo del JUDOKA
+        hierarchy.setHierarchy("ROLE_MASTER > ROLE_SENSEI \n ROLE_SENSEI > ROLE_JUDOKA");
+        return hierarchy;
+    }
+
 }

@@ -55,7 +55,7 @@ class FinanzasIntegrationTest {
         mov2.setFecha(LocalDateTime.now());
         mov2.setMonto(new BigDecimal("20000"));
         mov2.setTipo(TipoTransaccion.INGRESO);
-        mov2.setMetodoPago(MetodoPago.TRANSFERENCIA);
+        mov2.setMetodoPago(MetodoPago.EFECTIVO);
         mov2.setConcepto(mensualidad);
         movimientoRepo.save(mov2);
 

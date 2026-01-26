@@ -21,7 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 @PageTitle("Invitar Nuevo Judoka | Club Judo Colombia")
 @Route(value = "sensei/invitar") // Asume que tienes un MainLayout, agrégalo si es así: layout = MainLayout.class
-@RolesAllowed("ROLE_SENSEI") // Seguridad: Solo el Sensei puede ver esta página
+@RolesAllowed("ROLE_SENSEI")
 public class InvitarAspiranteView extends VerticalLayout {
 
     private final AdmisionesService admisionesService;

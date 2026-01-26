@@ -24,6 +24,10 @@ public class Judoka implements Serializable {
     @JoinColumn(name = "id_usuario", referencedColumnName = "id_usuario", unique = true, nullable = false)
     private Usuario usuario;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei", nullable = false)
+    private Sensei sensei;
+
     // --- DATOS FÍSICOS ---
     @Column(name = "peso_kg")
     private Double peso;
@@ -31,16 +35,16 @@ public class Judoka implements Serializable {
     @Column(name = "estatura_cm")
     private Double estatura;
 
-    @Column(name = "fecha_nacimiento", nullable = false)
+    @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "sexo", nullable = false)
+    @Column(name = "sexo")
     private Sexo sexo;
 
     // --- DATOS TÉCNICOS ---
     @Enumerated(EnumType.STRING)
-    @Column(name = "grado_cinturon", nullable = false)
+    @Column(name = "grado_cinturon")
     private GradoCinturon grado;
 
     @Lob
@@ -50,7 +54,7 @@ public class Judoka implements Serializable {
     @Column(name = "ocupacion_principal", length = 200)
     private String ocupacionPrincipal;
 
-    @Column(name = "es_competidor_activo", nullable = false)
+    @Column(name = "es_competidor_activo")
     private boolean esCompetidorActivo = false;
 
     // --- DATOS SALUD Y DOCUMENTOS (NUEVO) ---
@@ -218,6 +222,14 @@ public class Judoka implements Serializable {
 
     public void setDocumentos(List<DocumentoRequisito> documentos) {
         this.documentos = documentos;
+    }
+
+    public Sensei getSensei() {
+        return sensei;
+    }
+
+    public void setSensei(Sensei sensei) {
+        this.sensei = sensei;
     }
 
     @Override

@@ -4,7 +4,9 @@ public enum TipoDocumento {
     WAIVER("enum.tipo_documento.exoneracion_responsabilidad"),
     CERTIFICADO_MEDICO("enum.tipo_documento.certificado_medico"),
     EPS("enum.tipo_documento.certificado_afiliacion_eps"),
-    DOCUMENTO_IDENTIDAD("enum.tipo_documento.documento_identidad");
+    DOCUMENTO_IDENTIDAD("enum.tipo_documento.documento_identidad"),
+    COMPROBANTE_PAGO("enum.tipo_documento.comprobante_pago");
+
 
     private final String clave;
 

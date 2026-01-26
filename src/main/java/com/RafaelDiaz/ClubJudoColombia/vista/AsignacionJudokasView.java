@@ -39,7 +39,7 @@ import java.util.stream.Stream;
  * Actualizada con TraduccionService.
  */
 @Route("asignar-judokas")
-@RolesAllowed("ROLE_SENSEI")
+@RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 public class AsignacionJudokasView extends SenseiLayout implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -47,7 +47,7 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable 
 
     private final GrupoEntrenamientoService grupoService;
     private final JudokaService judokaService;
-    private final TraduccionService traduccionService; // <--- Nuevo campo
+    private final TraduccionService traduccionService;
 
     private final Grid<Judoka> gridDisponibles = new Grid<>(Judoka.class, false);
     private final Grid<Judoka> gridAsignados = new Grid<>(Judoka.class, false);

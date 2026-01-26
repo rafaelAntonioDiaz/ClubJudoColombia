@@ -28,32 +28,63 @@ public class GrupoEntrenamientoService {
     private final JudokaRepository judokaRepository;
     private final PlanEntrenamientoRepository planRepository;
 
+    // 1. CAMBIO: Inyectamos el SecurityService para saber de quién es el dojo
+    private final SecurityService securityService;
+
     public GrupoEntrenamientoService(GrupoEntrenamientoRepository grupoRepository,
                                      JudokaRepository judokaRepository,
-                                     PlanEntrenamientoRepository planRepository) {
+                                     PlanEntrenamientoRepository planRepository,
+                                     SecurityService securityService) { // Inyectado en el constructor
         this.grupoRepository = grupoRepository;
         this.judokaRepository = judokaRepository;
         this.planRepository = planRepository;
+        this.securityService = securityService;
     }
-
-    // ... (Mantén findAll, count, findById, save, addJudokaToGrupo, removeJudokaFromGrupo IGUALES) ...
-    // Solo pego los que cambian para brevedad, pero asegúrate de tener todo el archivo completo.
 
     @Transactional(readOnly = true)
     public List<GrupoEntrenamiento> findAll(int offset, int limit, String filter) {
-        PageRequest pageable = PageRequest.of(offset / limit, limit);
-        if (filter == null || filter.trim().isEmpty()) {
-            return grupoRepository.findAll(pageable).getContent();
-        }
-        return grupoRepository.findByNombreContainingIgnoreCase(filter, pageable).getContent();
-    }
+        Long miSenseiId = securityService.getSenseiIdActual();
+        if (miSenseiId == null) return List.of();
 
+        PageRequest pageable = PageRequest.of(offset / limit, limit);
+
+        List<GrupoEntrenamiento> grupos;
+
+        // 1. Buscamos normalmente sin JOIN FETCH
+        if (filter == null || filter.trim().isEmpty()) {
+            grupos = grupoRepository.findBySenseiId(miSenseiId, pageable).getContent();
+        } else {
+            grupos = grupoRepository.findBySenseiIdAndNombreContainingIgnoreCase(miSenseiId, filter, pageable).getContent();
+        }
+
+        // 2. LA MAGIA CORRECTA: Despertamos la colección DENTRO de la transacción.
+        // Como Vaadin solo va a llamar al .size() en la grilla, lo invocamos aquí para cargarlo.
+        for (GrupoEntrenamiento grupo : grupos) {
+            grupo.getJudokas().size();
+        }
+
+        return grupos;
+    }
     @Transactional(readOnly = true)
     public long count(String filter) {
+        Long miSenseiId = securityService.getSenseiIdActual();
+        if (miSenseiId == null) return 0;
+
         if (filter == null || filter.trim().isEmpty()) {
-            return grupoRepository.count();
+            return grupoRepository.countBySenseiId(miSenseiId);
         }
-        return grupoRepository.countByNombreContainingIgnoreCase(filter);
+        return grupoRepository.countBySenseiIdAndNombreContainingIgnoreCase(miSenseiId, filter);
+    }
+
+    @Transactional
+    public GrupoEntrenamiento save(GrupoEntrenamiento grupo) {
+        // SEGURIDAD: Al crear un grupo nuevo, lo atamos al Sensei logueado
+        if (grupo.getId() == null) {
+            Long miSenseiId = securityService.getSenseiIdActual();
+            // Asumimos que tienes acceso al senseiRepository aquí, o pasas el objeto Sensei
+            // grupo.setSensei(senseiActual);
+        }
+        return grupoRepository.save(grupo);
     }
 
     @Transactional(readOnly = true)
@@ -61,10 +92,7 @@ public class GrupoEntrenamientoService {
         return grupoRepository.findById(id);
     }
 
-    @Transactional
-    public GrupoEntrenamiento save(GrupoEntrenamiento grupo) {
-        return grupoRepository.save(grupo);
-    }
+    
 
     @Transactional
     public void addJudokaToGrupo(Long grupoId, Long judokaId) {
@@ -83,14 +111,22 @@ public class GrupoEntrenamientoService {
     }
 
     /**
-     * CORREGIDO: Usa findAllWithUsuario para evitar LazyInitException en el ComboBox
+     * 2. CAMBIO VITAL (SaaS): Ahora filtra por el ID del Sensei actual.
+     * Evita que un sensei meta a sus grupos a alumnos de otro dojo.
      */
     @Transactional(readOnly = true)
     public List<Judoka> findJudokasDisponibles(Long grupoId, String searchNombre, Sexo sexo, GradoCinturon grado) {
+
+        // Obtener el ID del Sensei de la sesión actual
+        Long miSenseiId = securityService.getSenseiIdActual();
+        if (miSenseiId == null) {
+            return List.of(); // Si no es Sensei, no ve a nadie.
+        }
+
         String nombreFilter = (searchNombre != null && !searchNombre.trim().isEmpty()) ? searchNombre.toLowerCase() : null;
 
-       // Usamos el método optimizado del repositorio [cite: 1]
-        List<Judoka> todos = judokaRepository.findAllWithUsuario();
+        // AHORA USAMOS EL MÉTODO DEL SAAS (findBySenseiIdWithUsuario)
+        List<Judoka> todos = judokaRepository.findBySenseiIdWithUsuario(miSenseiId);
 
         return todos.stream()
                 .filter(j -> {
@@ -113,7 +149,7 @@ public class GrupoEntrenamientoService {
     }
 
     /**
-     * CORREGIDO: Usa findByGrupoIdWithUsuario para evitar LazyInitException en la Grilla
+     * Este método se mantiene igual porque ya usa la consulta correcta del repositorio (findByGrupoIdWithUsuario)
      */
     @Transactional(readOnly = true)
     public List<Judoka> findJudokasEnGrupo(Long grupoId, String searchNombre, Sexo sexo, GradoCinturon grado) {

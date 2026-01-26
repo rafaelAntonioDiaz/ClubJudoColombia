@@ -50,10 +50,9 @@ public class AdmisionesService {
     public void generarInvitacion(String nombre, String apellido, String email, String baseUrl) {
         // 1. Crear el Usuario (Inactivo y sin clave aún)
         // Generamos un username temporal basado en el email
-        String username = email.split("@")[0] + "_" + System.currentTimeMillis() % 1000;
-        Usuario nuevoUsuario = new Usuario(username, "PENDIENTE", nombre, apellido);
+        Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
         nuevoUsuario.setEmail(email);
-        nuevoUsuario.setActivo(false); // Inactivo hasta que cree su clave
+        nuevoUsuario.setActivo(false);
         usuarioRepository.save(nuevoUsuario);
 
         // 2. Crear el Judoka (Estado PENDIENTE)
@@ -127,7 +126,7 @@ public class AdmisionesService {
                 .orElseThrow(() -> new RuntimeException("Error Crítico: No existe el rol ROLE_JUDOKA en la base de datos."));
 
         Usuario usuario = judoka.getUsuario();
-        usuario.setRoles(Collections.singleton(rolJudoka));
+        usuario.setRoles(new java.util.HashSet<>(java.util.Set.of(rolJudoka)));
         usuario.setActivo(true);
 
         usuarioRepository.save(usuario);
@@ -138,5 +137,52 @@ public class AdmisionesService {
     public void rechazarAspirante(Judoka judoka, String motivo) {
         judoka.setEstado(EstadoJudoka.RECHAZADO);
         judokaRepository.save(judoka);
+    }
+    @Transactional // <-- LA LLAVE DE LA VICTORIA (Correcto)
+    public Judoka obtenerJudokaPorToken(String uuid) {
+        TokenInvitacion token = tokenRepository.findByToken(uuid)
+                .orElseThrow(() -> new RuntimeException("Token inválido o no existe."));
+
+        // --- NUEVA BARRERA DE SEGURIDAD ---
+        if (!token.isValido()) {
+            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
+        }
+        // ----------------------------------
+
+        // Despertamos los datos perezosos antes de cerrar la conexión
+        Judoka judoka = token.getJudoka();
+        judoka.getUsuario().getNombre(); // "Tocamos" el usuario
+
+        return judoka;
+    }
+    /**
+     * Crea el aspirante y retorna el Token (Sin enviar email, ideal para tests)
+     */
+    @Transactional
+    public String crearAspiranteYGenerarToken(String nombre, String apellido, String email) {
+        Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
+        nuevoUsuario.setEmail(email);
+        nuevoUsuario.setActivo(false);
+        usuarioRepository.save(nuevoUsuario);
+
+        Judoka nuevoJudoka = new Judoka();
+        nuevoJudoka.setUsuario(nuevoUsuario);
+        nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
+        judokaRepository.save(nuevoJudoka);
+
+        TokenInvitacion token = new TokenInvitacion(nuevoJudoka, 48);
+        tokenRepository.save(token);
+        return token.getToken();
+    }
+
+    /**
+     * Invalida el token una vez el aspirante completa su registro.
+     */
+    @Transactional
+    public void consumirToken(String uuid) {
+        TokenInvitacion token = tokenRepository.findByToken(uuid)
+                .orElseThrow(() -> new RuntimeException("Token no encontrado"));
+        token.setUsado(true);
+        tokenRepository.save(token);
     }
 }
