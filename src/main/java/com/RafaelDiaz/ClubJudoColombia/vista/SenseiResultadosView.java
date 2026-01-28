@@ -3,10 +3,8 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.MetricaRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.ResultadoPruebaService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.SenseiRepository; // NUEVO
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.form.ResultadoPruebaForm;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -17,6 +15,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import org.springframework.security.core.userdetails.UserDetails; // NUEVO
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -35,25 +34,37 @@ public class SenseiResultadosView extends VerticalLayout {
     private final MetricaRepository metricaRepository;
     private final ResultadoPruebaService resultadoPruebaService;
 
+    // --- NUEVAS DEPENDENCIAS PARA SEGURIDAD ---
+    private final SecurityService securityService;
+    private final SenseiRepository senseiRepository;
+
     private ComboBox<Judoka> judokaComboBox;
     private Grid<PlanEntrenamiento> planesGrid;
     private Grid<EjercicioPlanificado> pruebasGrid;
     private ResultadoPruebaForm resultadoForm;
     private Judoka judokaSeleccionado;
+    private Sensei senseiActual; // El Sensei logueado
 
     public SenseiResultadosView(JudokaService judokaService,
                                 PlanEntrenamientoService planEntrenamientoService,
                                 TraduccionService traduccionService,
                                 MetricaRepository metricaRepository,
-                                ResultadoPruebaService resultadoPruebaService) {
+                                ResultadoPruebaService resultadoPruebaService,
+                                SecurityService securityService,
+                                SenseiRepository senseiRepository) {
         this.judokaService = judokaService;
         this.planEntrenamientoService = planEntrenamientoService;
         this.traduccionService = traduccionService;
         this.metricaRepository = metricaRepository;
         this.resultadoPruebaService = resultadoPruebaService;
+        this.securityService = securityService;
+        this.senseiRepository = senseiRepository;
 
         setSizeFull();
         add(new H1(traduccionService.get("resultados.titulo")));
+
+        // 0. OBTENER EL SENSEI ACTUAL (SEGURIDAD)
+        cargarSenseiLogueado();
 
         // 1. Crear el formulario (oculto)
         resultadoForm = new ResultadoPruebaForm(traduccionService, metricaRepository);
@@ -61,7 +72,7 @@ public class SenseiResultadosView extends VerticalLayout {
         resultadoForm.addSaveListener(this::guardarResultados);
         resultadoForm.addCancelListener(e -> cerrarEditorResultados());
 
-        // 2. Configurar el ComboBox de Judoka
+        // 2. Configurar el ComboBox de Judoka (AHORA FILTRADO)
         configurarJudokaComboBox();
 
         // 3. Configurar los Grids
@@ -79,9 +90,37 @@ public class SenseiResultadosView extends VerticalLayout {
         add(contenido);
     }
 
+    private void cargarSenseiLogueado() {
+        Optional<UserDetails> userDetails = securityService.getAuthenticatedUserDetails();
+        if (userDetails.isPresent()) {
+            // Buscamos al Sensei por su Usuario asociado
+            // Nota: Asumimos que findByUsuarioUsername existe o usamos una consulta similar
+            // Si no, podemos buscar por el ID del usuario si lo tenemos en sesión
+            Optional<Sensei> senseiOpt = senseiRepository.findByUsuarioUsername(userDetails.get().getUsername());
+            if (senseiOpt.isPresent()) {
+                this.senseiActual = senseiOpt.get();
+            } else {
+                // Manejo de error si es un Admin que no es Sensei, por ejemplo
+                Notification.show("Error: Perfil de Sensei no encontrado.", 3000, Notification.Position.MIDDLE);
+                // Deshabilitar UI
+                setEnabled(false);
+            }
+        }
+    }
+
     private void configurarJudokaComboBox() {
         judokaComboBox = new ComboBox<>(traduccionService.get("resultados.selector.judoka"));
-        judokaComboBox.setItems(judokaService.findAllJudokasWithUsuario());
+
+        // --- CAMBIO CRÍTICO: SOLO LOS JUDOKAS DEL SENSEI ---
+        if (this.senseiActual != null) {
+            // Necesitas crear este método en JudokaService si no existe
+            List<Judoka> misJudokas = judokaService.buscarPorSensei(this.senseiActual);
+            judokaComboBox.setItems(misJudokas);
+        } else {
+            judokaComboBox.setItems(Collections.emptyList());
+        }
+        // ----------------------------------------------------
+
         judokaComboBox.setItemLabelGenerator(judoka ->
                 judoka.getUsuario().getNombre() + " " + judoka.getUsuario().getApellido()
         );
@@ -94,6 +133,9 @@ public class SenseiResultadosView extends VerticalLayout {
             pruebasGrid.setItems(Collections.emptyList());
         });
     }
+
+    // ... (El resto de métodos configurarGridPlanes, configurarGridPruebas, etc. quedan igual) ...
+    // Solo copia el resto del archivo original aquí abajo
 
     private void configurarGridPlanes() {
         planesGrid = new Grid<>(PlanEntrenamiento.class);
@@ -169,18 +211,12 @@ public class SenseiResultadosView extends VerticalLayout {
         EjercicioPlanificado ejPlan = resultadosBrutos.get(0).getEjercicioPlanificado();
         String nombrePruebaKey = ejPlan.getPruebaEstandar().getNombreKey();
 
-        // StringBuilder para construir el mensaje de feedback
         StringBuilder feedback = new StringBuilder(traduccionService.get("resultados.feedback.inicio"));
 
         try {
-            // --- TAREA 3: CÁLCULO DE ÍNDICES ---
             if (nombrePruebaKey.equals("ejercicio.sjft.nombre")) {
-                // Flujo SJFT: Calcular índice
                 ResultadoPrueba indiceGuardado = calcularYGuardarIndiceSJFT(resultadosBrutos, judokaSeleccionado, ejPlan);
-
-                // Obtener clasificación PARA ESE ÍNDICE
                 Optional<ClasificacionRendimiento> clasificacionOpt = resultadoPruebaService.getClasificacionParaResultado(indiceGuardado);
-                // Usamos el traductor en el Enum (ej. EXCELENTE -> "Excelente")
                 String clasificacionStr = clasificacionOpt.map(clasificacion -> traduccionService.get(clasificacion))
                         .orElse(traduccionService.get("resultados.sin_clasificacion"));
 
@@ -188,15 +224,11 @@ public class SenseiResultadosView extends VerticalLayout {
                         indiceGuardado.getValor(), clasificacionStr));
 
             } else {
-                // Flujo Pruebas Simples: Guardar y clasificar cada una
                 for (ResultadoPrueba res : resultadosBrutos) {
                     ResultadoPrueba resultadoGuardado = resultadoPruebaService.registrarResultado(res);
-
-                    // Obtener clasificación
                     Optional<ClasificacionRendimiento> clasificacionOpt = resultadoPruebaService.getClasificacionParaResultado(resultadoGuardado);
                     String clasificacionStr = clasificacionOpt.map(clasificacion -> traduccionService.get(clasificacion))
                             .orElse(traduccionService.get("resultados.sin_clasificacion"));
-                    // Obtener nombre de la métrica (ej. "Distancia")
                     String metricaNombre = traduccionService.get(res.getMetrica().getNombreKey());
 
                     feedback.append(String.format(traduccionService.get("resultados.feedback.prueba"),
@@ -204,7 +236,6 @@ public class SenseiResultadosView extends VerticalLayout {
                 }
             }
 
-            // --- MOSTRAR EL FEEDBACK CONSTRUIDO ---
             Notification.show(feedback.toString(), 5000, Notification.Position.MIDDLE);
             cerrarEditorResultados();
 
@@ -215,26 +246,22 @@ public class SenseiResultadosView extends VerticalLayout {
     }
 
     private ResultadoPrueba calcularYGuardarIndiceSJFT(List<ResultadoPrueba> resultadosBrutos, Judoka judoka, EjercicioPlanificado ejPlan) {
-
         Map<String, Double> datos = resultadosBrutos.stream()
                 .collect(Collectors.toMap(
                         res -> res.getMetrica().getNombreKey(),
                         ResultadoPrueba::getValor
                 ));
 
-        // 1. Extraer datos brutos
         Double s1 = datos.get("metrica.sjft_proyecciones_s1.nombre");
         Double s2 = datos.get("metrica.sjft_proyecciones_s2.nombre");
         Double s3 = datos.get("metrica.sjft_proyecciones_s3.nombre");
         Double fcFinal = datos.get("metrica.sjft_fc_final.nombre");
         Double fc1Min = datos.get("metrica.sjft_fc_1min.nombre");
 
-        // 2. Validar
         if (s1 == null || s2 == null || s3 == null || fcFinal == null || fc1Min == null) {
             throw new IllegalStateException(traduccionService.get("resultados.sjft.error.faltan_datos"));
         }
 
-        // 3. Calcular
         double totalProyecciones = s1 + s2 + s3;
         if (totalProyecciones == 0) {
             throw new IllegalStateException(traduccionService.get("resultados.sjft.error.total_cero"));
@@ -242,12 +269,10 @@ public class SenseiResultadosView extends VerticalLayout {
 
         double indiceCalculado = (fcFinal + fc1Min) / totalProyecciones;
 
-        // 4. Obtener la Métrica "Índice"
         Metrica metricaIndice = metricaRepository.findByNombreKey("metrica.sjft_indice.nombre")
                 .orElseThrow(() -> new RuntimeException(
                         traduccionService.get("resultados.sjft.error.metrica_no_encontrada")));
 
-        // 5. Crear y guardar el NUEVO resultado
         ResultadoPrueba resultadoIndice = new ResultadoPrueba();
         resultadoIndice.setJudoka(judoka);
         resultadoIndice.setEjercicioPlanificado(ejPlan);
@@ -256,7 +281,6 @@ public class SenseiResultadosView extends VerticalLayout {
         resultadoIndice.setFechaRegistro(LocalDateTime.now());
         resultadoIndice.setNotasJudoka(traduccionService.get("resultados.sjft.nota_automatica"));
 
-        // --- 6. DEVOLVER EL RESULTADO GUARDADO ---
         return resultadoPruebaService.registrarResultado(resultadoIndice);
     }
 

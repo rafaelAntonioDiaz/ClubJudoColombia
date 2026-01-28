@@ -17,38 +17,34 @@ public class JudokaInsignia {
     @JoinColumn(name = "id_insignia")
     private Insignia insignia;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei")
+    private Sensei senseiOtorgante;
     private LocalDateTime fechaObtencion = LocalDateTime.now();
 
     public JudokaInsignia () {
 
     }
-
-
-    public void setJudoka(Judoka judoka) {
+    // Constructor útil para el DataInitializer
+    public JudokaInsignia(Judoka judoka, Insignia insignia, Sensei sensei) {
         this.judoka = judoka;
-    }
-
-    public void setInsignia(Insignia insignia) {
         this.insignia = insignia;
+        this.senseiOtorgante = sensei;
+        this.fechaObtencion = LocalDateTime.now();
     }
 
-    public void setFechaObtencion(LocalDateTime fechaObtencion) {
-        this.fechaObtencion = fechaObtencion;
-    }
-    public void setIdLogro(Long idLogro) {
-        this.idLogro = idLogro;
-    }
-    public Insignia getInsignia() {
-        return insignia;
-    }
-    public LocalDateTime getFechaObtencion() {
-        return fechaObtencion;
-    }
+    public Long getIdLogro() { return idLogro; }
+    public void setIdLogro(Long idLogro) { this.idLogro = idLogro; }
 
-    public Long getIdLogro() {
-        return idLogro;
-    }
-    public Judoka getJudoka() {
-        return judoka;
-    }
+    public Judoka getJudoka() { return judoka; }
+    public void setJudoka(Judoka judoka) { this.judoka = judoka; }
+
+    public Insignia getInsignia() { return insignia; }
+    public void setInsignia(Insignia insignia) { this.insignia = insignia; }
+
+    public Sensei getSenseiOtorgante() { return senseiOtorgante; }
+    public void setSenseiOtorgante(Sensei senseiOtorgante) { this.senseiOtorgante = senseiOtorgante; }
+
+    public LocalDateTime getFechaObtencion() { return fechaObtencion; }
+    public void setFechaObtencion(LocalDateTime fechaObtencion) { this.fechaObtencion = fechaObtencion; }
 }

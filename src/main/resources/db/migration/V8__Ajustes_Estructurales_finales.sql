@@ -16,13 +16,16 @@ UPDATE judokas SET estado = 'ACTIVO', fecha_pre_registro = NOW() WHERE estado = 
 
 -- 2. ADMISIONES: Nueva tabla DOCUMENTOS_REQUISITOS
 CREATE TABLE documentos_requisitos (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_judoka BIGINT NOT NULL,
-    tipo ENUM('WAIVER', 'CERTIFICADO_MEDICO', 'EPS', 'DOCUMENTO_IDENTIDAD') NOT NULL,
-    url_archivo VARCHAR(255) NOT NULL,
-    validado_por_sensei TINYINT(1) NOT NULL DEFAULT 0,
-    fecha_carga DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_docs_judoka FOREIGN KEY (id_judoka) REFERENCES judokas(id_judoka) ON DELETE CASCADE
+   id BIGINT AUTO_INCREMENT PRIMARY KEY,
+   id_judoka BIGINT NOT NULL,
+   tipo ENUM('WAIVER', 'CERTIFICADO_MEDICO', 'EPS', 'DOCUMENTO_IDENTIDAD') NOT NULL,
+   url_archivo VARCHAR(255) NOT NULL,
+   id_sensei BIGINT NULL COMMENT 'Null = Pendiente, ID = Validado por...',
+   fecha_carga DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   fecha_validacion DATETIME NULL,
+
+   CONSTRAINT fk_docs_judoka FOREIGN KEY (id_judoka) REFERENCES judokas(id_judoka) ON DELETE CASCADE,
+   CONSTRAINT fk_docs_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. GPS: Actualizar SESIONES_PROGRAMADAS

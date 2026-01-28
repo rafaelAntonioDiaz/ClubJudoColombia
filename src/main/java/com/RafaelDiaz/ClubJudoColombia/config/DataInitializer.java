@@ -95,78 +95,71 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        System.out.println(">>> INICIANDO VERIFICACIÓN DE ARQUITECTURA SaaS (MULTI-TENANT)");
+        System.out.println(">>> INICIANDO RUNNER DE DATOS - CLUB JUDO COLOMBIA");
 
-        // --- 1. Validar Roles (Asegúrate de que ROLE_MASTER y ROLE_SENSEI estén en este método) ---
+        // 1. SEGURIDAD: Validar Roles y Master (Siempre necesario)
         validarRolesExistentes();
-
-        // --- CHEQUEO 1: EL DOBLE SOMBRERO (CREACIÓN DEL MASTER / CLIENTE #0) ---
-        // Esto se ejecuta siempre, garantizando que el dueño de la plataforma exista y tenga su Sensei ID.
         Sensei masterSensei = configurarUsuarioMaster();
+        garantizarCatalogoInsignias();
+        // Variable para definir quién entrenará a María y Julián
+        Sensei senseiPrincipal;
 
-        // --- CHEQUEO 2: VERIFICACIÓN DE DATOS DEMOSTRATIVOS ---
-        // Verificación simple para no duplicar datos (Tu código original)
-        if (judokaRepository.count() > 0) {
-            System.out.println(">>> BASE DE DATOS YA POBLADA. SALTANDO INITIALIZER DE DATOS DEMO.");
+        // 2. ¿BASE DE DATOS VACÍA? -> CARGA MASIVA
+        if (judokaRepository.count() == 0) {
+            System.out.println(">>> BD VACÍA detectada. Iniciando carga de ecosistema completo...");
 
-            // Mantenemos la carga de Julián y María porque tu comentario dice que es segura.
-            cargarDatosJulianYMaria(judokaRepository.findAll(), masterSensei);
-            return;
+            // A. Configuraciones Globales
+            cargarTraducciones(traduccionRepository);
+            crearTraduccionesDashboard();
+            crearTraduccionesComunidad();
+            crearBibliotecaSabiduria();
+
+            // B. Crear Senseis del Demo
+            Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
+            crearSensei("toshiro", "Toshiro", "Diago", "123456", GradoCinturon.NEGRO_5_DAN);
+
+            // Kiuzo será el sensei principal en instalación limpia
+            senseiPrincipal = kiuzo;
+
+            // C. Generar Población y Actividad
+            List<Judoka> judokasGenericos = crearJudokas(kiuzo);
+            crearGruposYAsignar(judokasGenericos, kiuzo);
+            crearTareasAcondicionamiento(kiuzo);
+
+            PlanEntrenamiento planFisico = crearPlanAcondicionamiento(kiuzo);
+            PlanEntrenamiento planEvaluacion = crearPlanEvaluacion(kiuzo);
+
+            programarSesiones(kiuzo);
+
+            // D. Generar Historia (Resultados, Asistencia, Chat)
+            generarResultadosEvaluacion(judokasGenericos, planEvaluacion);
+            generarEjecucionesTareas(judokasGenericos, planFisico);
+            generarAsistencias(judokasGenericos);
+            generarDatosHistoricosCompletos(judokasGenericos);
+            crearChatInicial();
+
+            System.out.println(">>> ECOSISTEMA BASE CREADO.");
+
+        } else {
+            // 3. ¿BASE DE DATOS LLENA? -> RECUPERACIÓN
+            System.out.println(">>> BASE DE DATOS YA POBLADA. Omitiendo creación de masa crítica.");
+
+            // Intentamos recuperar a Kiuzo para que siga siendo el Sensei de María
+            // Si no existe (raro), usamos al Master como fallback.
+            senseiPrincipal = senseiRepository.findByUsuario_Username("kiuzo")
+                    .orElse(masterSensei);
         }
 
-        System.out.println(">>> INICIANDO CARGA DE DATOS MAESTROS - CLUB JUDO COLOMBIA");
+        // 4. PERSONAJES PRINCIPALES (MARÍA Y JULIÁN)
+        // Esto se ejecuta SIEMPRE para asegurar que tus pruebas manuales funcionen
+        // y que la gamificación se repare si se rompió algo.
+        System.out.println(">>> VERIFICANDO ESTADO DE MARÍA Y JULIÁN...");
+        List<Judoka> todosLosJudokas = judokaRepository.findAll();
 
-        // DIAGNÓSTICO DE PRUEBAS EXISTENTES
-        System.out.println("--- LISTADO DE PRUEBAS EN BD ---");
-        pruebaEstandarRepository.findAll().forEach(p ->
-                System.out.println("ID: " + p.getId() + " | Key: " + p.getNombreKey())
-        );
-        System.out.println("--------------------------------");
+        cargarDatosJulianYMaria(todosLosJudokas, senseiPrincipal);
 
-        // 2. Traducciones
-        cargarTraducciones(traduccionRepository);
-
-        // 3. Usuarios (Tus "Otros Clientes" del SaaS)
-        Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune",
-                "123456", GradoCinturon.NEGRO_5_DAN);
-        Sensei toshiro = crearSensei("toshiro", "Toshiro", "Diago", // Corregí para guardar la variable
-                "123456", GradoCinturon.NEGRO_5_DAN);
-
-        List<Judoka> judokas = crearJudokas(kiuzo);
-        // 4. Grupos
-        crearGruposYAsignar(judokas, kiuzo);
-        // 5. Tareas
-        crearTareasAcondicionamiento(kiuzo);
-        cargarPruebasYMetricas();
-        // 6. PLAN 1
-        PlanEntrenamiento planFisico = crearPlanAcondicionamiento(kiuzo);
-
-        // 7. PLAN 2
-        PlanEntrenamiento planEvaluacion = crearPlanEvaluacion(kiuzo);
-
-        // 8. Sesiones
-        programarSesiones(kiuzo);
-
-        // 9. Historial
-        generarResultadosEvaluacion(judokas, planEvaluacion);
-        generarEjecucionesTareas(judokas, planFisico);
-        generarAsistencias(judokas);
-
-        // Generar historial completo para gráficos
-        generarDatosHistoricosCompletos(judokas);
-        crearChatInicial();
-        otorgarInsigniasDemo(judokas);
-        crearTraduccionesDashboard();
-        crearTraduccionesComunidad();
-        crearBibliotecaSabiduria();
-        judokas = judokaRepository.findAll();
-
-        // 3. Generar Historia (Julián y actualización de María)
-        // Este método YA TIENE su propio chequeo (if exists julian return)
-        cargarDatosJulianYMaria(judokas, kiuzo);
-        System.out.println(">>> CARGA DE DATOS COMPLETADA CON ÉXITO.");
-    }
-    /**
+        System.out.println(">>> ✅ CARGA DE DATOS COMPLETADA CON ÉXITO.");
+    }    /**
      * CHEQUEO 1: Asegura que el Master/Dueño siempre exista en el sistema.
      * Retorna el Perfil Sensei del Master (El Cliente #0).
      */
@@ -176,30 +169,28 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         if (masterExistente.isPresent()) {
             System.out.println(">>> [OK] Usuario Master ya configurado.");
-            // Si ya existe, retornamos su perfil de Sensei.
             return senseiRepository.findByUsuario(masterExistente.get()).orElseThrow();
         }
 
         System.out.println("⚙️ Creando Usuario Máster (Cliente #0) con doble sombrero...");
 
-        // Traemos los roles (ya asegurados por validarRolesExistentes)
         Rol rolMaster = rolRepository.findByNombre("ROLE_MASTER").orElseThrow();
         Rol rolSensei = rolRepository.findByNombre("ROLE_SENSEI").orElseThrow();
 
-        // 1. Crear Usuario (Credenciales)
+        // 1. Crear Usuario
         Usuario masterUser = new Usuario(
                 masterUsername,
-                passwordEncoder.encode("contraseña"), // Credencial temporal
+                passwordEncoder.encode("contraseña"),
                 "Rafael",
                 "Díaz"
         );
-
-        // Le asignamos AMBOS sombreros
+        masterUser.setEmail("master@judocolombia.com"); // Asignar email obligatorio
+        masterUser.setActivo(true);
         masterUser.getRoles().add(rolMaster);
         masterUser.getRoles().add(rolSensei);
         masterUser = usuarioRepository.save(masterUser);
 
-        // 2. Crear Perfil de Tatami (Aquí nace tu Sensei ID)
+        // 2. Crear Perfil Sensei
         Sensei masterSenseiProfile = new Sensei();
         masterSenseiProfile.setUsuario(masterUser);
         masterSenseiProfile.setGrado(GradoCinturon.NEGRO_4_DAN);
@@ -808,9 +799,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         lista.add(new Traduccion(clave, "es", textoEs));
         lista.add(new Traduccion(clave, "en", textoEn));
     }
-    private Sensei crearSensei(String user,
-                               String nom, String ape, String pass, GradoCinturon grado) {
+    private Sensei crearSensei(String user, String nom, String ape, String pass, GradoCinturon grado) {
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
+
+        u.setEmail(user + "@judocolombia.com"); // Ej: kiuzo@judocolombia.com
+
         u.setActivo(true);
         u.getRoles().add(rolRepository.findByNombre("ROLE_SENSEI").orElseThrow());
         u.getRoles().add(rolRepository.findByNombre("ROLE_ADMIN").orElseThrow());
@@ -836,9 +829,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                                          int anio, int mes, int dia,
                                          Sexo sexo, GradoCinturon grado,
                                          boolean competidor, String acudiente,
-                                         Sensei sensei) { // <-- RECIBE SENSEI
-        // ... (Tu código de creación de usuario que ya tienes) ...
+                                         Sensei sensei) {
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
+        u.setEmail(user + "@judocolombia.com");
         u.setActivo(true);
         u.getRoles().add(rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow());
         if (competidor) u.getRoles().add(rolRepository.findByNombre("ROLE_COMPETIDOR").orElseThrow());
@@ -846,7 +839,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         Judoka j = new Judoka();
         j.setUsuario(u);
-        j.setSensei(sensei); // <--- ¡EL CANDADO SAAS SE CIERRA AQUÍ!
+        j.setSensei(sensei);
         j.setFechaNacimiento(LocalDate.of(anio, mes, dia));
         j.setSexo(sexo);
         j.setGrado(grado);
@@ -1179,40 +1172,6 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         chatService.enviarMensajeAlDojo(maria, "¡Entendido Sensei!", kiuzoSensei.getId());
     }
 
-    private void otorgarInsigniasDemo(List<Judoka> judokas) {
-        // 1. Buscar a María
-        Judoka maria = judokas.stream()
-                .filter(j -> j.getUsuario().getUsername().equals("maria.lopez"))
-                .findFirst().orElse(null);
-
-        if (maria == null) return;
-
-        // 2. Definir qué medallas le damos (Una de cada categoría para que se vea equilibrado)
-        List<String> clavesGanadas = List.of(
-                "SHIN_INICIO",     // "Primer Paso" (Mente)
-                "TAI_HERCULES",    // "Hércules" (Cuerpo - tiene sentido con sus stats físicos)
-                "GI_TECNICO"       // "Técnica Pura" (Técnica)
-        );
-
-        System.out.println(">>> OTORGANDO INSIGNIAS A MARÍA...");
-
-        for (String clave : clavesGanadas) {
-            // Buscamos la insignia en el catálogo
-            Insignia insignia = insigniaRepository.findByClave(clave).orElse(null);
-
-            if (insignia != null) {
-                // Creamos la relación (El logro)
-                JudokaInsignia logro = new JudokaInsignia();
-                logro.setInsignia(insignia);
-                logro.setJudoka(maria);
-
-                logro.setFechaObtencion(LocalDateTime.now().minusDays(new Random().nextInt(30))); // Ganada hace días
-
-                judokaInsigniaRepository.save(logro);
-                System.out.println("   -> Ganó: " + insignia.getNombre());
-            }
-        }
-    }
 
     // -------------------------------------------------------------------------
     //  DATOS DEMO: MARÍA (VETERANA) Y JULIÁN (PROMESA)
@@ -1224,62 +1183,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         System.out.println(">>> CREANDO HISTORIA: MARÍA VETERANA Y JULIÁN PROMESA...");
 
-        // 1. MARÍA LÓPEZ
-        Judoka maria = judokas.stream()
-                .filter(j -> j.getUsuario().getUsername().equals("maria.lopez"))
-                .findFirst()
-                .orElse(null);
+        // ---------------------------------------------------------------
+        //          CREACIÓN DE JULIÁN (CON DATOS OBLIGATORIOS)
+        // ---------------------------------------------------------------
 
-        if (maria != null) {
-            // --- DATOS FÍSICOS (Aseguramos que no sean nulos para el Wizard) ---
-            maria.setPeso(58.5);
-            maria.setEstatura(1.65);
-            maria.setFechaNacimiento(LocalDate.of(2010, 3, 15));
-            maria.setSexo(Sexo.FEMENINO);
-
-            // --- DATOS DE DOJO ---
-            maria.setGradoCinturon(GradoCinturon.AZUL);
-            maria.setSensei(sensei);
-
-            // --- DATOS LEGALES Y CONTACTO ---
-            maria.setEps("Sura");
-            maria.setNombreAcudiente("Jorge López (Hermano)");
-            maria.setTelefonoAcudiente("315 987 6543");
-
-            // --- LEGALIZACIÓN COMPLETA (EL BYPASS DEL WIZARD) ---
-            maria.setEstado(EstadoJudoka.ACTIVO); // Ya no es PENDIENTE
-            maria.setMatriculaPagada(true);       // Finanzas en verde
-            maria.setRutaCertificadoEps("documentos/eps/maria_eps_2025.pdf");
-            maria.setRutaAutorizacionWaiver("documentos/waivers/maria_waiver_firmado.pdf");
-
-            // Forzamos el guardado inmediato en disco
-            judokaRepository.saveAndFlush(maria);
-
-            // Insignias María...
-            insigniaRepository.findByClave("GI_CINTURON").ifPresent(insignia -> {
-                if (!judokaInsigniaRepository.existsByJudokaAndInsignia_Clave(
-                        maria, "GI_CINTURON")) {
-                    JudokaInsignia logro = new JudokaInsignia();
-                    logro.setJudoka(maria);
-                    logro.setInsignia(insignia);
-                    logro.setFechaObtencion(LocalDateTime.now().minusMonths(6));
-                    judokaInsigniaRepository.save(logro);
-                }
-            });
-
-            insigniaRepository.findByClave("SHIN_CONSTANCIA").
-                    ifPresent(insignia -> {
-                        if (!judokaInsigniaRepository.existsByJudokaAndInsignia_Clave(maria, "SHIN_CONSTANCIA")) {
-                            JudokaInsignia logro = new JudokaInsignia();
-                            logro.setJudoka(maria);
-                            logro.setInsignia(insignia);
-                            logro.setFechaObtencion(LocalDateTime.now().minusMonths(2));
-                            judokaInsigniaRepository.save(logro);
-                        }
-                    });
-        }
-
-        // 2. JULIÁN ANDRÉS
+        // A. Crear Usuario Julián
         Usuario userJulian = new Usuario();
         userJulian.setUsername("julian.bohorquez");
         userJulian.setPasswordHash(passwordEncoder.encode("1234"));
@@ -1289,45 +1197,36 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         userJulian.setActivo(true);
 
         Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
-                .orElseThrow(() -> new RuntimeException("ERROR CRÍTICO: No existe el rol ROLE_JUDOKA en la BD"));
-
+                .orElseThrow(() -> new RuntimeException("ERROR CRÍTICO: No existe el rol ROLE_JUDOKA"));
         userJulian.setRoles(new HashSet<>(Set.of(rolJudoka)));
-
         usuarioRepository.save(userJulian);
 
         // B. Crear Perfil Judoka
         Judoka julian = new Judoka();
         julian.setUsuario(userJulian);
         julian.setSensei(sensei);
-        julian.setGradoCinturon(GradoCinturon.BLANCO);
+
+        // --- DATOS OBLIGATORIOS RESTAURADOS ---
         julian.setFechaNacimiento(LocalDate.now().minusYears(10));
+        julian.setGradoCinturon(GradoCinturon.BLANCO);
         julian.setPeso(34.0);
         julian.setEstatura(1.38);
         julian.setSexo(Sexo.MASCULINO);
         julian.setEps("Sanitas");
-        julian.setNombreAcudiente("Carlos Bohórquez (Padre)");
+        julian.setNombreAcudiente("Carlos Bohórquez");
         julian.setTelefonoAcudiente("300 123 4567");
-        julian.setRutaCertificadoEps("documentos/eps/julian_eps_2025.pdf");
-        julian.setRutaAutorizacionWaiver("documentos/waivers/julian_waiver_firmado.pdf");
 
+        // Guardamos
         judokaRepository.save(julian);
 
-        // C. Gamificación Inicial
-        insigniaRepository.findByClave("SHIN_INICIO").ifPresent(insignia -> {
-            JudokaInsignia logro = new JudokaInsignia();
-            logro.setJudoka(julian);
-            logro.setInsignia(insignia);
-            logro.setFechaObtencion(LocalDateTime.now().minusDays(5));
-            judokaInsigniaRepository.save(logro);
-        });
+        // 2. MARÍA LÓPEZ
+        Judoka maria = judokas.stream()
+                .filter(j -> j.getUsuario().getUsername().equals("maria.lopez"))
+                .findFirst()
+                .orElse(null);
+        cargarGamificacionRobusta(maria,julian,sensei);
 
-        insigniaRepository.findByClave("TAI_VELOCIDAD").ifPresent(insignia -> {
-            JudokaInsignia logro = new JudokaInsignia();
-            logro.setJudoka(julian);
-            logro.setInsignia(insignia);
-            logro.setFechaObtencion(LocalDateTime.now().minusDays(1));
-            judokaInsigniaRepository.save(logro);
-        });
+
         // --- CARGAR PALMARES ---
         // 1. Palmarés de María (Experimentada)
         if (maria != null && palmaresRepo.findByJudokaOrderByFechaDesc(maria).isEmpty()) {
@@ -1855,5 +1754,132 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         System.out.println("✅ TEST SUPERADO: Aislamiento verificado. El Master ve lo suyo, Kiuzo no puede hackearlo.");
         System.out.println("===============================================================\n");
+    }
+    private void cargarGamificacionRobusta(Judoka maria, Judoka julian, Sensei sensei) {
+        System.out.println(">>> INICIANDO MOTOR DE GAMIFICACIÓN 2.0...");
+
+        // -----------------------------------------------------------
+        // 1. GARANTIZAR EL CATÁLOGO COMPLETO (Si no existe, se crea)
+        // -----------------------------------------------------------
+        if (insigniaRepository.count() == 0) {
+            List<Insignia> catalogo = new ArrayList<>();
+
+            // --- SHIN (Mente) ---
+            crearInsignia(catalogo, "SHIN_INICIO", "Espíritu de Principiante", "Tu primer paso en el tatami.", "HANDSHAKE", CategoriaInsignia.SHIN, 1);
+            crearInsignia(catalogo, "SHIN_CONSTANCIA", "Guerrero Constante", "10 entrenamientos completados.", "FIRE", CategoriaInsignia.SHIN, 5);
+            crearInsignia(catalogo, "SHIN_COMPROMISO", "Guardián del Dojo", "50 clases. Eres un pilar del club.", "SHIELD", CategoriaInsignia.SHIN, 10);
+
+            // --- GI (Técnica) ---
+            crearInsignia(catalogo, "GI_CINTURON", "Nuevo Horizonte", "Ascenso de grado. Tu técnica evoluciona.", "DIPLOMA", CategoriaInsignia.GI, 1);
+            crearInsignia(catalogo, "GI_IPON", "Maestro del Ippon", "Ejecución perfecta en combate.", "DIAMOND", CategoriaInsignia.GI, 5); // ¡NUEVA!
+
+            // --- TAI (Cuerpo) ---
+            crearInsignia(catalogo, "TAI_HERCULES", "Fuerza de Hércules", "Superaste las métricas de fuerza.", "BARBELL", CategoriaInsignia.TAI, 3);
+            crearInsignia(catalogo, "TAI_VELOCIDAD", "Rayo Veloz", "Velocidad élite en el tatami.", "FLASH", CategoriaInsignia.TAI, 3);
+
+            // --- COMPETENCIA (Nuevas para María) ---
+            crearInsignia(catalogo, "COMP_ORO", "Espíritu Dorado", "Ganador de medalla de ORO.", "TROPHY", CategoriaInsignia.SHIN, 10);
+
+            insigniaRepository.saveAll(catalogo);
+            System.out.println("   [OK] Catálogo de insignias creado/actualizado.");
+        }
+
+        // -----------------------------------------------------------
+        // 2. ASIGNAR LOGROS A MARÍA (PERFIL VETERANO)
+        // -----------------------------------------------------------
+        if (maria != null) {
+            // [LIMPIEZA]
+                insigniaRepository.findByClave("SHIN_INICIO").ifPresent(insNovata -> {
+                judokaInsigniaRepository.findByJudoka(maria).stream()
+                        .filter(logro -> logro.getInsignia().equals(insNovata))
+                        .forEach(judokaInsigniaRepository::delete);
+                });
+            // A. Insignias de Trayectoria (No le damos la de principiante)
+            asignarLogro(maria, "SHIN_CONSTANCIA", sensei, 60); // Hace 60 días
+            asignarLogro(maria, "SHIN_COMPROMISO", sensei, 30); // Hace 30 días (Tiene >50 clases)
+
+            // B. Insignias Técnicas y Físicas
+            asignarLogro(maria, "GI_CINTURON", sensei, 90);  // Cuando subió a Azul
+            asignarLogro(maria, "TAI_HERCULES", sensei, 15); // Es fuerte
+
+            // C. Insignia de Competencia (Coherente con su Palmarés de Oro)
+            asignarLogro(maria, "COMP_ORO", sensei, 45);
+
+            System.out.println("   [OK] Gamificación de María cargada (Perfil Veterano).");
+        }
+
+        // -----------------------------------------------------------
+        // 3. ASIGNAR LOGROS A JULIÁN (PERFIL NOVATO)
+        // -----------------------------------------------------------
+        if (julian != null) {
+            // A. El novato solo tiene la de bienvenida
+            asignarLogro(julian, "SHIN_INICIO", sensei, 2); // Hace 2 días
+
+            // B. Quizás destacó en velocidad en su primera semana
+            asignarLogro(julian, "TAI_VELOCIDAD", sensei, 1);
+
+            System.out.println("   [OK] Gamificación de Julián cargada (Perfil Novato).");
+        }
+    }
+
+    // --- MÉTODOS AUXILIARES PARA LIMPIEZA DEL CÓDIGO ---
+
+    private void crearInsignia(List<Insignia> lista, String clave, String nombre, String desc, String icono, CategoriaInsignia cat, int nivel) {
+        Insignia i = new Insignia();
+        i.setClave(clave);
+        i.setNombre(nombre);
+        i.setDescripcion(desc);
+        i.setIconoVaadin(icono);
+        i.setCategoria(cat);
+        i.setNivelRequerido(nivel);
+        lista.add(i);
+    }
+
+    private void asignarLogro(Judoka judoka, String claveInsignia, Sensei sensei, int diasAtras) {
+        insigniaRepository.findByClave(claveInsignia).ifPresent(ins -> {
+            if (!judokaInsigniaRepository.existsByJudokaAndInsignia_Clave(judoka, claveInsignia)) {
+                JudokaInsignia logro = new JudokaInsignia();
+                logro.setJudoka(judoka);
+                logro.setInsignia(ins);
+                logro.setSenseiOtorgante(sensei);
+                logro.setFechaObtencion(LocalDateTime.now().minusDays(diasAtras));
+                judokaInsigniaRepository.save(logro);
+            }
+        });
+    }
+    // --- MÉTODO 1: Catálogo a prueba de fallos ---
+    private void garantizarCatalogoInsignias() {
+        System.out.println(">>> ACTUALIZANDO CATÁLOGO DE INSIGNIAS...");
+
+        // SHIN (Mente)
+        crearInsigniaSiNoExiste("SHIN_INICIO", "Espíritu de Principiante", "Tu primer paso en el tatami.", "HANDSHAKE", CategoriaInsignia.SHIN, 1);
+        crearInsigniaSiNoExiste("SHIN_CONSTANCIA", "Guerrero Constante", "10 entrenamientos completados.", "FIRE", CategoriaInsignia.SHIN, 5);
+        crearInsigniaSiNoExiste("SHIN_COMPROMISO", "Guardián del Dojo", "50 clases. Eres un pilar.", "SHIELD", CategoriaInsignia.SHIN, 10);
+
+        // GI (Técnica)
+        crearInsigniaSiNoExiste("GI_CINTURON", "Nuevo Horizonte", "Ascenso de grado.", "DIPLOMA", CategoriaInsignia.GI, 1);
+        crearInsigniaSiNoExiste("GI_IPON", "Maestro del Ippon", "Ejecución perfecta en combate.", "DIAMOND", CategoriaInsignia.GI, 5);
+
+        // TAI (Cuerpo)
+        crearInsigniaSiNoExiste("TAI_HERCULES", "Fuerza de Hércules", "Superaste las métricas de fuerza.", "BARBELL", CategoriaInsignia.TAI, 3);
+        crearInsigniaSiNoExiste("TAI_VELOCIDAD", "Rayo Veloz", "Velocidad élite.", "FLASH", CategoriaInsignia.TAI, 3);
+
+        // COMPETENCIA (¡Las que le faltaban a María!)
+        crearInsigniaSiNoExiste("COMP_ORO", "Espíritu Dorado", "Ganador de medalla de ORO.", "TROPHY", CategoriaInsignia.SHIN, 10);
+    }
+
+    // --- MÉTODO 2: El Obrero que verifica una por una ---
+    private void crearInsigniaSiNoExiste(String clave, String nombre, String desc, String icono, CategoriaInsignia cat, int nivel) {
+        if (insigniaRepository.findByClave(clave).isEmpty()) {
+            Insignia i = new Insignia();
+            i.setClave(clave);
+            i.setNombre(nombre);
+            i.setDescripcion(desc);
+            i.setIconoVaadin(icono);
+            i.setCategoria(cat);
+            i.setNivelRequerido(nivel);
+            insigniaRepository.save(i);
+            System.out.println("   -> Creada insignia faltante: " + nombre);
+        }
     }
 }

@@ -31,7 +31,7 @@ public class TareaDiaria implements Serializable {
     private String metaTexto;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_sensei_creador")
+    @JoinColumn(name = "id_sensei")
     private Sensei senseiCreador;
 
     public TareaDiaria(String nombre, String metaTexto, Sensei sensei) {

@@ -164,10 +164,10 @@ CREATE TABLE tareas_diarias (
     descripcion TEXT NULL,
     video_url VARCHAR(255) NULL,
     meta_texto VARCHAR(100) NULL,
-    id_sensei_creador BIGINT NULL,
-    CONSTRAINT fk_tareas_sensei FOREIGN KEY (id_sensei_creador)
+    id_sensei BIGINT NULL,
+    CONSTRAINT fk_tareas_sensei FOREIGN KEY (id_sensei)
         REFERENCES senseis(id_sensei) ON DELETE SET NULL,
-    INDEX idx_sensei_creador (id_sensei_creador)
+    INDEX idx_sensei_creador (id_sensei)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ====================
@@ -175,9 +175,13 @@ CREATE TABLE tareas_diarias (
 -- ====================
 
 CREATE TABLE grupos_entrenamiento (
-    id_grupo BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(150) NOT NULL UNIQUE,
-    descripcion TEXT NULL
+  id_grupo BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(150) NOT NULL UNIQUE,
+  descripcion TEXT NULL,
+  id_sensei BIGINT NULL,
+  CONSTRAINT fk_grupos_sensei FOREIGN KEY (id_sensei)
+      REFERENCES senseis(id_sensei) ON DELETE SET NULL,
+  INDEX idx_sensei_grupo (id_sensei)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE judoka_grupos (
@@ -193,7 +197,7 @@ CREATE TABLE judoka_grupos (
 
 CREATE TABLE planes_entrenamiento (
     id_plan BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_sensei_creador BIGINT NOT NULL,
+    id_sensei BIGINT NOT NULL,
     tipo_sesion ENUM(
         'TECNICA',
         'COMBATE',
@@ -204,9 +208,9 @@ CREATE TABLE planes_entrenamiento (
     nombre_plan VARCHAR(200) NOT NULL,
     fecha_asignacion DATE NOT NULL,
     estado ENUM('ACTIVO', 'COMPLETADO', 'CANCELADO') NOT NULL,
-    CONSTRAINT fk_planes_sensei FOREIGN KEY (id_sensei_creador)
+    CONSTRAINT fk_planes_sensei FOREIGN KEY (id_sensei)
         REFERENCES senseis(id_sensei) ON DELETE CASCADE,
-    INDEX idx_sensei_fecha (id_sensei_creador, fecha_asignacion),
+    INDEX idx_sensei_fecha (id_sensei, fecha_asignacion),
     INDEX idx_estado (estado),
     INDEX idx_tipo_sesion (tipo_sesion)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

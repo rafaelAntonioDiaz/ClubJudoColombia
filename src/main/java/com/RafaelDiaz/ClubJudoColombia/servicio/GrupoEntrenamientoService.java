@@ -126,7 +126,7 @@ public class GrupoEntrenamientoService {
         String nombreFilter = (searchNombre != null && !searchNombre.trim().isEmpty()) ? searchNombre.toLowerCase() : null;
 
         // AHORA USAMOS EL MÉTODO DEL SAAS (findBySenseiIdWithUsuario)
-        List<Judoka> todos = judokaRepository.findBySenseiIdWithUsuario(miSenseiId);
+        List<Judoka> todos = judokaRepository.findBySensei(securityService.getAuthenticatedSensei().get());
 
         return todos.stream()
                 .filter(j -> {

@@ -1,0 +1,1538 @@
+-- ============================================================================
+-- DATA.SQL - INFRAESTRUCTURA UNIFICADA (SOPORTE PROESP/CBJ)
+-- ============================================================================
+
+-- 1. ROLES
+INSERT INTO roles (id_rol, nombre) VALUES (1, 'ROLE_ADMIN'), (2, 'ROLE_SENSEI'), (3, 'ROLE_JUDOKA'), (4, 'ROLE_COMPETIDOR'), (5, 'ROLE_MASTER');
+
+-- 2. CONFIGURACIÓN
+UPDATE configuracion_sistema
+SET nombre_organizacion = 'Club de Judo Colombia', nivel = 'CLUB', moneda = 'COP',
+    telefono_contacto = '300 123 4567', email_soporte = 'soporte@judocolombia.com'
+WHERE id = 1;
+
+-- 3. FINANZAS Y PRODUCTOS
+INSERT INTO conceptos_financieros (nombre, tipo, valor_sugerido) VALUES
+    ('Mensualidad', 'INGRESO', 40000.00), ('Matrícula', 'INGRESO', 120000.00), ('Uniforme', 'INGRESO', 150000.00);
+
+INSERT INTO productos (nombre, descripcion, precio_cop, tipo_subscripcion, activo) VALUES
+   ('Mensualidad', 'Mes', 50000.00, 'MENSUAL', 1), ('Anualidad', 'Año', 800000.00, 'ANUAL', 1);
+
+INSERT INTO inventario_articulos (nombre, cantidad_stock, precio_venta, precio_costo) VALUES
+    ('Judogi Básico', 5, 180000.00, 100000.00);
+
+-- 4. INSIGNIAS
+INSERT INTO insignias (clave, nombre, descripcion, icono_vaadin, categoria, nivel_requerido) VALUES
+     ('SHIN_INICIO', 'Primer Paso', 'Primer entreno.', 'FOOT', 'SHIN', 1),
+     ('GI_CINTURON', 'Nuevo Horizonte', 'Ascenso.', 'ACADEMY_CAP', 'GI', 3);
+-- TRADUCCIONES UI: WIDGET DE GAMIFICACIÓN (MiDoWidget)
+
+INSERT INTO traducciones (idioma, clave, texto) VALUES
+        ('es', 'widget.mido.titulo', 'Mi Camino (Do)'),
+        ('es', 'widget.mido.subtitulo', 'Insignias y Logros'),
+        ('es', 'widget.mido.progreso', 'Nivel de Maestría'),
+        ('es', 'widget.mido.ver_todas', 'Ver Catálogo Completo'),
+        ('es', 'widget.mido.btn_catalogo', 'Abrir Catálogo'), -- Por si lo usas en el botón externo
+        ('es', 'widget.mido.dialog.titulo', 'Catálogo de Honor'),
+
+-- TRADUCCIONES UI: ESTADOS DE LAS INSIGNIAS
+        ('es', 'badge.label.obtenida', 'Obtenida el'),
+        ('es', 'badge.label.pendiente', 'Bloqueada / Pendiente'),
+        ('es', 'badge.estado.sin_datos', 'Sin Datos Registrados'),
+
+-- TRADUCCIONES UI: CATEGORÍAS (Para los Tabs del Catálogo)
+        ('es', 'enum.categoriainsignia.shin', 'Shin (Mente)'),
+        ('es', 'enum.categoriainsignia.gi', 'Gi (Técnica)'),
+        ('es', 'enum.categoriainsignia.tai', 'Tai (Cuerpo)'),
+
+-- TRADUCCIONES UI: BOTONES Y TOOLTIPS GENERALES
+        ('es', 'btn.cerrar', 'Cerrar'),
+        ('es', 'tooltip.trofeos', 'Ver mis Trofeos y Medallas'),
+        ('es', 'tooltip.palmares', 'Ver mi Palmarés Deportivo');
+-- UI TRANSLATIONS: GAMIFICATION WIDGET (MiDoWidget)
+INSERT INTO traducciones (idioma, clave, texto) VALUES
+        ('en', 'widget.mido.titulo', 'My Path (Do)'),
+        ('en', 'widget.mido.subtitulo', 'Badges & Achievements'),
+        ('en', 'widget.mido.progreso', 'Mastery Level'),
+        ('en', 'widget.mido.ver_todas', 'View Full Catalog'),
+        ('en', 'widget.mido.btn_catalogo', 'Open Catalog'),
+        ('en', 'widget.mido.dialog.titulo', 'Hall of Fame'),
+
+-- UI TRANSLATIONS: BADGE STATES
+        ('en', 'badge.label.obtenida', 'Earned on'),
+        ('en', 'badge.label.pendiente', 'Locked'),
+        ('en', 'badge.estado.sin_datos', 'No Data Available'),
+
+-- UI TRANSLATIONS: CATEGORIES (Tabs)
+        ('en', 'enum.categoriainsignia.shin', 'Shin (Mind)'),
+        ('en', 'enum.categoriainsignia.gi', 'Gi (Technique)'),
+        ('en', 'enum.categoriainsignia.tai', 'Tai (Body)'),
+
+-- UI TRANSLATIONS: GENERAL BUTTONS
+        ('en', 'btn.cerrar', 'Close'),
+        ('en', 'tooltip.trofeos', 'View my Trophies'),
+        ('en', 'tooltip.palmares', 'View my Track Record');
+
+-- ============================================================================
+-- 5. CATÁLOGO DE MÉTRICAS (Alineado con Bloque Normas)
+-- ============================================================================
+INSERT INTO metricas (nombre_key, unidad) VALUES
+    ('metrica.masa_corporal.nombre', 'kg'),
+    ('metrica.estatura.nombre', 'm'),
+    ('metrica.imc.nombre', 'kg/m2'),
+    ('metrica.whtr.nombre', 'ratio'),
+    ('metrica.envergadura.nombre', 'cm'),
+    ('metrica.distancia.nombre', 'cm'),        -- Salto horizontal (cm)
+    ('metrica.distancia_6min.nombre', 'm'),    -- Carrera 6 min (metros)
+    ('metrica.tiempo_isometrico.nombre', 'seg'),
+    ('metrica.repeticiones_dinamicas.nombre', 'reps'),
+    ('metrica.tiempo_iso_kg.nombre', 's/kg'),
+    ('metrica.rep_dinamicas_kg.nombre', 'rep/kg'),
+    ('metrica.potencia.nombre', 'watts'),
+    ('metrica.velocidad_20m.nombre', 'seg'),
+    ('metrica.agilidad_4x4.nombre', 'seg'),
+    ('metrica.abdominales_1min.nombre', 'reps'),
+    ('metrica.lanzamiento_balon.nombre', 'cm'),
+    ('metrica.flexibilidad_sit_reach.nombre', 'cm'),
+    ('metrica.repeticiones_uchikomi.nombre', 'reps'),
+    ('metrica.sjft_proyecciones_total.nombre', 'reps'),
+    ('metrica.sjft_fc_final.nombre', 'bpm'),
+    ('metrica.sjft_fc_1min.nombre', 'bpm'),
+    ('metrica.sjft_indice.nombre', 'index');
+
+-- ============================================================================
+-- 6. CATÁLOGO DE PRUEBAS (Alineado con Bloque Normas)
+-- ============================================================================
+-- Usamos las keys "ejercicio.*" que espera el script de Brasil
+
+-- Antropometría
+INSERT INTO pruebas_estandar (nombre_key, objetivo_key, descripcion_key, categoria, video_url) VALUES
+    ('ejercicio.medicion_antropo.nombre', 'objetivo.composicion', 'desc.antropo', 'MEDICION_ANTROPOMETRICA', NULL);
+
+-- Potencia / Fuerza Explosiva
+INSERT INTO pruebas_estandar (nombre_key, objetivo_key, descripcion_key, categoria, video_url) VALUES
+   ('ejercicio.salto_horizontal.nombre', 'objetivo.potencia_piernas', 'desc.salto_cbj', 'POTENCIA', 'https://youtu.be/salto'),
+   ('ejercicio.salto_horizontal_proesp.nombre', 'objetivo.potencia_piernas', 'desc.salto_proesp', 'POTENCIA', 'https://youtu.be/salto'),
+   ('ejercicio.lanzamiento_balon.nombre', 'objetivo.potencia_superior', 'desc.lanzamiento', 'POTENCIA', 'https://youtu.be/balon');
+
+-- Resistencia Muscular / Isométrica
+INSERT INTO pruebas_estandar (nombre_key, objetivo_key, descripcion_key, categoria, video_url) VALUES
+   ('ejercicio.suspension_barra.nombre', 'objetivo.fuerza_agarre', 'desc.suspension', 'RESISTENCIA_ISOMETRICA', 'https://youtu.be/suspension'),
+   ('ejercicio.abdominales_1min.nombre', 'objetivo.resistencia_abdominal', 'desc.abs', 'RESISTENCIA_MUSCULAR_LOCALIZADA', 'https://youtu.be/abs');
+
+-- Velocidad / Agilidad
+INSERT INTO pruebas_estandar (nombre_key, objetivo_key, descripcion_key, categoria, video_url) VALUES
+   ('ejercicio.carrera_20m.nombre', 'objetivo.velocidad', 'desc.20m', 'VELOCIDAD', 'https://youtu.be/20m'),
+   ('ejercicio.agilidad_4x4.nombre', 'objetivo.agilidad', 'desc.4x4', 'AGILIDAD', 'https://youtu.be/4x4');
+
+-- Resistencia Aeróbica / Específica
+INSERT INTO pruebas_estandar (nombre_key, objetivo_key, descripcion_key, categoria, video_url) VALUES
+   ('ejercicio.carrera_6min.nombre', 'objetivo.aerobico', 'desc.6min', 'APTITUD_AEROBICA', 'https://youtu.be/6min'),
+   ('ejercicio.uchikomi_test.nombre', 'objetivo.especifico', 'desc.uchikomi', 'RESISTENCIA_DINAMICA', 'https://youtu.be/uchikomi'),
+   ('ejercicio.sjft.nombre', 'objetivo.anaerobico_lactico', 'desc.sjft', 'APTITUD_ANAEROBICA', 'https://youtu.be/sjft');
+
+-- Flexibilidad
+INSERT INTO pruebas_estandar (nombre_key, objetivo_key, descripcion_key, categoria, video_url) VALUES
+    ('ejercicio.sit_reach.nombre', 'objetivo.flexibilidad', 'desc.sit_reach', 'FLEXIBILIDAD', 'https://youtu.be/sit_reach');
+
+
+-- ============================================================================
+-- 7. VINCULACIÓN POR DEFECTO (PRUEBA <-> MÉTRICA)
+-- ============================================================================
+-- Vinculamos lo básico para que el sistema sepa qué medir por defecto
+
+INSERT INTO prueba_estandar_metricas (id_ejercicio, id_metrica)
+SELECT p.id_ejercicio, m.id_metrica FROM pruebas_estandar p, metricas m
+WHERE p.nombre_key = 'ejercicio.salto_horizontal.nombre' AND m.nombre_key = 'metrica.distancia.nombre';
+
+INSERT INTO prueba_estandar_metricas (id_ejercicio, id_metrica)
+SELECT p.id_ejercicio, m.id_metrica FROM pruebas_estandar p, metricas m
+WHERE p.nombre_key = 'ejercicio.carrera_20m.nombre' AND m.nombre_key = 'metrica.velocidad_20m.nombre';
+
+INSERT INTO prueba_estandar_metricas (id_ejercicio, id_metrica)
+SELECT p.id_ejercicio, m.id_metrica FROM pruebas_estandar p, metricas m
+WHERE p.nombre_key = 'ejercicio.sjft.nombre' AND m.nombre_key = 'metrica.sjft_indice.nombre';
+
+SET @METRICA_MASA = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.masa_corporal.nombre');
+SET @METRICA_ESTATURA = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.estatura.nombre');
+SET @METRICA_IMC = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.imc.nombre');  -- Corregido: Métrica para IMC
+SET @METRICA_WHTR = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.whtr.nombre');  -- Agregado: Para WHtR
+SET @METRICA_DISTANCIA = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.distancia.nombre');
+SET @METRICA_SUSP_ISO_S = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.tiempo_isometrico.nombre');
+SET @METRICA_SUSP_DIN_REP = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.repeticiones_dinamicas.nombre');
+SET @METRICA_SUSP_ISO_KG = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.tiempo_iso_kg.nombre');
+SET @METRICA_SUSP_DIN_KG = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.rep_dinamicas_kg.nombre');
+SET @METRICA_UCHIKOMI_REP = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.repeticiones_uchikomi.nombre');
+SET @METRICA_SJFT_TOTAL = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.sjft_proyecciones_total.nombre');
+SET @METRICA_SJFT_FC_FIN = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.sjft_fc_final.nombre');
+SET @METRICA_SJFT_FC_1MIN = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.sjft_fc_1min.nombre');
+SET @METRICA_SJFT_INDICE = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.sjft_indice.nombre');
+SET @METRICA_CARRERA_6MIN = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.distancia_6min.nombre');
+SET @METRICA_SIT_REACH = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.flexibilidad_sit_reach.nombre');
+SET @METRICA_ABDOMINALES_1MIN = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.abdominales_1min.nombre');
+SET @METRICA_LANZ_BALON = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.lanzamiento_balon.nombre');
+SET @METRICA_AGILIDAD_4X4 = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.agilidad_4x4.nombre');
+SET @METRICA_CARRERA_20M = (SELECT id_metrica FROM metricas WHERE nombre_key = 'metrica.velocidad_20m.nombre');
+
+-- ---
+-- Helper: Asignar IDs de ejercicios a variables
+-- ---
+SET @EJERCICIO_ANTROPO = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.medicion_antropo.nombre');
+SET @EJERCICIO_SALTO_H_CBJ = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.salto_horizontal.nombre');
+SET @EJERCICIO_SUSPENSION = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.suspension_barra.nombre');
+SET @EJERCICIO_UCHIKOMI = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.uchikomi_test.nombre');
+SET @EJERCICIO_SJFT = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.sjft.nombre');
+SET @EJERCICIO_CARRERA_6MIN = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.carrera_6min.nombre');
+SET @EJERCICIO_SIT_REACH = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.sit_reach.nombre');
+SET @EJERCICIO_ABDOMINALES_1MIN = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.abdominales_1min.nombre');
+SET @EJERCICIO_LANZ_BALON = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.lanzamiento_balon.nombre');
+SET @EJERCICIO_SALTO_H_PROESP = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.salto_horizontal_proesp.nombre');
+SET @EJERCICIO_AGILIDAD_4X4 = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.agilidad_4x4.nombre');
+SET @EJERCICIO_CARRERA_20M = (SELECT id_ejercicio FROM pruebas_estandar WHERE nombre_key = 'ejercicio.carrera_20m.nombre');
+
+-- ###############################################
+-- ## Sección 1: Manual CBJ (Judo Específico) ##
+-- ###############################################
+SET @FUENTE_CBJ = 'cbj_judo_manual';
+
+-- ---
+-- 1.1 Salto Horizontal (CBJ)
+-- ---
+-- Masculino Sub-18 (Asumido 0-17 años, ajusta si es necesario a 15-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 17, 'EXCELENTE', 261, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 17, 'BUENO', 247, 260),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 17, 'REGULAR', 212, 246),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 17, 'DEBIL', 194, 211),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 193);
+-- Masculino Sub-21 (Asumido 0-20 años, ajusta si es necesario a 18-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 20, 'EXCELENTE', 267, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 20, 'BUENO', 259, 266),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 20, 'REGULAR', 218, 258),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 20, 'DEBIL', 199, 217),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 198);
+-- Femenino Sub-18 (Asumido 0-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 17, 'EXCELENTE', 228, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 17, 'BUENO', 214, 227),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 17, 'REGULAR', 188, 213),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 17, 'DEBIL', 169, 187),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 168);
+-- Femenino Sub-21 (Asumido 0-20 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 20, 'EXCELENTE', 226, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 20, 'BUENO', 215, 225),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 20, 'REGULAR', 181, 214),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 20, 'DEBIL', 157, 180),
+    (@FUENTE_CBJ, @EJERCICIO_SALTO_H_CBJ, @METRICA_DISTANCIA, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 156);
+
+-- ---
+-- 1.2 Suspensión en Barra
+-- ---
+-- Masculino Sub-18 (0-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 17, 'EXCELENTE', 90, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 17, 'BUENO', 70, 89),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 17, 'REGULAR', 41, 69),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 17, 'DEBIL', 8, 40),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 7),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 17, 'EXCELENTE', 32, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 17, 'BUENO', 26, 31),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 17, 'REGULAR', 14, 25),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 17, 'DEBIL', 3, 13),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 2),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 17, 'EXCELENTE', 5857, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 17, 'BUENO', 4507, 5856),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 17, 'REGULAR', 2745, 4506),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 17, 'DEBIL', 627, 2744),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 626),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 17, 'EXCELENTE', 2245, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 17, 'BUENO', 1738, 2244),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 17, 'REGULAR', 785, 1737),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 17, 'DEBIL', 227, 784),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 226);
+
+-- Masculino Sub-21 (0-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 20, 'EXCELENTE', 76, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 20, 'BUENO', 66, 75),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 20, 'REGULAR', 35, 65),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 20, 'DEBIL', 7, 34),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 6),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 20, 'EXCELENTE', 31, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 20, 'BUENO', 29, 30),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 20, 'REGULAR', 16, 28),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 20, 'DEBIL', 4, 15),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 3),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 20, 'EXCELENTE', 5714, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 20, 'BUENO', 4733, 5713),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 20, 'REGULAR', 3159, 4732),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 20, 'DEBIL', 823, 3158),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 822),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 20, 'EXCELENTE', 2367, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 20, 'BUENO', 2027, 2366),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 20, 'REGULAR', 1159, 2026),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 20, 'DEBIL', 412, 1158),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 411);
+
+-- Femenino Sub-18 (0-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 17, 'EXCELENTE', 75, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 17, 'BUENO', 56, 74),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 17, 'REGULAR', 27, 55),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 17, 'DEBIL', 13, 26),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 12),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 17, 'EXCELENTE', 23, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 17, 'BUENO', 17, 22),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 17, 'REGULAR', 6, 16),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 17, 'DEBIL', 2, 5),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 1),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 17, 'EXCELENTE', 3406, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 17, 'BUENO', 2933, 3405),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 17, 'REGULAR', 1515, 2932),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 17, 'DEBIL', 555, 1514),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 554),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 17, 'EXCELENTE', 1143, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 17, 'BUENO', 800, 1142),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 17, 'REGULAR', 351, 799),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 17, 'DEBIL', 145, 350),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 144);
+
+-- Femenino Sub-21 (0-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 20, 'EXCELENTE', 72, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 20, 'BUENO', 58, 71),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 20, 'REGULAR', 18, 57),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 20, 'DEBIL', 3, 17),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_S, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 2),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 20, 'EXCELENTE', 24, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 20, 'BUENO', 21, 23),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 20, 'REGULAR', 4, 20),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 20, 'DEBIL', 1, 3),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_REP, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 0),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 20, 'EXCELENTE', 3934, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 20, 'BUENO', 3217, 3933),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 20, 'REGULAR', 1233, 3216),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 20, 'DEBIL', 244, 1232),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_ISO_KG, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 243),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 20, 'EXCELENTE', 1297, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 20, 'BUENO', 1057, 1296),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 20, 'REGULAR', 307, 1056),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 20, 'DEBIL', 59, 306),
+    (@FUENTE_CBJ, @EJERCICIO_SUSPENSION, @METRICA_SUSP_DIN_KG, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 58);
+
+-- ---
+-- 1.3 Hikidashi Uchi-komi Test
+-- ---
+-- Masculino Sub-18 (0-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 17, 'EXCELENTE', 71, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 17, 'BUENO', 64, 70),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 17, 'REGULAR', 50, 63),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 17, 'DEBIL', 47, 49),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 46);
+-- Masculino Sub-21 (0-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 20, 'EXCELENTE', 77, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 20, 'BUENO', 67, 76),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 20, 'REGULAR', 53, 66),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 20, 'DEBIL', 41, 52),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 40);
+-- Femenino Sub-18 (0-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 17, 'EXCELENTE', 66, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 17, 'BUENO', 59, 65),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 17, 'REGULAR', 48, 58),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 17, 'DEBIL', 44, 47),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 43);
+-- Femenino Sub-21 (0-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 20, 'EXCELENTE', 68, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 20, 'BUENO', 64, 67),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 20, 'REGULAR', 52, 63),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 20, 'DEBIL', 44, 51),
+    (@FUENTE_CBJ, @EJERCICIO_UCHIKOMI, @METRICA_UCHIKOMI_REP, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 43);
+
+-- ---
+-- 1.4 Special Judo Fitness Test (SJFT)
+-- ---
+-- Masculino Sub-18 (0-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 17, 'EXCELENTE', 30, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 17, 'BUENO', 28, 29),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 17, 'REGULAR', 25, 27),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 17, 'DEBIL', 23, 24),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 17, 'MUY_DEBIL', NULL, 22),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 17, 'EXCELENTE', NULL, 163),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 17, 'BUENO', 164, 174),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 17, 'REGULAR', 175, 195),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 17, 'DEBIL', 196, 200),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 17, 'MUY_DEBIL', 201, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 17, 'EXCELENTE', NULL, 132),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 17, 'BUENO', 133, 148),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 17, 'REGULAR', 149, 175),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 17, 'DEBIL', 176, 184),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 17, 'MUY_DEBIL', 185, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 17, 'EXCELENTE', NULL, 11.15),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 17, 'BUENO', 11.16, 12.38),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 17, 'REGULAR', 12.39, 14.32),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 17, 'DEBIL', 14.33, 15.92),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 17, 'MUY_DEBIL', 15.93, NULL);
+
+-- Masculino Sub-21 (0-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 20, 'EXCELENTE', 31, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 20, 'BUENO', 30, 30),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 20, 'REGULAR', 26, 29),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 20, 'DEBIL', 23, 25),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'MASCULINO', 0, 20, 'MUY_DEBIL', NULL, 22),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 20, 'EXCELENTE', NULL, 162),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 20, 'BUENO', 163, 174),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 20, 'REGULAR', 175, 188),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 20, 'DEBIL', 189, 198),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'MASCULINO', 0, 20, 'MUY_DEBIL', 199, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 20, 'EXCELENTE', NULL, 127),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 20, 'BUENO', 128, 144),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 20, 'REGULAR', 145, 168),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 20, 'DEBIL', 169, 184),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'MASCULINO', 0, 20, 'MUY_DEBIL', 185, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 20, 'EXCELENTE', NULL, 10.40),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 20, 'BUENO', 10.41, 11.29),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 20, 'REGULAR', 11.30, 13.52),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 20, 'DEBIL', 13.53, 14.18),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'MASCULINO', 0, 20, 'MUY_DEBIL', 14.19, NULL);
+
+-- Femenino Sub-18 (0-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 17, 'EXCELENTE', 28, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 17, 'BUENO', 27, 27),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 17, 'REGULAR', 23, 26),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 17, 'DEBIL', 21, 22),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 17, 'MUY_DEBIL', NULL, 20),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 17, 'EXCELENTE', NULL, 168),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 17, 'BUENO', 169, 176),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 17, 'REGULAR', 177, 193),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 17, 'DEBIL', 194, 202),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 17, 'MUY_DEBIL', 203, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 17, 'EXCELENTE', NULL, 132),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 17, 'BUENO', 133, 148),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 17, 'REGULAR', 149, 176),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 17, 'DEBIL', 177, 189),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 17, 'MUY_DEBIL', 190, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 17, 'EXCELENTE', NULL, 11.53),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 17, 'BUENO', 11.54, 12.63),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 17, 'REGULAR', 12.64, 15.45),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 17, 'DEBIL', 15.46, 18.00),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 17, 'MUY_DEBIL', 18.01, NULL);
+
+-- Femenino Sub-21 (0-20)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 20, 'EXCELENTE', 30, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 20, 'BUENO', 28, 29),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 20, 'REGULAR', 25, 27),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 20, 'DEBIL', 22, 24),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_TOTAL, 'FEMENINO', 0, 20, 'MUY_DEBIL', NULL, 21),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 20, 'EXCELENTE', NULL, 168),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 20, 'BUENO', 169, 179),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 20, 'REGULAR', 180, 190),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 20, 'DEBIL', 191, 196),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_FIN, 'FEMENINO', 0, 20, 'MUY_DEBIL', 197, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 20, 'EXCELENTE', NULL, 148),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 20, 'BUENO', 149, 157),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 20, 'REGULAR', 158, 176),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 20, 'DEBIL', 177, 180),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_FC_1MIN, 'FEMENINO', 0, 20, 'MUY_DEBIL', 181, NULL),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 20, 'EXCELENTE', NULL, 11.48),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 20, 'BUENO', 11.49, 12.00),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 20, 'REGULAR', 12.01, 14.70),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 20, 'DEBIL', 14.71, 17.45),
+    (@FUENTE_CBJ, @EJERCICIO_SJFT, @METRICA_SJFT_INDICE, 'FEMENINO', 0, 20, 'MUY_DEBIL', 17.46, NULL);
+
+-- ########################################################
+-- ## Sección 2: Manual PROESP-BR (Aptitud Física General) ##
+-- ########################################################
+SET @FUENTE_PROESP = 'proesp_br_manual';
+
+-- ---
+-- 2.1 Criterios de Salud (Zonas de Riesgo)
+-- ---
+-- IMC (MASCULINO) - Corregido a @METRICA_IMC
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 6, 6, 'ZONA_DE_RIESGO', 17.7, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 7, 7, 'ZONA_DE_RIESGO', 17.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 8, 8, 'ZONA_DE_RIESGO', 19.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 9, 9, 'ZONA_DE_RIESGO', 19.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 10, 10, 'ZONA_DE_RIESGO', 20.7, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 11, 11, 'ZONA_DE_RIESGO', 22.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 12, 12, 'ZONA_DE_RIESGO', 22.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 13, 13, 'ZONA_DE_RIESGO', 22.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 14, 14, 'ZONA_DE_RIESGO', 22.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 15, 15, 'ZONA_DE_RIESGO', 23.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 16, 16, 'ZONA_DE_RIESGO', 24.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'MASCULINO', 17, 17, 'ZONA_DE_RIESGO', 25.4, NULL);
+-- IMC (FEMENINO) - Corregido a @METRICA_IMC
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 6, 6, 'ZONA_DE_RIESGO', 17.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 7, 7, 'ZONA_DE_RIESGO', 17.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 8, 8, 'ZONA_DE_RIESGO', 18.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 9, 9, 'ZONA_DE_RIESGO', 19.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 10, 10, 'ZONA_DE_RIESGO', 20.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 11, 11, 'ZONA_DE_RIESGO', 22.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 12, 12, 'ZONA_DE_RIESGO', 22.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 13, 13, 'ZONA_DE_RIESGO', 22.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 14, 14, 'ZONA_DE_RIESGO', 22.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 15, 15, 'ZONA_DE_RIESGO', 22.4, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 16, 16, 'ZONA_DE_RIESGO', 24.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_IMC, 'FEMENINO', 17, 17, 'ZONA_DE_RIESGO', 24.0, NULL);
+-- Carrera 6 min (MASCULINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 675),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 730),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 768),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 820),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 856),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 930),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 966),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 995),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 1060),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 1130),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 1190),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 1190);
+-- Carrera 6 min (FEMENINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 630),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 683),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 715),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 745),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 790),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 840),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 900),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 940),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 985),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 1005),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 1070),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 1110);
+-- WHtR (Agregado: Riesgo si >= 0.5 para todos, edades 6-17)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_WHTR, 'MASCULINO', 6, 17, 'ZONA_DE_RIESGO', 0.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ANTROPO, @METRICA_WHTR, 'FEMENINO', 6, 17, 'ZONA_DE_RIESGO', 0.5, NULL);
+-- Sentarse y Estirarse (MASCULINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 29),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 29),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 32.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 29),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 29.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 29.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 29.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 26.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 30.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 31),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 34.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 34);
+-- Sentarse y Estirarse (FEMENINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 40.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 40.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 39.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 35.0),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 36.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 34.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 39.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 38.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 38.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 38.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 39.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 39.5);
+-- Abdominales 1 min (MASCULINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 18),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 18),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 24),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 26),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 31),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 37),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 41),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 42),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 43),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 45),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 46),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 47);
+-- Abdominales 1 min (FEMENINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 18),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 18),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 18),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 20),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 26),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 30),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 30),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 33),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 34),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 34),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 34),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 34);
+-- Lanzamiento Balón 2kg (MASCULINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 147.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 168.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 190.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 210.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 232.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 260.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 290.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 335.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 400.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 440.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 480.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 500.0);
+-- Lanzamiento Balón 2kg (FEMENINO)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 6, 6, 'ZONA_DE_RIESGO', NULL, 125.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 7, 7, 'ZONA_DE_RIESGO', NULL, 140.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 8, 8, 'ZONA_DE_RIESGO', NULL, 158.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 9, 9, 'ZONA_DE_RIESGO', NULL, 175.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 10, 10, 'ZONA_DE_RIESGO', NULL, 202.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 11, 11, 'ZONA_DE_RIESGO', NULL, 228.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 12, 12, 'ZONA_DE_RIESGO', NULL, 260.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 13, 13, 'ZONA_DE_RIESGO', NULL, 280.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 14, 14, 'ZONA_DE_RIESGO', NULL, 290.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 15, 15, 'ZONA_DE_RIESGO', NULL, 306.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 16, 16, 'ZONA_DE_RIESGO', NULL, 310.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 17, 17, 'ZONA_DE_RIESGO', NULL, 315.0);
+-- Carrera 20m (MASCULINO) - ALTO es RIESGO
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 6, 6, 'ZONA_DE_RIESGO', 4.81, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 7, 7, 'ZONA_DE_RIESGO', 4.52, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 8, 8, 'ZONA_DE_RIESGO', 4.31, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 9, 9, 'ZONA_DE_RIESGO', 4.25, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 10, 10, 'ZONA_DE_RIESGO', 4.09, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 11, 11, 'ZONA_DE_RIESGO', 4.00, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 12, 12, 'ZONA_DE_RIESGO', 3.88, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 13, 13, 'ZONA_DE_RIESGO', 3.72, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 14, 14, 'ZONA_DE_RIESGO', 3.54, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 15, 15, 'ZONA_DE_RIESGO', 3.40, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 16, 16, 'ZONA_DE_RIESGO', 3.28, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 17, 17, 'ZONA_DE_RIESGO', 3.22, NULL);
+-- Carrera 20m (FEMENINO) - ALTO es RIESGO
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 6, 6, 'ZONA_DE_RIESGO', 5.22, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 7, 7, 'ZONA_DE_RIESGO', 4.88, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 8, 8, 'ZONA_DE_RIESGO', 4.66, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 9, 9, 'ZONA_DE_RIESGO', 4.58, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 10, 10, 'ZONA_DE_RIESGO', 4.44, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 11, 11, 'ZONA_DE_RIESGO', 4.36, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 12, 12, 'ZONA_DE_RIESGO', 4.28, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 13, 13, 'ZONA_DE_RIESGO', 4.17, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 14, 14, 'ZONA_DE_RIESGO', 4.16, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 15, 15, 'ZONA_DE_RIESGO', 4.07, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 16, 16, 'ZONA_DE_RIESGO', 4.01, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 17, 17, 'ZONA_DE_RIESGO', 3.91, NULL);
+
+-- ---
+-- 2.2 Normas de Rendimiento Motor (Clasificaciones)
+-- ---
+-- Carrera 6 min (MASCULINO, 6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 6, 6, 'DEBIL', NULL, 730),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 6, 6, 'RAZONABLE', 730, 826),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 6, 6, 'BUENO', 827, 956),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 6, 6, 'MUY_BIEN', 957, 1316),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 6, 6, 'EXCELENTE', 1317, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 7, 7, 'DEBIL', NULL, 752),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 7, 7, 'RAZONABLE', 752, 848),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 7, 7, 'BUENO', 849, 975),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 7, 7, 'MUY_BIEN', 976, 1302),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 7, 7, 'EXCELENTE', 1303, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 8, 8, 'DEBIL', NULL, 774),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 8, 8, 'RAZONABLE', 774, 870),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 8, 8, 'BUENO', 871, 995),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 8, 8, 'MUY_BIEN', 996, 1300),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 8, 8, 'EXCELENTE', 1301, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 9, 9, 'DEBIL', NULL, 797),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 9, 9, 'RAZONABLE', 797, 894),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 9, 9, 'BUENO', 895, 1018),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 9, 9, 'MUY_BIEN', 1019, 1309),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 9, 9, 'EXCELENTE', 1310, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 10, 10, 'DEBIL', NULL, 817),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 10, 10, 'RAZONABLE', 817, 916),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 10, 10, 'BUENO', 917, 1040),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 10, 10, 'MUY_BIEN', 1041, 1322),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 10, 10, 'EXCELENTE', 1323, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 11, 11, 'DEBIL', NULL, 837),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 11, 11, 'RAZONABLE', 837, 938),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 11, 11, 'BUENO', 939, 1062),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 11, 11, 'MUY_BIEN', 1063, 1338),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 11, 11, 'EXCELENTE', 1339, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 12, 12, 'DEBIL', NULL, 860),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 12, 12, 'RAZONABLE', 860, 964),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 12, 12, 'BUENO', 965, 1090),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 12, 12, 'MUY_BIEN', 1091, 1366),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 12, 12, 'EXCELENTE', 1367, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 13, 13, 'DEBIL', NULL, 895),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 13, 13, 'RAZONABLE', 895, 1004),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 13, 13, 'BUENO', 1005, 1136),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 13, 13, 'MUY_BIEN', 1137, 1421),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 13, 13, 'EXCELENTE', 1422, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 14, 14, 'DEBIL', NULL, 939),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 14, 14, 'RAZONABLE', 939, 1057),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 14, 14, 'BUENO', 1058, 1197),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 14, 14, 'MUY_BIEN', 1198, 1498),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 14, 14, 'EXCELENTE', 1499, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 15, 15, 'DEBIL', NULL, 986),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 15, 15, 'RAZONABLE', 986, 1112),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 15, 15, 'BUENO', 1113, 1262),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 15, 15, 'MUY_BIEN', 1263, 1584),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 15, 15, 'EXCELENTE', 1585, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 16, 16, 'DEBIL', NULL, 1015),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 16, 16, 'RAZONABLE', 1015, 1148),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 16, 16, 'BUENO', 1149, 1306),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 16, 16, 'MUY_BIEN', 1307, 1643),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 16, 16, 'EXCELENTE', 1644, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 17, 17, 'DEBIL', NULL, 1038),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 17, 17, 'RAZONABLE', 1038, 1176),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 17, 17, 'BUENO', 1177, 1341),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 17, 17, 'MUY_BIEN', 1342, 1691),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'MASCULINO', 17, 17, 'EXCELENTE', 1692, NULL);
+
+-- Carrera 6 min (FEMENINO, 6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 6, 6, 'DEBIL', NULL, 672),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 6, 6, 'RAZONABLE', 672, 767),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 6, 6, 'BUENO', 768, 900),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 6, 6, 'MUY_BIEN', 901, 1276),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 6, 6, 'EXCELENTE', 1277, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 7, 7, 'DEBIL', NULL, 691),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 7, 7, 'RAZONABLE', 691, 779),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 7, 7, 'BUENO', 780, 891),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 7, 7, 'MUY_BIEN', 892, 1158),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 7, 7, 'EXCELENTE', 1159, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 8, 8, 'DEBIL', NULL, 707),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 8, 8, 'RAZONABLE', 707, 791),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 8, 8, 'BUENO', 792, 895),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 8, 8, 'MUY_BIEN', 896, 1131),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 8, 8, 'EXCELENTE', 1132, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 9, 9, 'DEBIL', NULL, 720),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 9, 9, 'RAZONABLE', 720, 805),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 9, 9, 'BUENO', 806, 910),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 9, 9, 'MUY_BIEN', 911, 1148),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 9, 9, 'EXCELENTE', 1149, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 10, 10, 'DEBIL', NULL, 729),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 10, 10, 'RAZONABLE', 729, 818),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 10, 10, 'BUENO', 819, 931),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 10, 10, 'MUY_BIEN', 932, 1199),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 10, 10, 'EXCELENTE', 1200, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 11, 11, 'DEBIL', NULL, 736),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 11, 11, 'RAZONABLE', 736, 831),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 11, 11, 'BUENO', 832, 953),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 11, 11, 'MUY_BIEN', 954, 1250),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 11, 11, 'EXCELENTE', 1251, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 12, 12, 'DEBIL', NULL, 743),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 12, 12, 'RAZONABLE', 743, 835),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 12, 12, 'BUENO', 836, 947),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 12, 12, 'MUY_BIEN', 948, 1191),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 12, 12, 'EXCELENTE', 1192, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 13, 13, 'DEBIL', NULL, 749),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 13, 13, 'RAZONABLE', 749, 839),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 13, 13, 'BUENO', 840, 947),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 13, 13, 'MUY_BIEN', 948, 1178),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 13, 13, 'EXCELENTE', 1179, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 14, 14, 'DEBIL', NULL, 751),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 14, 14, 'RAZONABLE', 751, 847),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 14, 14, 'BUENO', 848, 969),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 14, 14, 'MUY_BIEN', 970, 1256),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 14, 14, 'EXCELENTE', 1257, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 15, 15, 'DEBIL', NULL, 748),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 15, 15, 'RAZONABLE', 748, 858),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 15, 15, 'BUENO', 859, 1005),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 15, 15, 'MUY_BIEN', 1006, 1390),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 15, 15, 'EXCELENTE', 1391, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 16, 16, 'DEBIL', NULL, 746),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 16, 16, 'RAZONABLE', 746, 865),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 16, 16, 'BUENO', 866, 1021),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 16, 16, 'MUY_BIEN', 1022, 1401),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 16, 16, 'EXCELENTE', 1402, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 17, 17, 'DEBIL', NULL, 744),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 17, 17, 'RAZONABLE', 744, 870),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 17, 17, 'BUENO', 871, 1027),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 17, 17, 'MUY_BIEN', 1028, 1389),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_6MIN, @METRICA_CARRERA_6MIN, 'FEMENINO', 17, 17, 'EXCELENTE', 1390, NULL);
+
+-- ########################################################
+-- ## Sección 2.2: PROESP-BR (Continuación)              ##
+-- ########################################################
+
+-- ---
+-- 2.2.2 Flexibilidad (Sentarse y Estirarse)
+-- ---
+-- Masculino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 6, 6, 'DEBIL', NULL, 34.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 6, 6, 'RAZONABLE', 34.3, 41.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 6, 6, 'BUENO', 41.3, 50.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 6, 6, 'MUY_BIEN', 50.4, 73.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 6, 6, 'EXCELENTE', 74.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 7, 7, 'DEBIL', NULL, 33.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 7, 7, 'RAZONABLE', 33.3, 39.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 7, 7, 'BUENO', 39.7, 47.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 7, 7, 'MUY_BIEN', 48.0, 68.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 7, 7, 'EXCELENTE', 68.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 8, 8, 'DEBIL', NULL, 32.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 8, 8, 'RAZONABLE', 32.3, 38.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 8, 8, 'BUENO', 38.4, 45.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 8, 8, 'MUY_BIEN', 46.0, 63.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 8, 8, 'EXCELENTE', 64.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 9, 9, 'DEBIL', NULL, 31.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 9, 9, 'RAZONABLE', 31.3, 37.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 9, 9, 'BUENO', 37.2, 44.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 9, 9, 'MUY_BIEN', 44.6, 61.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 9, 9, 'EXCELENTE', 61.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 10, 10, 'DEBIL', NULL, 30.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 10, 10, 'RAZONABLE', 30.4, 36.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 10, 10, 'BUENO', 36.5, 43.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 10, 10, 'MUY_BIEN', 43.9, 60.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 10, 10, 'EXCELENTE', 60.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 11, 11, 'DEBIL', NULL, 29.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 11, 11, 'RAZONABLE', 29.8, 35.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 11, 11, 'BUENO', 35.7, 42.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 11, 11, 'MUY_BIEN', 43.0, 59.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 11, 11, 'EXCELENTE', 59.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 12, 12, 'DEBIL', NULL, 29.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 12, 12, 'RAZONABLE', 29.4, 35.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 12, 12, 'BUENO', 35.2, 42.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 12, 12, 'MUY_BIEN', 42.2, 57.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 12, 12, 'EXCELENTE', 57.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 13, 13, 'DEBIL', NULL, 29.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 13, 13, 'RAZONABLE', 29.1, 35.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 13, 13, 'BUENO', 35.3, 42.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 13, 13, 'MUY_BIEN', 42.9, 60.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 13, 13, 'EXCELENTE', 60.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 14, 14, 'DEBIL', NULL, 28.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 14, 14, 'RAZONABLE', 28.7, 35.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 14, 14, 'BUENO', 35.7, 44.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 14, 14, 'MUY_BIEN', 44.8, 67.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 14, 14, 'EXCELENTE', 67.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 15, 15, 'DEBIL', NULL, 28.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 15, 15, 'RAZONABLE', 28.4, 36.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 15, 15, 'BUENO', 36.4, 46.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 15, 15, 'MUY_BIEN', 47.0, 73.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 15, 15, 'EXCELENTE', 73.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 16, 16, 'DEBIL', NULL, 28.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 16, 16, 'RAZONABLE', 28.4, 36.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 16, 16, 'BUENO', 36.8, 48.0),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 16, 16, 'MUY_BIEN', 48.1, 76.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 16, 16, 'EXCELENTE', 76.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 17, 17, 'DEBIL', NULL, 28.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 17, 17, 'RAZONABLE', 28.7, 36.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 17, 17, 'BUENO', 36.9, 47.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 17, 17, 'MUY_BIEN', 48.0, 76.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'MASCULINO', 17, 17, 'EXCELENTE', 76.2, NULL);
+
+-- Femenino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 6, 6, 'DEBIL', NULL, 37.0),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 6, 6, 'RAZONABLE', 37.0, 43.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 6, 6, 'BUENO', 43.9, 52.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 6, 6, 'MUY_BIEN', 52.6, 73.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 6, 6, 'EXCELENTE', 73.4, NULL),  -- Nota: JSON tiene ≥73.4, pero igual a 73.4 como min
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 7, 7, 'DEBIL', NULL, 35.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 7, 7, 'RAZONABLE', 35.3, 41.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 7, 7, 'BUENO', 41.9, 49.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 7, 7, 'MUY_BIEN', 50.0, 69.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 7, 7, 'EXCELENTE', 69.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 8, 8, 'DEBIL', NULL, 33.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 8, 8, 'RAZONABLE', 33.8, 40.0),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 8, 8, 'BUENO', 40.1, 47.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 8, 8, 'MUY_BIEN', 47.9, 65.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 8, 8, 'EXCELENTE', 65.7, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 9, 9, 'DEBIL', NULL, 32.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 9, 9, 'RAZONABLE', 32.4, 38.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 9, 9, 'BUENO', 38.7, 46.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 9, 9, 'MUY_BIEN', 46.3, 63.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 9, 9, 'EXCELENTE', 63.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 10, 10, 'DEBIL', NULL, 31.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 10, 10, 'RAZONABLE', 31.3, 37.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 10, 10, 'BUENO', 37.6, 45.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 10, 10, 'MUY_BIEN', 45.4, 62.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 10, 10, 'EXCELENTE', 62.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 11, 11, 'DEBIL', NULL, 30.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 11, 11, 'RAZONABLE', 30.6, 36.7),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 11, 11, 'BUENO', 36.8, 44.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 11, 11, 'MUY_BIEN', 44.3, 61.0),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 11, 11, 'EXCELENTE', 61.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 12, 12, 'DEBIL', NULL, 30.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 12, 12, 'RAZONABLE', 30.4, 36.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 12, 12, 'BUENO', 36.4, 43.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 12, 12, 'MUY_BIEN', 43.7, 60.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 12, 12, 'EXCELENTE', 60.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 13, 13, 'DEBIL', NULL, 30.3),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 13, 13, 'RAZONABLE', 30.3, 36.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 13, 13, 'BUENO', 36.7, 44.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 13, 13, 'MUY_BIEN', 44.6, 62.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 13, 13, 'EXCELENTE', 62.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 14, 14, 'DEBIL', NULL, 30.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 14, 14, 'RAZONABLE', 30.1, 37.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 14, 14, 'BUENO', 37.3, 46.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 14, 14, 'MUY_BIEN', 46.6, 69.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 14, 14, 'EXCELENTE', 69.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 15, 15, 'DEBIL', NULL, 29.6),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 15, 15, 'RAZONABLE', 29.6, 37.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 15, 15, 'BUENO', 37.9, 48.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 15, 15, 'MUY_BIEN', 48.9, 77.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 15, 15, 'EXCELENTE', 77.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 16, 16, 'DEBIL', NULL, 29.2),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 16, 16, 'RAZONABLE', 29.2, 37.8),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 16, 16, 'BUENO', 37.9, 49.5),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 16, 16, 'MUY_BIEN', 49.6, 80.1),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 16, 16, 'EXCELENTE', 80.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 17, 17, 'DEBIL', NULL, 28.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 17, 17, 'RAZONABLE', 28.9, 37.4),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 17, 17, 'BUENO', 37.5, 48.9),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 17, 17, 'MUY_BIEN', 49.0, 79.0),
+    (@FUENTE_PROESP, @EJERCICIO_SIT_REACH, @METRICA_SIT_REACH, 'FEMENINO', 17, 17, 'EXCELENTE', 79.0, NULL);
+
+-- ---
+-- 2.2.3 Resistencia Muscular (Abdominales 1 min)
+-- ---
+-- Masculino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 6, 6, 'DEBIL', NULL, 18),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 6, 6, 'RAZONABLE', 18, 22),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 6, 6, 'BUENO', 23, 27),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 6, 6, 'MUY_BIEN', 28, 38),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 6, 6, 'EXCELENTE', 39, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 7, 7, 'DEBIL', NULL, 20),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 7, 7, 'RAZONABLE', 20, 25),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 7, 7, 'BUENO', 26, 30),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 7, 7, 'MUY_BIEN', 31, 42),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 7, 7, 'EXCELENTE', 43, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 8, 8, 'DEBIL', NULL, 23),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 8, 8, 'RAZONABLE', 23, 27),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 8, 8, 'BUENO', 28, 33),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 8, 8, 'MUY_BIEN', 34, 45),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 8, 8, 'EXCELENTE', 46, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 9, 9, 'DEBIL', NULL, 25),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 9, 9, 'RAZONABLE', 25, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 9, 9, 'BUENO', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 9, 9, 'MUY_BIEN', 36, 47),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 9, 9, 'EXCELENTE', 48, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 10, 10, 'DEBIL', NULL, 26),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 10, 10, 'RAZONABLE', 26, 31),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 10, 10, 'BUENO', 32, 36),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 10, 10, 'MUY_BIEN', 37, 48),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 10, 10, 'EXCELENTE', 49, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 11, 11, 'DEBIL', NULL, 27),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 11, 11, 'RAZONABLE', 27, 32),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 11, 11, 'BUENO', 33, 38),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 11, 11, 'MUY_BIEN', 39, 49),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 11, 11, 'EXCELENTE', 50, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 12, 12, 'DEBIL', NULL, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 12, 12, 'RAZONABLE', 29, 34),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 12, 12, 'BUENO', 35, 39),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 12, 12, 'MUY_BIEN', 40, 51),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 12, 12, 'EXCELENTE', 52, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 13, 13, 'DEBIL', NULL, 30),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 13, 13, 'RAZONABLE', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 13, 13, 'BUENO', 36, 41),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 13, 13, 'MUY_BIEN', 42, 53),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 13, 13, 'EXCELENTE', 54, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 14, 14, 'DEBIL', NULL, 32),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 14, 14, 'RAZONABLE', 32, 37),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 14, 14, 'BUENO', 38, 43),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 14, 14, 'MUY_BIEN', 44, 56),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 14, 14, 'EXCELENTE', 57, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 15, 15, 'DEBIL', NULL, 34),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 15, 15, 'RAZONABLE', 34, 39),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 15, 15, 'BUENO', 40, 46),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 15, 15, 'MUY_BIEN', 47, 59),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 15, 15, 'EXCELENTE', 60, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 16, 16, 'DEBIL', NULL, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 16, 16, 'RAZONABLE', 35, 41),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 16, 16, 'BUENO', 42, 47),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 16, 16, 'MUY_BIEN', 48, 61),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 16, 16, 'EXCELENTE', 62, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 17, 17, 'DEBIL', NULL, 36),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 17, 17, 'RAZONABLE', 36, 42),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 17, 17, 'BUENO', 43, 48),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 17, 17, 'MUY_BIEN', 49, 62),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'MASCULINO', 17, 17, 'EXCELENTE', 63, NULL);
+
+-- Femenino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 6, 6, 'DEBIL', NULL, 17),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 6, 6, 'RAZONABLE', 17, 21),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 6, 6, 'BUENO', 22, 26),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 6, 6, 'MUY_BIEN', 27, 37),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 6, 6, 'EXCELENTE', 37, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 7, 7, 'DEBIL', NULL, 19),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 7, 7, 'RAZONABLE', 19, 23),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 7, 7, 'BUENO', 24, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 7, 7, 'MUY_BIEN', 30, 40),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 7, 7, 'EXCELENTE', 40, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 8, 8, 'DEBIL', NULL, 20),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 8, 8, 'RAZONABLE', 20, 25),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 8, 8, 'BUENO', 26, 31),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 8, 8, 'MUY_BIEN', 32, 43),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 8, 8, 'EXCELENTE', 43, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 9, 9, 'DEBIL', NULL, 21),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 9, 9, 'RAZONABLE', 21, 26),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 9, 9, 'BUENO', 27, 32),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 9, 9, 'MUY_BIEN', 33, 45),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 9, 9, 'EXCELENTE', 45, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 10, 10, 'DEBIL', NULL, 22),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 10, 10, 'RAZONABLE', 22, 27),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 10, 10, 'BUENO', 28, 33),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 10, 10, 'MUY_BIEN', 34, 45),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 10, 10, 'EXCELENTE', 45, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 11, 11, 'DEBIL', NULL, 23),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 11, 11, 'RAZONABLE', 23, 28),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 11, 11, 'BUENO', 29, 33),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 11, 11, 'MUY_BIEN', 34, 46),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 11, 11, 'EXCELENTE', 46, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 12, 12, 'DEBIL', NULL, 23),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 12, 12, 'RAZONABLE', 23, 28),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 12, 12, 'BUENO', 29, 34),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 12, 12, 'MUY_BIEN', 35, 46),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 12, 12, 'EXCELENTE', 46, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 13, 13, 'DEBIL', NULL, 24),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 13, 13, 'RAZONABLE', 24, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 13, 13, 'BUENO', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 13, 13, 'MUY_BIEN', 36, 48),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 13, 13, 'EXCELENTE', 48, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 14, 14, 'DEBIL', NULL, 24),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 14, 14, 'RAZONABLE', 24, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 14, 14, 'BUENO', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 14, 14, 'MUY_BIEN', 36, 49),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 14, 14, 'EXCELENTE', 49, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 15, 15, 'DEBIL', NULL, 24),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 15, 15, 'RAZONABLE', 24, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 15, 15, 'BUENO', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 15, 15, 'MUY_BIEN', 36, 49),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 15, 15, 'EXCELENTE', 49, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 16, 16, 'DEBIL', NULL, 23),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 16, 16, 'RAZONABLE', 23, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 16, 16, 'BUENO', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 16, 16, 'MUY_BIEN', 36, 49),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 16, 16, 'EXCELENTE', 49, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 17, 17, 'DEBIL', NULL, 23),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 17, 17, 'RAZONABLE', 23, 29),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 17, 17, 'BUENO', 30, 35),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 17, 17, 'MUY_BIEN', 36, 48),
+    (@FUENTE_PROESP, @EJERCICIO_ABDOMINALES_1MIN, @METRICA_ABDOMINALES_1MIN, 'FEMENINO', 17, 17, 'EXCELENTE', 48, NULL);
+
+-- ---
+-- 2.2.4 Potencia de Extremidades Superiores (Lanzamiento Balón 2kg)
+-- ---
+-- Masculino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 6, 6, 'DEBIL', NULL, 136.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 6, 6, 'RAZONABLE', 136.2, 154.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 6, 6, 'BUENO', 155.0, 180.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 6, 6, 'MUY_BIEN', 180.4, 248.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 6, 6, 'EXCELENTE', 249.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 7, 7, 'DEBIL', NULL, 154.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 7, 7, 'RAZONABLE', 154.9, 175.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 7, 7, 'BUENO', 175.6, 201.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 7, 7, 'MUY_BIEN', 201.4, 261.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 7, 7, 'EXCELENTE', 261.4, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 8, 8, 'DEBIL', NULL, 173.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 8, 8, 'RAZONABLE', 173.4, 195.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 8, 8, 'BUENO', 195.9, 223.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 8, 8, 'MUY_BIEN', 223.3, 284.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 8, 8, 'EXCELENTE', 284.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 9, 9, 'DEBIL', NULL, 192.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 9, 9, 'RAZONABLE', 192.2, 216.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 9, 9, 'BUENO', 216.8, 246.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 9, 9, 'MUY_BIEN', 247.0, 315.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 9, 9, 'EXCELENTE', 315.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 10, 10, 'DEBIL', NULL, 209.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 10, 10, 'RAZONABLE', 209.2, 235.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 10, 10, 'BUENO', 235.7, 268.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 10, 10, 'MUY_BIEN', 268.8, 345.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 10, 10, 'EXCELENTE', 345.4, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 11, 11, 'DEBIL', NULL, 230.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 11, 11, 'RAZONABLE', 230.1, 259.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 11, 11, 'BUENO', 259.2, 295.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 11, 11, 'MUY_BIEN', 295.1, 376.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 11, 11, 'EXCELENTE', 376.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 12, 12, 'DEBIL', NULL, 255.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 12, 12, 'RAZONABLE', 255.2, 287.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 12, 12, 'BUENO', 287.7, 327.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 12, 12, 'MUY_BIEN', 327.4, 416.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 12, 12, 'EXCELENTE', 416.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 13, 13, 'DEBIL', NULL, 295.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 13, 13, 'RAZONABLE', 295.6, 333.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 13, 13, 'BUENO', 334.0, 379.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 13, 13, 'MUY_BIEN', 380.0, 479.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 13, 13, 'EXCELENTE', 479.7, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 14, 14, 'DEBIL', NULL, 348.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 14, 14, 'RAZONABLE', 348.5, 393.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 14, 14, 'BUENO', 394.0, 446.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 14, 14, 'MUY_BIEN', 446.5, 554.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 14, 14, 'EXCELENTE', 554.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 15, 15, 'DEBIL', NULL, 405.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 15, 15, 'RAZONABLE', 405.1, 456.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 15, 15, 'BUENO', 456.2, 512.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 15, 15, 'MUY_BIEN', 513.0, 623.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 15, 15, 'EXCELENTE', 623.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 16, 16, 'DEBIL', NULL, 448.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 16, 16, 'RAZONABLE', 448.3, 501.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 16, 16, 'BUENO', 501.7, 560.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 16, 16, 'MUY_BIEN', 560.1, 670.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 16, 16, 'EXCELENTE', 670.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 17, 17, 'DEBIL', NULL, 486.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 17, 17, 'RAZONABLE', 486.8, 541.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 17, 17, 'BUENO', 541.3, 600.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 17, 17, 'MUY_BIEN', 600.2, 710.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'MASCULINO', 17, 17, 'EXCELENTE', 710.4, NULL);
+
+-- Femenino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 6, 6, 'DEBIL', NULL, 129.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 6, 6, 'RAZONABLE', 129.7, 146.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 6, 6, 'BUENO', 146.7, 167.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 6, 6, 'MUY_BIEN', 167.5, 214.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 6, 6, 'EXCELENTE', 214.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 7, 7, 'DEBIL', NULL, 141.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 7, 7, 'RAZONABLE', 141.7, 159.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 7, 7, 'BUENO', 160.0, 182.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 7, 7, 'MUY_BIEN', 182.1, 230.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 7, 7, 'EXCELENTE', 230.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 8, 8, 'DEBIL', NULL, 156.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 8, 8, 'RAZONABLE', 156.6, 176.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 8, 8, 'BUENO', 176.5, 200.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 8, 8, 'MUY_BIEN', 200.4, 252.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 8, 8, 'EXCELENTE', 252.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 9, 9, 'DEBIL', NULL, 174.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 9, 9, 'RAZONABLE', 174.1, 195.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 9, 9, 'BUENO', 195.9, 222.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 9, 9, 'MUY_BIEN', 222.2, 279.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 9, 9, 'EXCELENTE', 279.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 10, 10, 'DEBIL', NULL, 191.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 10, 10, 'RAZONABLE', 191.9, 215.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 10, 10, 'BUENO', 215.6, 244.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 10, 10, 'MUY_BIEN', 244.4, 308.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 10, 10, 'EXCELENTE', 308.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 11, 11, 'DEBIL', NULL, 214.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 11, 11, 'RAZONABLE', 214.3, 240.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 11, 11, 'BUENO', 240.3, 271.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 11, 11, 'MUY_BIEN', 271.9, 341.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 11, 11, 'EXCELENTE', 341.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 12, 12, 'DEBIL', NULL, 236.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 12, 12, 'RAZONABLE', 236.8, 265.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 12, 12, 'BUENO', 265.1, 298.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 12, 12, 'MUY_BIEN', 299.0, 372.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 12, 12, 'EXCELENTE', 372.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 13, 13, 'DEBIL', NULL, 261.3),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 13, 13, 'RAZONABLE', 261.3, 292.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 13, 13, 'BUENO', 292.2, 328.2),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 13, 13, 'MUY_BIEN', 328.3, 403.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 13, 13, 'EXCELENTE', 403.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 14, 14, 'DEBIL', NULL, 283.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 14, 14, 'RAZONABLE', 283.5, 316.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 14, 14, 'BUENO', 316.6, 354.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 14, 14, 'MUY_BIEN', 354.5, 431.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 14, 14, 'EXCELENTE', 431.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 15, 15, 'DEBIL', NULL, 299.9),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 15, 15, 'RAZONABLE', 299.9, 334.1),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 15, 15, 'BUENO', 334.2, 373.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 15, 15, 'MUY_BIEN', 373.5, 452.8),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 15, 15, 'EXCELENTE', 452.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 16, 16, 'DEBIL', NULL, 309.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 16, 16, 'RAZONABLE', 309.7, 344.6),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 16, 16, 'BUENO', 344.7, 385.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 16, 16, 'MUY_BIEN', 385.1, 468.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 16, 16, 'EXCELENTE', 468.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 17, 17, 'DEBIL', NULL, 318.4),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 17, 17, 'RAZONABLE', 318.4, 353.7),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 17, 17, 'BUENO', 353.8, 395.5),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 17, 17, 'MUY_BIEN', 395.6, 484.0),
+    (@FUENTE_PROESP, @EJERCICIO_LANZ_BALON, @METRICA_LANZ_BALON, 'FEMENINO', 17, 17, 'EXCELENTE', 484.1, NULL);
+
+-- ---
+-- 2.2.5 Potencia de Extremidades Inferiores (Salto Horizontal PROESP)
+-- ---
+-- Masculino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 6, 6, 'DEBIL', NULL, 100.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 6, 6, 'RAZONABLE', 100.1, 111.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 6, 6, 'BUENO', 111.6, 125.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 6, 6, 'MUY_BIEN', 125.7, 157.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 6, 6, 'EXCELENTE', 158.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 7, 7, 'DEBIL', NULL, 107.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 7, 7, 'RAZONABLE', 107.5, 118.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 7, 7, 'BUENO', 119.0, 132.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 7, 7, 'MUY_BIEN', 133.0, 164.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 7, 7, 'EXCELENTE', 164.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 8, 8, 'DEBIL', NULL, 114.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 8, 8, 'RAZONABLE', 114.7, 126.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 8, 8, 'BUENO', 126.3, 140.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 8, 8, 'MUY_BIEN', 140.2, 170.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 8, 8, 'EXCELENTE', 170.7, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 9, 9, 'DEBIL', NULL, 122.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 9, 9, 'RAZONABLE', 122.2, 133.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 9, 9, 'BUENO', 134.0, 147.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 9, 9, 'MUY_BIEN', 147.9, 178.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 9, 9, 'EXCELENTE', 178.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 10, 10, 'DEBIL', NULL, 129.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 10, 10, 'RAZONABLE', 129.6, 141.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 10, 10, 'BUENO', 141.6, 155.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 10, 10, 'MUY_BIEN', 155.8, 185.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 10, 10, 'EXCELENTE', 185.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 11, 11, 'DEBIL', NULL, 136.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 11, 11, 'RAZONABLE', 136.6, 148.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 11, 11, 'BUENO', 148.9, 163.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 11, 11, 'MUY_BIEN', 163.3, 193.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 11, 11, 'EXCELENTE', 193.4, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 12, 12, 'DEBIL', NULL, 143.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 12, 12, 'RAZONABLE', 143.1, 155.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 12, 12, 'BUENO', 155.9, 170.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 12, 12, 'MUY_BIEN', 170.6, 201.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 12, 12, 'EXCELENTE', 201.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 13, 13, 'DEBIL', NULL, 152.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 13, 13, 'RAZONABLE', 152.6, 166.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 13, 13, 'BUENO', 166.2, 181.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 13, 13, 'MUY_BIEN', 181.9, 213.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 13, 13, 'EXCELENTE', 213.9, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 14, 14, 'DEBIL', NULL, 164.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 14, 14, 'RAZONABLE', 164.0, 178.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 14, 14, 'BUENO', 178.9, 195.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 14, 14, 'MUY_BIEN', 195.8, 229.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 14, 14, 'EXCELENTE', 230.0, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 15, 15, 'DEBIL', NULL, 175.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 15, 15, 'RAZONABLE', 175.3, 191.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 15, 15, 'BUENO', 191.4, 209.4),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 15, 15, 'MUY_BIEN', 209.5, 245.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 15, 15, 'EXCELENTE', 245.6, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 16, 16, 'DEBIL', NULL, 182.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 16, 16, 'RAZONABLE', 182.6, 199.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 16, 16, 'BUENO', 199.4, 218.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 16, 16, 'MUY_BIEN', 218.2, 255.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 16, 16, 'EXCELENTE', 255.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 17, 17, 'DEBIL', NULL, 188.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 17, 17, 'RAZONABLE', 188.5, 205.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 17, 17, 'BUENO', 205.9, 225.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 17, 17, 'MUY_BIEN', 225.1, 262.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'MASCULINO', 17, 17, 'EXCELENTE', 262.6, NULL);
+
+-- Femenino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 6, 6, 'DEBIL', NULL, 88.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 6, 6, 'RAZONABLE', 88.3, 99.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 6, 6, 'BUENO', 99.3, 112.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 6, 6, 'MUY_BIEN', 112.9, 143.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 6, 6, 'EXCELENTE', 143.2, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 7, 7, 'DEBIL', NULL, 96.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 7, 7, 'RAZONABLE', 96.2, 107.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 7, 7, 'BUENO', 107.4, 120.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 7, 7, 'MUY_BIEN', 120.9, 151.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 7, 7, 'EXCELENTE', 151.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 8, 8, 'DEBIL', NULL, 103.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 8, 8, 'RAZONABLE', 103.5, 114.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 8, 8, 'BUENO', 114.7, 128.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 8, 8, 'MUY_BIEN', 128.4, 158.4),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 8, 8, 'EXCELENTE', 158.5, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 9, 9, 'DEBIL', NULL, 110.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 9, 9, 'RAZONABLE', 110.8, 122.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 9, 9, 'BUENO', 122.2, 135.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 9, 9, 'MUY_BIEN', 136.0, 166.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 9, 9, 'EXCELENTE', 166.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 10, 10, 'DEBIL', NULL, 117.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 10, 10, 'RAZONABLE', 117.7, 129.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 10, 10, 'BUENO', 129.3, 143.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 10, 10, 'MUY_BIEN', 143.4, 174.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 10, 10, 'EXCELENTE', 174.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 11, 11, 'DEBIL', NULL, 123.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 11, 11, 'RAZONABLE', 123.9, 135.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 11, 11, 'BUENO', 135.9, 150.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 11, 11, 'MUY_BIEN', 150.4, 181.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 11, 11, 'EXCELENTE', 181.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 12, 12, 'DEBIL', NULL, 128.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 12, 12, 'RAZONABLE', 128.0, 140.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 12, 12, 'BUENO', 140.4, 155.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 12, 12, 'MUY_BIEN', 155.4, 187.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 12, 12, 'EXCELENTE', 187.7, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 13, 13, 'DEBIL', NULL, 130.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 13, 13, 'RAZONABLE', 130.8, 143.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 13, 13, 'BUENO', 143.8, 159.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 13, 13, 'MUY_BIEN', 159.4, 193.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 13, 13, 'EXCELENTE', 193.1, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 14, 14, 'DEBIL', NULL, 132.0),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 14, 14, 'RAZONABLE', 132.0, 145.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 14, 14, 'BUENO', 145.7, 161.9),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 14, 14, 'MUY_BIEN', 162.0, 197.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 14, 14, 'EXCELENTE', 197.4, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 15, 15, 'DEBIL', NULL, 131.8),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 15, 15, 'RAZONABLE', 131.8, 146.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 15, 15, 'BUENO', 146.3, 163.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 15, 15, 'MUY_BIEN', 163.6, 200.7),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 15, 15, 'EXCELENTE', 200.8, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 16, 16, 'DEBIL', NULL, 131.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 16, 16, 'RAZONABLE', 131.2, 146.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 16, 16, 'BUENO', 146.3, 164.3),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 16, 16, 'MUY_BIEN', 164.4, 203.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 16, 16, 'EXCELENTE', 203.3, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 17, 17, 'DEBIL', NULL, 130.5),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 17, 17, 'RAZONABLE', 130.5, 146.2),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 17, 17, 'BUENO', 146.3, 165.1),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 17, 17, 'MUY_BIEN', 165.2, 205.6),
+    (@FUENTE_PROESP, @EJERCICIO_SALTO_H_PROESP, @METRICA_DISTANCIA, 'FEMENINO', 17, 17, 'EXCELENTE', 205.7, NULL);
+
+-- ---
+-- 2.2.6 Agilidad (4x4 metros)
+-- ---
+-- Masculino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 6, 6, 'EXCELENTE', NULL, 6.20),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 6, 6, 'MUY_BIEN', 6.21, 7.10),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 6, 6, 'BUENO', 7.11, 7.60),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 6, 6, 'RAZONABLE', 7.61, 8.07),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 6, 6, 'DEBIL', 8.08, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 7, 7, 'EXCELENTE', NULL, 6.01),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 7, 7, 'MUY_BIEN', 6.02, 6.90),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 7, 7, 'BUENO', 6.91, 7.39),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 7, 7, 'RAZONABLE', 7.40, 7.85),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 7, 7, 'DEBIL', 7.86, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 8, 8, 'EXCELENTE', NULL, 5.85),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 8, 8, 'MUY_BIEN', 5.86, 6.71),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 8, 8, 'BUENO', 6.72, 7.20),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 8, 8, 'RAZONABLE', 7.21, 7.65),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 8, 8, 'DEBIL', 7.66, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 9, 9, 'EXCELENTE', NULL, 5.69),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 9, 9, 'MUY_BIEN', 5.70, 6.53),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 9, 9, 'BUENO', 6.54, 7.00),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 9, 9, 'RAZONABLE', 7.01, 7.45),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 9, 9, 'DEBIL', 7.46, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 10, 10, 'EXCELENTE', NULL, 5.54),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 10, 10, 'MUY_BIEN', 5.55, 6.35),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 10, 10, 'BUENO', 6.36, 6.81),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 10, 10, 'RAZONABLE', 6.82, 7.25),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 10, 10, 'DEBIL', 7.26, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 11, 11, 'EXCELENTE', NULL, 5.37),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 11, 11, 'MUY_BIEN', 5.38, 6.15),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 11, 11, 'BUENO', 6.16, 6.60),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 11, 11, 'RAZONABLE', 6.61, 7.02),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 11, 11, 'DEBIL', 7.03, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 12, 12, 'EXCELENTE', NULL, 5.22),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 12, 12, 'MUY_BIEN', 5.23, 5.98),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 12, 12, 'BUENO', 5.99, 6.41),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 12, 12, 'RAZONABLE', 6.42, 6.82),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 12, 12, 'DEBIL', 6.83, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 13, 13, 'EXCELENTE', NULL, 5.08),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 13, 13, 'MUY_BIEN', 5.09, 5.80),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 13, 13, 'BUENO', 5.81, 6.22),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 13, 13, 'RAZONABLE', 6.23, 6.62),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 13, 13, 'DEBIL', 6.63, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 14, 14, 'EXCELENTE', NULL, 4.93),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 14, 14, 'MUY_BIEN', 4.94, 5.62),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 14, 14, 'BUENO', 5.63, 6.03),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 14, 14, 'RAZONABLE', 6.04, 6.42),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 14, 14, 'DEBIL', 6.43, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 15, 15, 'EXCELENTE', NULL, 4.76),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 15, 15, 'MUY_BIEN', 4.77, 5.42),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 15, 15, 'BUENO', 5.43, 5.81),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 15, 15, 'RAZONABLE', 5.82, 6.19),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 15, 15, 'DEBIL', 6.20, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 16, 16, 'EXCELENTE', NULL, 4.62),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 16, 16, 'MUY_BIEN', 4.63, 5.24),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 16, 16, 'BUENO', 5.25, 5.62),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 16, 16, 'RAZONABLE', 5.63, 5.99),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 16, 16, 'DEBIL', 6.00, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 17, 17, 'EXCELENTE', NULL, 4.47),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 17, 17, 'MUY_BIEN', 4.48, 5.07),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 17, 17, 'BUENO', 5.08, 5.43),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 17, 17, 'RAZONABLE', 5.44, 5.79),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'MASCULINO', 17, 17, 'DEBIL', 5.80, NULL);
+
+-- Femenino (6-17 años)
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 6, 6, 'EXCELENTE', NULL, 6.67),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 6, 6, 'MUY_BIEN', 6.68, 7.67),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 6, 6, 'BUENO', 7.68, 8.26),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 6, 6, 'RAZONABLE', 8.27, 8.85),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 6, 6, 'DEBIL', 8.86, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 7, 7, 'EXCELENTE', NULL, 6.32),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 7, 7, 'MUY_BIEN', 6.33, 7.35),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 7, 7, 'BUENO', 7.36, 7.93),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 7, 7, 'RAZONABLE', 7.94, 8.47),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 7, 7, 'DEBIL', 8.48, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 8, 8, 'EXCELENTE', NULL, 6.09),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 8, 8, 'MUY_BIEN', 6.10, 7.09),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 8, 8, 'BUENO', 7.10, 7.64),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 8, 8, 'RAZONABLE', 7.65, 8.15),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 8, 8, 'DEBIL', 8.16, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 9, 9, 'EXCELENTE', NULL, 5.97),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 9, 9, 'MUY_BIEN', 5.98, 6.87),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 9, 9, 'BUENO', 6.88, 7.37),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 9, 9, 'RAZONABLE', 7.38, 7.85),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 9, 9, 'DEBIL', 7.86, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 10, 10, 'EXCELENTE', NULL, 5.81),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 10, 10, 'MUY_BIEN', 5.82, 6.66),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 10, 10, 'BUENO', 6.67, 7.14),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 10, 10, 'RAZONABLE', 7.15, 7.60),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 10, 10, 'DEBIL', 7.61, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 11, 11, 'EXCELENTE', NULL, 5.67),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 11, 11, 'MUY_BIEN', 5.68, 6.49),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 11, 11, 'BUENO', 6.50, 6.95),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 11, 11, 'RAZONABLE', 6.96, 7.39),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 11, 11, 'DEBIL', 7.40, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 12, 12, 'EXCELENTE', NULL, 5.61),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 12, 12, 'MUY_BIEN', 5.62, 6.37),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 12, 12, 'BUENO', 6.38, 6.82),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 12, 12, 'RAZONABLE', 6.83, 7.27),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 12, 12, 'DEBIL', 7.28, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 13, 13, 'EXCELENTE', NULL, 5.47),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 13, 13, 'MUY_BIEN', 5.48, 6.25),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 13, 13, 'BUENO', 6.26, 6.70),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 13, 13, 'RAZONABLE', 6.71, 7.15),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 13, 13, 'DEBIL', 7.16, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 14, 14, 'EXCELENTE', NULL, 5.32),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 14, 14, 'MUY_BIEN', 5.33, 6.11),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 14, 14, 'BUENO', 6.12, 6.58),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 14, 14, 'RAZONABLE', 6.59, 7.05),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 14, 14, 'DEBIL', 7.06, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 15, 15, 'EXCELENTE', NULL, 5.21),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 15, 15, 'MUY_BIEN', 5.22, 6.00),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 15, 15, 'BUENO', 6.01, 6.48),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 15, 15, 'RAZONABLE', 6.49, 6.97),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 15, 15, 'DEBIL', 6.98, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 16, 16, 'EXCELENTE', NULL, 5.12),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 16, 16, 'MUY_BIEN', 5.13, 5.92),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 16, 16, 'BUENO', 5.93, 6.42),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 16, 16, 'RAZONABLE', 6.43, 6.92),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 16, 16, 'DEBIL', 6.93, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 17, 17, 'EXCELENTE', NULL, 5.02),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 17, 17, 'MUY_BIEN', 5.03, 5.84),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 17, 17, 'BUENO', 5.85, 6.36),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 17, 17, 'RAZONABLE', 6.37, 6.88),
+    (@FUENTE_PROESP, @EJERCICIO_AGILIDAD_4X4, @METRICA_AGILIDAD_4X4, 'FEMENINO', 17, 17, 'DEBIL', 6.89, NULL);
+
+-- ---
+-- 2.2.7 Velocidad (Carrera 20m)
+-- ---
+-- Masculino (6-17 años) - MÁS BAJO ES MEJOR
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 6, 6, 'EXCELENTE', NULL, 3.61),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 6, 6, 'MUY_BIEN', 3.62, 4.21),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 6, 6, 'BUENO', 4.22, 4.57),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 6, 6, 'RAZONABLE', 4.58, 4.94),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 6, 6, 'DEBIL', 4.95, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 7, 7, 'EXCELENTE', NULL, 3.52),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 7, 7, 'MUY_BIEN', 3.53, 4.08),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 7, 7, 'BUENO', 4.09, 4.42),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 7, 7, 'RAZONABLE', 4.43, 4.75),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 7, 7, 'DEBIL', 4.76, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 8, 8, 'EXCELENTE', NULL, 3.44),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 8, 8, 'MUY_BIEN', 3.45, 3.97),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 8, 8, 'BUENO', 3.98, 4.28),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 8, 8, 'RAZONABLE', 4.29, 4.59),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 8, 8, 'DEBIL', 4.60, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 9, 9, 'EXCELENTE', NULL, 3.37),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 9, 9, 'MUY_BIEN', 3.38, 3.86),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 9, 9, 'BUENO', 3.87, 4.15),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 9, 9, 'RAZONABLE', 4.16, 4.44),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 9, 9, 'DEBIL', 4.45, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 10, 10, 'EXCELENTE', NULL, 3.30),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 10, 10, 'MUY_BIEN', 3.31, 3.76),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 10, 10, 'BUENO', 3.77, 4.03),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 10, 10, 'RAZONABLE', 4.04, 4.30),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 10, 10, 'DEBIL', 4.31, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 11, 11, 'EXCELENTE', NULL, 3.22),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 11, 11, 'MUY_BIEN', 3.23, 3.65),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 11, 11, 'BUENO', 3.66, 3.91),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 11, 11, 'RAZONABLE', 3.92, 4.16),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 11, 11, 'DEBIL', 4.17, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 12, 12, 'EXCELENTE', NULL, 3.14),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 12, 12, 'MUY_BIEN', 3.15, 3.56),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 12, 12, 'BUENO', 3.57, 3.80),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 12, 12, 'RAZONABLE', 3.81, 4.04),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 12, 12, 'DEBIL', 4.05, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 13, 13, 'EXCELENTE', NULL, 3.04),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 13, 13, 'MUY_BIEN', 3.05, 3.44),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 13, 13, 'BUENO', 3.45, 3.68),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 13, 13, 'RAZONABLE', 3.69, 3.91),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 13, 13, 'DEBIL', 3.92, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 14, 14, 'EXCELENTE', NULL, 2.92),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 14, 14, 'MUY_BIEN', 2.93, 3.30),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 14, 14, 'BUENO', 3.31, 3.54),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 14, 14, 'RAZONABLE', 3.55, 3.78),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 14, 14, 'DEBIL', 3.79, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 15, 15, 'EXCELENTE', NULL, 2.78),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 15, 15, 'MUY_BIEN', 2.79, 3.16),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 15, 15, 'BUENO', 3.17, 3.39),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 15, 15, 'RAZONABLE', 3.40, 3.63),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 15, 15, 'DEBIL', 3.64, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 16, 16, 'EXCELENTE', NULL, 2.68),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 16, 16, 'MUY_BIEN', 2.69, 3.05),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 16, 16, 'BUENO', 3.06, 3.28),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 16, 16, 'RAZONABLE', 3.29, 3.53),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 16, 16, 'DEBIL', 3.54, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 17, 17, 'EXCELENTE', NULL, 2.58),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 17, 17, 'MUY_BIEN', 2.59, 2.95),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 17, 17, 'BUENO', 2.96, 3.19),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 17, 17, 'RAZONABLE', 3.20, 3.43),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'MASCULINO', 17, 17, 'DEBIL', 3.44, NULL);
+
+-- Femenino (6-17 años) - MÁS BAJO ES MEJOR
+INSERT INTO normas_evaluacion (fuente, id_ejercicio, id_metrica, sexo, edad_min, edad_max, clasificacion, valor_min, valor_max) VALUES
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 6, 6, 'EXCELENTE', NULL, 3.98),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 6, 6, 'MUY_BIEN', 3.99, 4.56),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 6, 6, 'BUENO', 4.57, 4.91),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 6, 6, 'RAZONABLE', 4.92, 5.27),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 6, 6, 'DEBIL', 5.28, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 7, 7, 'EXCELENTE', NULL, 3.84),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 7, 7, 'MUY_BIEN', 3.85, 4.39),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 7, 7, 'BUENO', 4.40, 4.72),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 7, 7, 'RAZONABLE', 4.73, 5.05),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 7, 7, 'DEBIL', 5.06, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 8, 8, 'EXCELENTE', NULL, 3.72),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 8, 8, 'MUY_BIEN', 3.73, 4.23),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 8, 8, 'BUENO', 4.24, 4.55),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 8, 8, 'RAZONABLE', 4.56, 4.86),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 8, 8, 'DEBIL', 4.87, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 9, 9, 'EXCELENTE', NULL, 3.60),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 9, 9, 'MUY_BIEN', 3.61, 4.09),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 9, 9, 'BUENO', 4.10, 4.39),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 9, 9, 'RAZONABLE', 4.40, 4.68),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 9, 9, 'DEBIL', 4.69, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 10, 10, 'EXCELENTE', NULL, 3.50),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 10, 10, 'MUY_BIEN', 3.51, 3.97),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 10, 10, 'BUENO', 3.98, 4.25),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 10, 10, 'RAZONABLE', 4.26, 4.53),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 10, 10, 'DEBIL', 4.54, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 11, 11, 'EXCELENTE', NULL, 3.41),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 11, 11, 'MUY_BIEN', 3.42, 3.86),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 11, 11, 'BUENO', 3.87, 4.14),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 11, 11, 'RAZONABLE', 4.15, 4.41),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 11, 11, 'DEBIL', 4.42, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 12, 12, 'EXCELENTE', NULL, 3.34),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 12, 12, 'MUY_BIEN', 3.35, 3.79),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 12, 12, 'BUENO', 3.80, 4.06),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 12, 12, 'RAZONABLE', 4.07, 4.33),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 12, 12, 'DEBIL', 4.34, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 13, 13, 'EXCELENTE', NULL, 3.27),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 13, 13, 'MUY_BIEN', 3.28, 3.73),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 13, 13, 'BUENO', 3.74, 4.00),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 13, 13, 'RAZONABLE', 4.01, 4.28),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 13, 13, 'DEBIL', 4.29, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 14, 14, 'EXCELENTE', NULL, 3.20),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 14, 14, 'MUY_BIEN', 3.21, 3.67),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 14, 14, 'BUENO', 3.68, 3.96),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 14, 14, 'RAZONABLE', 3.97, 4.25),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 14, 14, 'DEBIL', 4.26, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 15, 15, 'EXCELENTE', NULL, 3.11),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 15, 15, 'MUY_BIEN', 3.12, 3.61),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 15, 15, 'BUENO', 3.62, 3.91),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 15, 15, 'RAZONABLE', 3.92, 4.22),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 15, 15, 'DEBIL', 4.23, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 16, 16, 'EXCELENTE', NULL, 3.03),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 16, 16, 'MUY_BIEN', 3.04, 3.55),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 16, 16, 'BUENO', 3.56, 3.87),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 16, 16, 'RAZONABLE', 3.88, 4.21),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 16, 16, 'DEBIL', 4.22, NULL),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 17, 17, 'EXCELENTE', NULL, 2.95),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 17, 17, 'MUY_BIEN', 2.96, 3.49),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 17, 17, 'BUENO', 3.50, 3.83),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 17, 17, 'RAZONABLE', 3.84, 4.19),
+    (@FUENTE_PROESP, @EJERCICIO_CARRERA_20M, @METRICA_CARRERA_20M, 'FEMENINO', 17, 17, 'DEBIL', 4.20, NULL);

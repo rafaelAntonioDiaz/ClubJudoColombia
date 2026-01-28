@@ -11,19 +11,18 @@ CREATE TABLE insignias (
 
 -- Relación Judoka <-> Insignias
 CREATE TABLE judoka_insignias (
-    id_logro BIGINT AUTO_INCREMENT PRIMARY KEY,
-    id_judoka BIGINT NOT NULL,
-    id_insignia BIGINT NOT NULL,
-    fecha_obtencion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id_logro BIGINT AUTO_INCREMENT PRIMARY KEY,
+  id_judoka BIGINT NOT NULL,
+  id_insignia BIGINT NOT NULL,
+  id_sensei BIGINT NULL,
+  fecha_obtencion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_logro_judoka FOREIGN KEY (id_judoka)
-        REFERENCES judokas(id_judoka) ON DELETE CASCADE,
-    CONSTRAINT fk_logro_insignia FOREIGN KEY (id_insignia)
-        REFERENCES insignias(id_insignia) ON DELETE CASCADE,
+  CONSTRAINT fk_logro_judoka FOREIGN KEY (id_judoka) REFERENCES judokas(id_judoka) ON DELETE CASCADE,
+  CONSTRAINT fk_logro_insignia FOREIGN KEY (id_insignia) REFERENCES insignias(id_insignia) ON DELETE CASCADE,
+  CONSTRAINT fk_logro_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE SET NULL,
 
-    UNIQUE KEY uk_judoka_insignia (id_judoka, id_insignia)
+  UNIQUE KEY uk_judoka_insignia (id_judoka, id_insignia)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- --- CARGA INICIAL DE INSIGNIAS (SHIN-GI-TAI) ---
 
 -- SHIN (Mente/Espíritu - Rojo/Fuego)

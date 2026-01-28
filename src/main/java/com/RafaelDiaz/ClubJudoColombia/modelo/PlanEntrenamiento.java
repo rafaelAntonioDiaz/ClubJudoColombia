@@ -28,7 +28,7 @@ public class PlanEntrenamiento implements Serializable {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_sensei_creador", nullable = false)
+    @JoinColumn(name = "id_sensei", nullable = false)
     private Sensei sensei;
 
     @Column(name = "nombre_plan", nullable = false, length = 200)

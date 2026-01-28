@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TokenInvitacionRepository;
+
 @Service
 public class AdmisionesService {
 
@@ -28,28 +28,34 @@ public class AdmisionesService {
     private final TraduccionService traduccionService;
     private final TokenInvitacionRepository tokenRepository;
     private final EmailService emailService;
+
+    // 1. NUEVA INYECCIÓN: Necesitamos el servicio que sabe crear planes
+    private final JudokaService judokaService;
+
     public AdmisionesService(JudokaRepository judokaRepository,
                              UsuarioRepository usuarioRepository,
                              DocumentoRequisitoRepository documentoRepository,
                              RolRepository rolRepository,
                              TraduccionService traduccionService,
                              TokenInvitacionRepository tokenRepository,
-                             EmailService emailService) {
-        this.judokaRepository = judokaRepository; // 3. Faltaba esta asignación
+                             EmailService emailService,
+                             JudokaService judokaService) { // 2. Agregado al constructor
+        this.judokaRepository = judokaRepository;
         this.usuarioRepository = usuarioRepository;
         this.documentoRepository = documentoRepository;
         this.rolRepository = rolRepository;
         this.traduccionService = traduccionService;
-        this.tokenRepository = tokenRepository;   // 4. Asignación agregada
-        this.emailService = emailService;         // 5. Asignación agregada
+        this.tokenRepository = tokenRepository;
+        this.emailService = emailService;
+        this.judokaService = judokaService; // 3. Asignación
     }
+
     /**
      * FASE 1: El Sensei inicia el proceso (Invita al aspirante)
      */
     @Transactional
     public void generarInvitacion(String nombre, String apellido, String email, String baseUrl) {
         // 1. Crear el Usuario (Inactivo y sin clave aún)
-        // Generamos un username temporal basado en el email
         Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
         nuevoUsuario.setEmail(email);
         nuevoUsuario.setActivo(false);
@@ -59,8 +65,13 @@ public class AdmisionesService {
         Judoka nuevoJudoka = new Judoka();
         nuevoJudoka.setUsuario(nuevoUsuario);
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
-        // Nota: Los datos físicos se llenarán en el Asistente.
+
         judokaRepository.save(nuevoJudoka);
+
+        // --- 4. EL DISPARADOR MÁGICO: Crear Plan de Evaluación Automático ---
+        // Justo después de guardar, le asignamos su carpeta de pruebas vacía.
+        judokaService.inicializarJudokaNuevo(nuevoJudoka);
+        // -------------------------------------------------------------------
 
         // 3. Generar el Token (Válido por 48 horas)
         TokenInvitacion token = new TokenInvitacion(nuevoJudoka, 48);
@@ -69,6 +80,7 @@ public class AdmisionesService {
         // 4. Enviar el correo con el Magic Link
         emailService.enviarInvitacionMagicLink(email, nombre, token.getToken(), baseUrl);
     }
+
     /**
      * Sube un documento (Waiver, Médico, etc)
      */
@@ -77,7 +89,6 @@ public class AdmisionesService {
         DocumentoRequisito doc = new DocumentoRequisito(judoka, tipo, urlArchivo);
         documentoRepository.save(doc);
 
-        // Si estaba RECHAZADO, vuelve a PENDIENTE para revisión
         if (judoka.getEstado() == EstadoJudoka.RECHAZADO) {
             judoka.setEstado(EstadoJudoka.PENDIENTE);
             judokaRepository.save(judoka);
@@ -94,36 +105,31 @@ public class AdmisionesService {
     }
 
     /**
-     * 🚀 EL GRAN TRIGGER: ACTIVACIÓN DEFINITIVA
+     * ACTIVACIÓN DEFINITIVA
      */
     @Transactional
     public void activarJudoka(Judoka judoka) {
         List<String> faltantes = new ArrayList<>();
 
-        // 1. Validar Waiver
         boolean tieneWaiver = judoka.getDocumentos().stream()
                 .anyMatch(d -> d.getTipo() == TipoDocumento.WAIVER);
 
         if (!tieneWaiver) {
-            faltantes.add(traduccionService.get("error.admisiones.falta_waiver")); // I18N
+            faltantes.add(traduccionService.get("error.admisiones.falta_waiver"));
         }
 
-        // 2. Validar Pago
         if (!judoka.isMatriculaPagada()) {
-            faltantes.add(traduccionService.get("error.admisiones.falta_pago")); // I18N
+            faltantes.add(traduccionService.get("error.admisiones.falta_pago"));
         }
 
-        // 3. Decisión
         if (!faltantes.isEmpty()) {
             throw new RuntimeException(traduccionService.get("error.admisiones.requisitos_incompletos") + ": " + String.join(" ", faltantes));
         }
 
-        // 4. ÉXITO: Activar
         judoka.setEstado(EstadoJudoka.ACTIVO);
 
-        // Actualizar Roles del Usuario
         Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
-                .orElseThrow(() -> new RuntimeException("Error Crítico: No existe el rol ROLE_JUDOKA en la base de datos."));
+                .orElseThrow(() -> new RuntimeException("Error Crítico: No existe el rol ROLE_JUDOKA."));
 
         Usuario usuario = judoka.getUsuario();
         usuario.setRoles(new java.util.HashSet<>(java.util.Set.of(rolJudoka)));
@@ -138,25 +144,23 @@ public class AdmisionesService {
         judoka.setEstado(EstadoJudoka.RECHAZADO);
         judokaRepository.save(judoka);
     }
-    @Transactional // <-- LA LLAVE DE LA VICTORIA (Correcto)
+
+    @Transactional
     public Judoka obtenerJudokaPorToken(String uuid) {
         TokenInvitacion token = tokenRepository.findByToken(uuid)
                 .orElseThrow(() -> new RuntimeException("Token inválido o no existe."));
 
-        // --- NUEVA BARRERA DE SEGURIDAD ---
         if (!token.isValido()) {
             throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
         }
-        // ----------------------------------
 
-        // Despertamos los datos perezosos antes de cerrar la conexión
         Judoka judoka = token.getJudoka();
-        judoka.getUsuario().getNombre(); // "Tocamos" el usuario
-
+        judoka.getUsuario().getNombre();
         return judoka;
     }
+
     /**
-     * Crea el aspirante y retorna el Token (Sin enviar email, ideal para tests)
+     * Helper para pruebas o creación manual
      */
     @Transactional
     public String crearAspiranteYGenerarToken(String nombre, String apellido, String email) {
@@ -170,14 +174,13 @@ public class AdmisionesService {
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
         judokaRepository.save(nuevoJudoka);
 
+        judokaService.inicializarJudokaNuevo(nuevoJudoka);
+
         TokenInvitacion token = new TokenInvitacion(nuevoJudoka, 48);
         tokenRepository.save(token);
         return token.getToken();
     }
 
-    /**
-     * Invalida el token una vez el aspirante completa su registro.
-     */
     @Transactional
     public void consumirToken(String uuid) {
         TokenInvitacion token = tokenRepository.findByToken(uuid)
