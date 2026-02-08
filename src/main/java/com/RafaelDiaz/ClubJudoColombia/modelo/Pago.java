@@ -23,6 +23,12 @@ public class Pago implements Serializable {
     @JoinColumn(name = "id_producto", nullable = false)
     private Producto producto;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_cuenta_cobro")
+    private CuentaCobro cuentaCobro;
+
+
+
     @Column(name = "monto_cop", nullable = false)
     private Double monto;
 
@@ -35,6 +41,7 @@ public class Pago implements Serializable {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false)
     private EstadoPago estado;
+
 
     // --- MODELO DE PAGOS: EFECTIVO / NEQUI ---
     @Enumerated(EnumType.STRING)
@@ -126,4 +133,6 @@ public class Pago implements Serializable {
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
     }
+    public CuentaCobro getCuentaCobro() { return cuentaCobro; }
+    public void setCuentaCobro(CuentaCobro cuentaCobro) { this.cuentaCobro = cuentaCobro; }
 }

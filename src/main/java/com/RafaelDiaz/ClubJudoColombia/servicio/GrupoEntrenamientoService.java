@@ -157,7 +157,7 @@ public class GrupoEntrenamientoService {
 
         String nombreFilter = (searchNombre != null && !searchNombre.trim().isEmpty()) ? searchNombre.toLowerCase() : null;
 
-        List<Judoka> miembros = judokaRepository.findByGrupoIdWithUsuario(grupoId);
+        List<Judoka> miembros = judokaRepository.findByGrupoIdWithAcudiente(grupoId);
 
         return miembros.stream()
                 .filter(j -> {

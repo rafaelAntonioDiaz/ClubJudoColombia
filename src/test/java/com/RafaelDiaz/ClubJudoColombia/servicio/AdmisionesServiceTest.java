@@ -58,7 +58,7 @@ class AdmisionesServiceTest {
         Usuario usuarioMock = new Usuario();
 
         Judoka aspirante = new Judoka();
-        aspirante.setUsuario(usuarioMock);
+        aspirante.setAcudiente(usuarioMock);
         aspirante.setMatriculaPagada(true);
         // Le agregamos el Waiver
         aspirante.getDocumentos().add(new DocumentoRequisito(aspirante, TipoDocumento.WAIVER, "path/file.pdf"));

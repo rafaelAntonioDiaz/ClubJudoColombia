@@ -46,24 +46,25 @@ public class InventarioService {
         articulo.setCantidadStock(articulo.getCantidadStock() - cantidad);
         articuloRepo.save(articulo);
 
-        // 2. Registrar Ingreso en Caja Automáticamente
+        // 2. Buscar o Crear Concepto Financiero
         ConceptoFinanciero conceptoVenta = conceptoRepo.findByTipo(TipoTransaccion.INGRESO).stream()
                 .filter(c -> c.getNombre().equalsIgnoreCase("Venta Tienda"))
                 .findFirst()
                 .orElseGet(() -> {
-                    // Si no existe el concepto, lo creamos al vuelo
-                    return finanzasService.guardarConcepto(new ConceptoFinanciero("Venta Tienda", TipoTransaccion.INGRESO, null));
+                    // Si no existe, lo creamos usando el servicio de Finanzas (o el repo directamente)
+                    return conceptoRepo.save(new ConceptoFinanciero("Venta Tienda", TipoTransaccion.INGRESO, BigDecimal.ZERO));
                 });
 
-        MovimientoCaja venta = new MovimientoCaja();
-        venta.setFecha(java.time.LocalDateTime.now());
-        venta.setTipo(TipoTransaccion.INGRESO);
-        venta.setConcepto(conceptoVenta);
-        venta.setMonto(articulo.getPrecioVenta().multiply(new BigDecimal(cantidad)));
-        venta.setMetodoPago(metodoPago);
-        venta.setObservacion("Venta de " + cantidad + "x " + articulo.getNombre());
-
-        finanzasService.registrarMovimiento(venta);
+        // 3. Registrar Ingreso en Caja (USANDO EL NUEVO MÉTODO DE 7 ARGUMENTOS)
+        finanzasService.registrarMovimiento(
+                articulo.getPrecioVenta().multiply(new BigDecimal(cantidad)), // 1. Monto
+                TipoTransaccion.INGRESO,                                      // 2. Tipo
+                metodoPago,                                                   // 3. Método
+                String.valueOf(conceptoVenta),                                                // 4. Concepto
+                null,                                                         // 5. Judoka (Null porque es venta anónima de tienda)
+                "Venta de " + cantidad + "x " + articulo.getNombre(),         // 6. Observación
+                null                                                          // 7. URL Soporte (Null por ahora)
+        );
     }
 
     @Transactional

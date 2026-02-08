@@ -1,21 +1,15 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.ParticipacionCompetencia;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Rol;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.NivelCompetencia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ResultadoCompetencia;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.ParticipacionCompetenciaRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.RolRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 @Service
 @Transactional
@@ -24,16 +18,21 @@ public class CompetenciaService {
     private final ParticipacionCompetenciaRepository competenciaRepo;
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
-    private final TraduccionService traduccionService; // <--- INYECCIÓN
-
+    private final TraduccionService traduccionService;
+    private final CompetenciaRepository competenciaRepository;
+    private final DocumentoRequisitoRepository documentoRepo;
     public CompetenciaService(ParticipacionCompetenciaRepository competenciaRepo,
                               UsuarioRepository usuarioRepository,
                               RolRepository rolRepository,
-                              TraduccionService traduccionService) {
+                              TraduccionService traduccionService,
+                              CompetenciaRepository competenciaRepository,
+                              DocumentoRequisitoRepository documentoRepo) {
         this.competenciaRepo = competenciaRepo;
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.traduccionService = traduccionService;
+        this.competenciaRepository = competenciaRepository;
+        this.documentoRepo = documentoRepo;
     }
 
     @Transactional(readOnly = true)
@@ -67,5 +66,63 @@ public class CompetenciaService {
 
     public void eliminarParticipacion(ParticipacionCompetencia p) {
         competenciaRepo.delete(p);
+    }
+    public Competencia guardarCompetenciaDefinicion(Competencia c) {
+        return competenciaRepository.save(c);
+    }
+
+    public List<Competencia> obtenerTorneosDisponibles() {
+        return competenciaRepository.findAll();
+    }
+
+    // Inscribir usando la Entidad Competencia (Reemplaza o sobrecarga el anterior)
+    public void inscribirJudokaEnCompetencia(Judoka judoka, Competencia competencia) {
+        ParticipacionCompetencia participacion = new ParticipacionCompetencia(judoka, competencia);
+        competenciaRepo.save(participacion);
+
+        // (Aquí puedes mantener la lógica de rol COMPETIDOR si deseas)
+    }
+
+    // --- GESTIÓN DE DOCUMENTOS (LO QUE PEDISTE) ---
+
+    public Map<String, String> obtenerEstadoDocumentos(Judoka judoka, Competencia competencia) {
+        Map<String, String> estado = new HashMap<>();
+        if (competencia.getDocumentosRequeridos() != null) {
+            for (String req : competencia.getDocumentosRequeridos()) {
+                String clave = competencia.getNombre() + " - " + req;
+                // Asumiendo que DocumentoRequisitoRepository tiene findByEventoAsociadoAndJudoka
+                // Si no, usar findByJudoka y filtrar en memoria
+                Optional<DocumentoRequisito> doc = documentoRepo.findByEventoAsociadoAndJudoka(clave, judoka);
+                estado.put(req, doc.map(DocumentoRequisito::getUrlArchivo).orElse(null));
+            }
+        }
+        return estado;
+    }
+
+    @Transactional
+    public void recibirDocumentoTorneo(Judoka judoka, Competencia competencia, String nombreRequisito, String urlArchivo) {
+        String claveEvento = competencia.getNombre() + " - " + nombreRequisito;
+
+        DocumentoRequisito doc = documentoRepo.findByEventoAsociadoAndJudoka(claveEvento, judoka)
+                .orElse(new DocumentoRequisito());
+
+        if (doc.getId() == null) { // Es nuevo
+            doc.setJudoka(judoka);
+            doc.setTipo(TipoDocumento.OTRO);
+            doc.setEventoAsociado(claveEvento);
+        }
+
+        doc.setUrlArchivo(urlArchivo);
+        doc.setValidadoPorSensei(false);
+        documentoRepo.save(doc);
+    }
+    // --- AGREGAR ESTE MÉTODO EN CompetenciaService ---
+
+    public List<Competencia> obtenerInscripcionesDeJudoka(Judoka judoka) {
+        // Usamos el repositorio de participaciones para buscar el historial
+        return competenciaRepo.findByJudokaOrderByFechaDesc(judoka)
+                .stream()
+                .map(ParticipacionCompetencia::getCompetencia)
+                .toList();
     }
 }

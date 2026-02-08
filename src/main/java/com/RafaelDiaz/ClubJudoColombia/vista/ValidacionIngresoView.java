@@ -6,6 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.FinanzasService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- INYECCIÓN
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.Component;
@@ -30,6 +31,7 @@ import com.vaadin.flow.server.streams.DownloadHandler;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.io.File;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,16 +43,17 @@ public class ValidacionIngresoView extends VerticalLayout {
     private final JudokaRepository judokaRepository;
     private final AdmisionesService admisionesService;
     private final TraduccionService traduccionService; // <--- I18n
-
+    private final FinanzasService finanzasService;
     private Grid<Judoka> gridAspirantes;
 
     @Autowired
     public ValidacionIngresoView(JudokaRepository judokaRepository,
                                  AdmisionesService admisionesService,
-                                 TraduccionService traduccionService) {
+                                 TraduccionService traduccionService, FinanzasService finanzasService) {
         this.judokaRepository = judokaRepository;
         this.admisionesService = admisionesService;
         this.traduccionService = traduccionService;
+        this.finanzasService = finanzasService;
 
         addClassName("admisiones-view");
         setSizeFull();
@@ -76,10 +79,6 @@ public class ValidacionIngresoView extends VerticalLayout {
                 .setHeader(traduccionService.get("generic.aspirante"))
                 .setAutoWidth(true)
                 .setSortable(true);
-
-        gridAspirantes.addColumn(new LocalDateTimeRenderer<>(Judoka::getFechaPreRegistro, "dd/MM/yyyy HH:mm"))
-                .setHeader(traduccionService.get("admisiones.grid.registrado"))
-                .setAutoWidth(true);
 
         gridAspirantes.addColumn(new ComponentRenderer<>(this::crearComponenteWaiver))
                 .setHeader(traduccionService.get("admisiones.grid.documentos"))
@@ -161,9 +160,11 @@ public class ValidacionIngresoView extends VerticalLayout {
             btnMarcar.addClickListener(e -> {
                 admisionesService.registrarPagoMatricula(judoka);
                 Notification.show(traduccionService.get("msg.success.payment_manual")).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                finanzasService.procesarPagoMensualidad(judoka,"EFECTIVO");
+                judoka.setMatriculaPagada(true);
+                judoka.setFechaVencimientoSuscripcion(LocalDate.now());
                 actualizarGrid();
             });
-
             HorizontalLayout hl = new HorizontalLayout(new Span(traduccionService.get("generic.no_registrado")), btnMarcar);
             hl.setAlignItems(Alignment.CENTER);
             return hl;

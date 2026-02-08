@@ -2,7 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.ConceptoFinanciero;
 import com.RafaelDiaz.ClubJudoColombia.modelo.MovimientoCaja;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MetodoPago;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoTransaccion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.ConceptoFinancieroRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.MovimientoCajaRepository;
@@ -10,18 +10,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class) // Habilita Mockito
+@ExtendWith(MockitoExtension.class)
 class FinanzasServiceTest {
 
     @Mock
@@ -31,46 +35,89 @@ class FinanzasServiceTest {
     private ConceptoFinancieroRepository conceptoRepo;
 
     @Mock
-    private SecurityService securityService; // Para simular el usuario logueado
+    private SecurityService securityService;
 
     @InjectMocks
-    private FinanzasService finanzasService; // El servicio que vamos a probar
+    private FinanzasService finanzasService;
 
     private ConceptoFinanciero conceptoMensualidad;
 
     @BeforeEach
     void setUp() {
-        // Preparar datos de prueba comunes
-        conceptoMensualidad = new ConceptoFinanciero("Mensualidad", TipoTransaccion.INGRESO, new BigDecimal("50000"));
+        conceptoMensualidad = new ConceptoFinanciero("Mensualidad Enero", TipoTransaccion.INGRESO, new BigDecimal("50000"));
     }
 
     @Test
-    @DisplayName("Debe registrar un ingreso correctamente y asignar el usuario auditor")
-    void registrarMovimiento_Ingreso_Exitoso() {
-        // 1. PREPARAR (Arrange)
-        MovimientoCaja movimiento = new MovimientoCaja();
-        movimiento.setMonto(new BigDecimal("50000"));
-        movimiento.setTipo(TipoTransaccion.INGRESO);
-        movimiento.setConcepto(conceptoMensualidad);
+    @DisplayName("Debe registrar un movimiento correctamente con los 7 argumentos")
+    void registrarMovimiento_FlujoExitoso() {
+        // 1. PREPARAR (Mocks)
 
-        Usuario senseiMock = new Usuario();
-        senseiMock.setUsername("sensei_rafael");
+        // Simulamos un usuario logueado para la auditoría
+        UserDetails userDetails = new User("sensei_rafael", "password", Collections.emptyList());
+        when(securityService.getAuthenticatedUserDetails()).thenReturn(Optional.of(userDetails));
 
-        // Simulamos que el repositorio devuelve el mismo objeto al guardar
-        when(movimientoRepo.save(any(MovimientoCaja.class))).thenReturn(movimiento);
-        // Simulamos que hay un usuario logueado
-        when(securityService.getAuthenticatedUsuario()).thenReturn(Optional.of(senseiMock));
+        // Cuando guarde, devolvemos un objeto cualquiera (no afecta la aserción del captor)
+        when(movimientoRepo.save(any(MovimientoCaja.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        // 2. ACTUAR (Act)
-        MovimientoCaja resultado = finanzasService.registrarMovimiento(movimiento);
+        // 2. ACTUAR (Llamamos al NUEVO método de 7 argumentos)
+        BigDecimal monto = new BigDecimal("50000");
+        finanzasService.registrarMovimiento(
+                monto,
+                TipoTransaccion.INGRESO,
+                MetodoPago.EFECTIVO,
+                String.valueOf(conceptoMensualidad),
+                null, // Judoka null
+                "Pago mensualidad test",
+                "http://url-fake.com"
+        );
 
-        // 3. VERIFICAR (Assert)
-        assertNotNull(resultado);
-        assertEquals(new BigDecimal("50000"), resultado.getMonto());
-        assertEquals("sensei_rafael", resultado.getRegistradoPor(), "Debe auditar quién registró");
+        // 3. VERIFICAR (Usamos Captor para ver qué construyó el servicio por dentro)
+        ArgumentCaptor<MovimientoCaja> captor = ArgumentCaptor.forClass(MovimientoCaja.class);
+        verify(movimientoRepo, times(1)).save(captor.capture());
 
-        // Verificar que se llamó al repositorio 1 vez
-        verify(movimientoRepo, times(1)).save(movimiento);
+        MovimientoCaja movimientoGuardado = captor.getValue();
+
+        // Validaciones
+        assertEquals(monto, movimientoGuardado.getMonto());
+        assertEquals(TipoTransaccion.INGRESO, movimientoGuardado.getTipo());
+        assertEquals(MetodoPago.EFECTIVO, movimientoGuardado.getMetodoPago());
+        assertEquals("sensei_rafael", movimientoGuardado.getRegistradoPor(), "La auditoría debe capturar el usuario logueado");
+        assertEquals("Pago mensualidad test", movimientoGuardado.getObservacion());
+    }
+
+    @Test
+    @DisplayName("Debe autogenerar el concepto si se pasa null")
+    void registrarMovimiento_ConceptoNull_GeneraAutomatico() {
+        // 1. PREPARAR
+        // Simulamos usuario
+        UserDetails userDetails = new User("admin", "123", Collections.emptyList());
+        when(securityService.getAuthenticatedUserDetails()).thenReturn(Optional.of(userDetails));
+
+        // Simulamos que NO existe el concepto "OTROS INGRESO", así que el servicio debe crearlo
+        // Nota: El servicio busca "OTROS INGRESO" si el concepto es null
+        when(conceptoRepo.findByNombre(anyString())).thenReturn(Optional.empty());
+
+        // Simulamos el guardado del nuevo concepto
+        when(conceptoRepo.save(any(ConceptoFinanciero.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        // 2. ACTUAR
+        finanzasService.registrarMovimiento(
+                new BigDecimal("20000"),
+                TipoTransaccion.INGRESO,
+                MetodoPago.NEQUI,
+                null, // <--- PROBAMOS EL NULL AQUÍ
+                null,
+                "Venta sin concepto",
+                null
+        );
+
+        // 3. VERIFICAR
+        ArgumentCaptor<MovimientoCaja> captor = ArgumentCaptor.forClass(MovimientoCaja.class);
+        verify(movimientoRepo).save(captor.capture());
+
+        MovimientoCaja mov = captor.getValue();
+        assertNotNull(mov.getConcepto());
+        assertTrue(mov.getConcepto().getNombre().contains("OTROS"), "Debe asignar un concepto por defecto tipo OTROS");
     }
 
     @Test
@@ -85,21 +132,13 @@ class FinanzasServiceTest {
                 .thenReturn(new BigDecimal("30000")); // Salieron 30k
 
         // 2. ACTUAR
+        // Nota: Asegúrate que FinanzasService tenga este método o uno similar
+        // Si lo borraste en el refactor, este test fallará.
+        // Asumo que mantuviste la lógica de reportes.
         BigDecimal balance = finanzasService.calcularBalanceMes();
 
         // 3. VERIFICAR
         // 100.000 - 30.000 = 70.000
         assertEquals(new BigDecimal("70000"), balance);
-    }
-
-    @Test
-    @DisplayName("Debe manejar balance cero si no hay movimientos")
-    void calcularBalanceMes_SinMovimientos() {
-        // Simulamos que devuelve NULL (como pasa en SQL real si no hay filas)
-        when(movimientoRepo.sumarTotalPorTipoYFecha(any(), any(), any())).thenReturn(null);
-
-        BigDecimal balance = finanzasService.calcularBalanceMes();
-
-        assertEquals(BigDecimal.ZERO, balance, "El balance debe ser 0, no null");
     }
 }

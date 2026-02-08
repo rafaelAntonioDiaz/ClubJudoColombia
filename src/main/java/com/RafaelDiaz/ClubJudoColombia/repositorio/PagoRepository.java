@@ -15,4 +15,5 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
     List<Pago> findByMetodoPago(MetodoPago metodoPago);
     // Para buscar el historial de pagos de un usuario
     List<Pago> findByUsuarioOrderByFechaCreacionDesc(Usuario usuario);
+
 }

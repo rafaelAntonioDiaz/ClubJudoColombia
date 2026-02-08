@@ -14,7 +14,13 @@ public interface CampoEntrenamientoRepository extends JpaRepository<CampoEntrena
     // Para el perfil del Judoka
     List<CampoEntrenamiento> findByJudokaOrderByFechaInicioDesc(Judoka judoka);
 
-    // Para el Sensei (Gestión con datos cargados)
-    @Query("SELECT c FROM CampoEntrenamiento c JOIN FETCH c.judoka j JOIN FETCH j.usuario ORDER BY c.fechaInicio DESC")
+    /**
+     * Para el Sensei (Gestión con datos cargados de forma optimizada)
+     * ARMONIZADO: Se cambia 'j.usuario' por 'j.acudiente' para cumplir con el nuevo modelo.
+     */
+    @Query("SELECT c FROM CampoEntrenamiento c " +
+            "JOIN FETCH c.judoka j " +
+            "JOIN FETCH j.acudiente " + // <--- CAMBIO CLAVE
+            "ORDER BY c.fechaInicio DESC")
     List<CampoEntrenamiento> findAllWithDetails();
 }

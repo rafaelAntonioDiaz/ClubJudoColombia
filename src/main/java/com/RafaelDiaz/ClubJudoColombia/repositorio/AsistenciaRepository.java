@@ -14,14 +14,19 @@ import java.util.List;
 @Repository
 public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
 
-    // Método flexible por Objetos (Usado por el Servicio)
     boolean existsByJudokaAndSesion(Judoka judoka, SesionProgramada sesion);
 
-    // Método por IDs (Legacy/Optimización)
     boolean existsByJudokaIdAndSesionId(Long judokaId, Long sesionId);
 
-    @Query("SELECT a FROM Asistencia a JOIN FETCH a.judoka j JOIN FETCH j.usuario WHERE a.sesion.id = :sesionId")
-    List<Asistencia> findBySesionIdWithDetails(@Param("sesionId") Long sesionId);
+    /**
+     * Busca la asistencia de una sesión cargando los datos del Judoka y su Acudiente.
+     * ARMONIZADO: Se cambia 'j.usuario' por 'j.acudiente' y el método a 'WithAcudiente'.
+     */
+    @Query("SELECT a FROM Asistencia a " +
+            "JOIN FETCH a.judoka j " +
+            "JOIN FETCH j.acudiente " + // <--- CAMBIO CLAVE: Referencia al nuevo campo
+            "WHERE a.sesion.id = :sesionId")
+    List<Asistencia> findBySesionIdWithAcudiente(@Param("sesionId") Long sesionId);
 
     @Query(value = "SELECT " +
             "COUNT(CASE WHEN a.presente = true THEN 1 END) as asistencias, " +
@@ -34,4 +39,14 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
             @Param("id_sensei") Long senseiId, @Param("inicio") LocalDateTime inicio);
 
     long countByJudoka(Judoka judoka);
+
+    /**
+     * Listado completo de asistencia con detalles del acudiente.
+     * ARMONIZADO: Cambio de j.usuario a j.acudiente.
+     */
+    @Query("SELECT a FROM Asistencia a " +
+            "JOIN FETCH a.judoka j " +
+            "JOIN FETCH j.acudiente " +
+            "ORDER BY a.fechaHoraMarcacion DESC")
+    List<Asistencia> findAllWithDetails();
 }

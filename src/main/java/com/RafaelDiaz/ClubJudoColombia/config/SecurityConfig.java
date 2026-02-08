@@ -58,6 +58,7 @@ public class SecurityConfig extends VaadinWebSecurity {
                                 "/registro/**",  // Permite /registro y /registro/{token}
                                 "/images/**",
                                 "/icons/**",
+                                "/acceso-dojo/**",
                                 "/manifest.webmanifest",
                                 "/sw.js",
                                 "/offline.html"

@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.modelo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
  * Entidad de Perfil que representa a un Entrenador (Sensei).
@@ -49,6 +50,15 @@ public class Sensei implements Serializable {
     @Lob
     @Column(name = "biografia", columnDefinition = "TEXT")
     private String biografia;
+    @Column(name = "saldo_wallet")
+    private BigDecimal saldoWallet = BigDecimal.ZERO; // Aquí acumulamos los 5.000 COP
+
+    @Column(name = "total_ganado_historico")
+    private BigDecimal totalGanadoHistorico = BigDecimal.ZERO; // Para estadísticas (cuánto ha generado en total)
+
+    @Column(name = "datos_bancarios_nequi")
+    private String datosNequi; // Para saber a dónde girarle su plata
+
 
     // --- Constructores ---
 
@@ -112,7 +122,19 @@ public class Sensei implements Serializable {
         this.biografia = biografia;
     }
 
-    // ... (hashCode y equals no cambian) ...
+    public void abonarComision(BigDecimal monto) {
+        if (monto == null) return;
+        this.saldoWallet = this.saldoWallet.add(monto);
+        this.totalGanadoHistorico = this.totalGanadoHistorico.add(monto);
+    }
+
+    public void descontarRetiro(BigDecimal monto) {
+        if (saldoWallet.compareTo(monto) >= 0) {
+            this.saldoWallet = this.saldoWallet.subtract(monto);
+        } else {
+            throw new RuntimeException("Saldo insuficiente en la billetera del Sensei.");
+        }
+    }
 
     @Override
     public int hashCode() {
@@ -133,5 +155,9 @@ public class Sensei implements Serializable {
             return usuario.getId().equals(that.usuario != null ? that.usuario.getId() : null);
         }
         return id != null ? id.equals(that.id) : super.equals(obj);
+    }
+
+    public BigDecimal getSaldoWallet() {
+        return saldoWallet;
     }
 }

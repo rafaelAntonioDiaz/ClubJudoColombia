@@ -179,33 +179,34 @@ public class TesoreriaView extends VerticalLayout {
                 return;
             }
 
-            MovimientoCaja mov = new MovimientoCaja();
-            mov.setTipo(TipoTransaccion.INGRESO);
-            mov.setConcepto(conceptoSelect.getValue());
-            mov.setMonto(montoField.getValue());
-            mov.setMetodoPago(metodoPagoSelect.getValue());
-            mov.setJudoka(judokaSelect.getValue());
+            // --- CORRECCIÓN: Preparar datos para el nuevo método de FinanzasService ---
 
             // Unimos la observación con el código de Nequi si existe
             String notaFinal = observacion.getValue();
             if (metodoPagoSelect.getValue() == MetodoPago.NEQUI) {
                 notaFinal = "Ref. Nequi: " + referenciaField.getValue() + " | " + notaFinal;
             }
-            mov.setObservacion(notaFinal);
-            mov.setUrlSoporte(urlSoporteIngreso[0]); // La URL del pantallazo
 
-            MovimientoCaja guardado = finanzasService.registrarMovimiento(mov);
+            // LLAMADA ACTUALIZADA (7 ARGUMENTOS)
+            MovimientoCaja guardado = finanzasService.registrarMovimiento(
+                    montoField.getValue(),              // 1. Monto
+                    TipoTransaccion.INGRESO,            // 2. Tipo
+                    metodoPagoSelect.getValue(),        // 3. Método
+                    String.valueOf(conceptoSelect.getValue()),          // 4. Concepto
+                    judokaSelect.getValue(),            // 5. Judoka (Aquí sí aplica)
+                    notaFinal,                          // 6. Observación
+                    urlSoporteIngreso[0]                // 7. URL Soporte
+            );
 
             // --- LÓGICA DE NOTIFICACIÓN ---
             if (metodoPagoSelect.getValue() == MetodoPago.EFECTIVO) {
-                Notification.show("Ingreso en efectivo registrado. Generando PDF y enviando por email...").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                // Nota: Aquí el finanzasService internamente llamaría a EmailService.enviarRecibo(judoka, pdf)
+                Notification.show("Ingreso en efectivo registrado. Generando PDF...").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 descargarRecibo(guardado);
             } else {
                 Notification.show("Pago por Nequi validado exitosamente.").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             }
 
-            // Limpiar formulario
+            // Limpiar formulario...
             montoField.clear();
             observacion.clear();
             referenciaField.clear();
@@ -295,18 +296,21 @@ public class TesoreriaView extends VerticalLayout {
                 return;
             }
 
-            MovimientoCaja mov = new MovimientoCaja();
-            mov.setTipo(TipoTransaccion.EGRESO);
-            mov.setConcepto(conceptoSelect.getValue());
-            mov.setMonto(montoField.getValue());
-            mov.setMetodoPago(metodoPagoSelect.getValue());
-            mov.setObservacion(observacion.getValue());
-            mov.setUrlSoporte(urlSoporteNube[0]); // Guardamos la URL de Cloudflare
-
-            finanzasService.registrarMovimiento(mov);
+            // --- CORRECCIÓN: LLAMADA ACTUALIZADA (7 ARGUMENTOS) ---
+            finanzasService.registrarMovimiento(
+                    montoField.getValue(),          // 1. Monto
+                    TipoTransaccion.EGRESO,         // 2. Tipo
+                    metodoPagoSelect.getValue(),    // 3. Método
+                    String.valueOf(conceptoSelect.getValue()),      // 4. Concepto
+                    null,                           // 5. Judoka (Es null porque es un gasto)
+                    observacion.getValue(),         // 6. Observación
+                    urlSoporteNube[0]               // 7. URL Soporte
+            );
 
             Notification.show(traduccionService.get("tesoreria.notificacion.gasto_registrado"))
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+            // Limpiar formulario...
             montoField.clear();
             observacion.clear();
             upload.clearFileList();

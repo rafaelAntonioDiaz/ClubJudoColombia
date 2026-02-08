@@ -20,6 +20,7 @@ java {
 }
 
 repositories {
+    mavenLocal()
 	mavenCentral()
 	maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
 	maven { setUrl("https://repo.spring.io/milestone") }
@@ -57,6 +58,12 @@ dependencies {
     // ---- Vaadin ----
     // Importa la lista de versiones correctas de Vaadin
     implementation enforcedPlatform("com.vaadin:vaadin-bom:$vaadinVersion")
+
+    implementation platform("com.vaadin:vaadin-bom:$vaadinVersion")
+    // upload component specifically
+    implementation("com.vaadin:vaadin-upload-flow")
+
+    implementation("com.vaadin:vaadin-core:$vaadinVersion")
     // El "starter" que integra Vaadin con Spring Boot
     implementation 'com.vaadin:vaadin-spring-boot-starter'
     // Para la seguridad (autenticación, autorización y encriptación)

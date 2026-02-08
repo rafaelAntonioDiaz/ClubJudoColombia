@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,16 +51,13 @@ public class JudokaService {
         this.senseiRepository = senseiRepository;
     }
 
-    // --- MÉTODOS BÁSICOS ---
 
-    @Transactional(readOnly = true)
-    public Optional<Judoka> findByUsuario(Usuario usuario) {
-        return judokaRepository.findByUsuario(usuario);
+    // Método adicional útil para el nuevo modelo
+    public List<Judoka> findAllJudokasByAcudiente(Usuario acudiente) {
+        return judokaRepository.findByAcudiente(acudiente);
     }
-
-    @Transactional(readOnly = true)
-    public List<Judoka> findAllJudokasWithUsuario() {
-        return judokaRepository.findAll();
+    public List<Judoka> obtenerJudokasPorAcudiente(Usuario usuario) {
+        return judokaRepository.findByAcudiente(usuario);
     }
 
     @Transactional
@@ -187,6 +185,18 @@ public class JudokaService {
         agregarPruebaAlPlan(plan, "ejercicio.salto_horizontal_proesp.nombre", 4);
     }
 
+    @Transactional(readOnly = true)
+    public List<Judoka> findByMecenas(Mecenas mecenas) {
+        return judokaRepository.findAll().stream()
+                .filter(j -> j.getMecenas() != null && j.getMecenas().equals(mecenas))
+                .collect(Collectors.toList());
+    }
+    @Transactional(readOnly = true)
+    public List<Judoka> findByAcudiente(Usuario acudiente) {
+        return judokaRepository.findAll().stream()
+                .filter(j -> j.getAcudiente() != null && j.getAcudiente().equals(acudiente))
+                .collect(Collectors.toList());
+    }
     private void agregarPruebaAlPlan(PlanEntrenamiento plan, String keyPrueba, int orden) {
         Optional<PruebaEstandar> pruebaOpt = pruebaRepository.findByNombreKey(keyPrueba);
         if (pruebaOpt.isPresent()) {
@@ -196,5 +206,15 @@ public class JudokaService {
             ej.setOrden(orden);
             ejercicioPlanificadoRepository.save(ej);
         }
+    }
+    /**
+     * Calcula el monto total mensual para el SaaS.
+     * Estructura: 15.000 COP (Plataforma/SaaS) + Mensualidad pactada con el Sensei.
+     */
+    public BigDecimal calcularMontoMensualTotal(Judoka judoka) {
+        BigDecimal tasaPlataforma = new BigDecimal("15000");
+        BigDecimal mensualidadSensei = judoka.getMontoMensualidad() != null ?
+                judoka.getMontoMensualidad() : BigDecimal.ZERO;
+        return tasaPlataforma.add(mensualidadSensei);
     }
 }

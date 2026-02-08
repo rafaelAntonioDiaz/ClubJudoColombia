@@ -6,6 +6,11 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.ConfiguracionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.Currency;
+import java.util.Locale;
+
 @Service
 public class ConfiguracionService {
 
@@ -39,4 +44,44 @@ public class ConfiguracionService {
     public boolean esClub() { return obtenerConfiguracion().getNivel() == NivelOrganizacional.CLUB; }
     public boolean esLiga() { return obtenerConfiguracion().getNivel() == NivelOrganizacional.LIGA; }
     public boolean esFederacion() { return obtenerConfiguracion().getNivel() == NivelOrganizacional.FEDERACION; }
+    // Reemplaza los métodos helper al final de ConfiguracionService.java
+    public BigDecimal getAsBigDecimal(String clave) {
+        ConfiguracionSistema config = obtenerConfiguracion();
+        return switch (clave) {
+            case "FIN_SAAS_CANON_FIJO" -> config.getFIN_SAAS_CANON_FIJO();
+            case "FIN_SENSEI_MASTER_MENSUALIDAD" -> config.getFIN_SENSEI_MASTER_MENSUALIDAD();
+            case "FIN_MATRICULA_ANUAL" -> config.getFIN_MATRICULA_ANUAL();
+            case "COMISION_SENSEI_MENSUALIDAD" -> config.getCOMISION_SENSEI_MENSUALIDAD();
+            default -> BigDecimal.ZERO;
+        };
+    }
+
+    public NumberFormat obtenerFormatoMoneda() {
+        ConfiguracionSistema config = obtenerConfiguracion();
+        String codigoMoneda = config.getMoneda() != null ? config.getMoneda() : "COP";
+
+        // 1. Intentamos obtener la moneda del sistema
+        Currency currency;
+        try {
+            currency = Currency.getInstance(codigoMoneda);
+        } catch (Exception e) {
+            currency = Currency.getInstance("COP"); // Fallback seguro
+        }
+
+        // 2. Usamos el Locale del usuario o defecto (Podrías inyectar User Locale aquí)
+        NumberFormat formato = NumberFormat.getCurrencyInstance(Locale.getDefault());
+        formato.setCurrency(currency);
+
+        // 3. Regla de Negocio: Si es COP o CLP (Pesos sin centavos), quitamos decimales
+        if ("COP".equals(codigoMoneda) || "CLP".equals(codigoMoneda) || "JPY".equals(codigoMoneda)) {
+            formato.setMaximumFractionDigits(0);
+        } else {
+            formato.setMaximumFractionDigits(2); // USD, EUR usan centavos
+        }
+
+        return formato;
+    }
+    public int getDiaVencimiento() {
+        return obtenerConfiguracion().getFIN_DIA_VENCIMIENTO().intValue();
+    }
 }

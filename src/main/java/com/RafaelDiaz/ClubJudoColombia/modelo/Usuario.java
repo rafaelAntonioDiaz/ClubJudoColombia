@@ -2,6 +2,8 @@ package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -57,7 +59,20 @@ public class Usuario implements Serializable {
     @Column(name = "email", length = 150)
     private String email;
 
+    /**
+     * Lista de Judokas bajo la responsabilidad de este Usuario.
+     * Puede ser él mismo (si es adulto) o sus hijos/representados.
+     * Reemplaza la lógica 1 a 1 anterior.
+     */
+    @OneToMany(mappedBy = "acudiente", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<Judoka> judokasAcudidos = new ArrayList<>();
 
+    /**
+     * Perfil de Mecenas asociado (Opcional).
+     * Un usuario puede ser Acudiente y Mecenas a la vez.
+     */
+    @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Mecenas perfilMecenas;
     /**
      * Estado del usuario (activo, inactivo, pendiente de verificación).
      * Usamos un booleano para simplicidad (true = activo, false = inactivo).
@@ -170,7 +185,21 @@ public class Usuario implements Serializable {
     public void setActivo(boolean activo) {
         this.activo = activo;
     }
+    public List<Judoka> getJudokasAcudidos() {
+        return judokasAcudidos;
+    }
 
+    public void setJudokasAcudidos(List<Judoka> judokasAcudidos) {
+        this.judokasAcudidos = judokasAcudidos;
+    }
+
+    public Mecenas getPerfilMecenas() {
+        return perfilMecenas;
+    }
+
+    public void setPerfilMecenas(Mecenas perfilMecenas) {
+        this.perfilMecenas = perfilMecenas;
+    }
 
 
 

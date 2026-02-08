@@ -35,6 +35,9 @@ CREATE TABLE senseis (
          anos_practica INT NULL,
          biografia TEXT NULL,
          ruta_certificaciones_archivo VARCHAR(255) NULL,
+         saldo_wallet NUMERIC,
+         total_ganado_historico NUMERIC,
+         datos_bancarios_nequi VARCHAR(20),
          CONSTRAINT fk_senseis_user FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
@@ -52,14 +55,16 @@ CREATE TABLE judokas (
          es_competidor_activo TINYINT(1) DEFAULT 0,
          estado ENUM('PENDIENTE', 'EN_REVISION', 'ACTIVO', 'INACTIVO', 'RECHAZADO') NOT NULL DEFAULT 'ACTIVO',
          eps VARCHAR(100),
-         matricula_pagada TINYINT(1) DEFAULT 0,
-         fecha_pre_registro DATETIME NULL,
+         ruta_certificado_eps VARCHAR(255),
          celular VARCHAR(20),
          nombre_acudiente VARCHAR(255),
          telefono_acudiente VARCHAR(20),
-         ruta_certificado_eps VARCHAR(255),
          ruta_autorizacion_waiver VARCHAR(255),
          url_foto_perfil VARCHAR(255),
+         fecha_pre_registro DATETIME NULL,
+         matricula_pagada TINYINT(1) DEFAULT 0,
+         fecha_vencimiento_suscripcion DATETIME NULL,
+         suscripcion_activa TINYINT(1) DEFAULT 0,
          CONSTRAINT fk_judokas_user FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
          CONSTRAINT fk_judokas_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE SET NULL
 );
@@ -419,3 +424,20 @@ CREATE TABLE inventario_articulos (
                                       precio_venta DECIMAL(12,2) NOT NULL,
                                       precio_costo DECIMAL(12,2) NOT NULL
 );
+-- Tabla para la entidad Reflexion.java
+CREATE TABLE reflexiones (
+                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                             id_judoka BIGINT NOT NULL,
+                             contenido TEXT NOT NULL,
+                             fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                             fecha_ultima_edicion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    -- Integridad referencial
+                             CONSTRAINT fk_reflexion_judoka
+                                 FOREIGN KEY (id_judoka)
+                                     REFERENCES judokas(id_judoka)
+                                     ON DELETE CASCADE
+);
+
+-- Opcional: Índice para buscar rápidamente las reflexiones de un alumno
+CREATE INDEX idx_reflexiones_judoka ON reflexiones(id_judoka);

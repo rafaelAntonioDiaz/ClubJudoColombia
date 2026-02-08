@@ -20,6 +20,10 @@ public class ParticipacionCompetencia {
     private String sede;
     private LocalDate fecha;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_competencia") // Puede ser nullable por ahora para compatibilidad
+    private Competencia competencia;
+
     @Enumerated(EnumType.STRING)
     private NivelCompetencia nivel;
 
@@ -44,6 +48,18 @@ public class ParticipacionCompetencia {
         this.urlVideo = video;
     }
 
+    public ParticipacionCompetencia(Judoka judoka, Competencia competencia) {
+        this.judoka = judoka;
+        this.competencia = competencia;
+        // Sincronizamos campos para compatibilidad con reportes/vistas históricas
+        if (competencia != null) {
+            this.nombreCampeonato = competencia.getNombre();
+            this.sede = competencia.getLugar();
+            this.fecha = competencia.getFechaInicio();
+            this.nivel = competencia.getNivel();
+        }
+        this.resultado = ResultadoCompetencia.PARTICIPACION;
+    }
     // Lógica de Puntos
     public int getPuntosCalculados() {
         if (nivel == null || resultado == null) return 0;
@@ -69,4 +85,6 @@ public class ParticipacionCompetencia {
     public void setUrlFoto(String urlFoto) { this.urlFoto = urlFoto; }
     public String getUrlVideo() { return urlVideo; }
     public void setUrlVideo(String urlVideo) { this.urlVideo = urlVideo; }
+    public Competencia getCompetencia() { return competencia; }
+    public void setCompetencia(Competencia competencia) { this.competencia = competencia; }
 }

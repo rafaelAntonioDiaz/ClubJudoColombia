@@ -159,7 +159,7 @@ public class SenseiCampeonatosView extends VerticalLayout {
         MultiSelectComboBox<Judoka> judokas =
                 new MultiSelectComboBox<>(traduccionService.get("campeonatos.field.seleccionar_atletas"));
         Long miSenseiId = securityService.getSenseiIdActual();
-        judokas.setItems(judokaRepository.findBySenseiIdWithUsuario(miSenseiId));
+        judokas.setItems(judokaRepository.findBySenseiIdWithAcudiente(miSenseiId));
         judokas.setItemLabelGenerator(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido());
         judokas.setWidthFull();
 

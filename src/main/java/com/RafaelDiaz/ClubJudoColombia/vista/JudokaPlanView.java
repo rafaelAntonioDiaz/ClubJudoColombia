@@ -30,9 +30,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("mis-planes")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR", "ROLE_ACUDIENTE"})
 @PageTitle("Mis Tareas | Club Judo Colombia")
 @CssImport("./styles/plan-judoka.css")
 public class JudokaPlanView extends JudokaLayout {
@@ -41,6 +42,7 @@ public class JudokaPlanView extends JudokaLayout {
     private final PlanEntrenamientoService planService;
     private final EjecucionTareaService ejecucionService;
     private final EjecucionTareaRepository ejecucionRepository;
+    private final JudokaRepository judokaRepository;
     private final TraduccionService traduccionService;
 
     // Componentes UI
@@ -61,13 +63,15 @@ public class JudokaPlanView extends JudokaLayout {
                           EjecucionTareaService ejecucionService,
                           EjecucionTareaRepository ejecucionRepository,
                           TraduccionService traduccionService,
-                          AccessAnnotationChecker accessChecker) {
-        super(securityService, accessChecker, traduccionService);
+                          AccessAnnotationChecker accessChecker,
+                          JudokaRepository judokaRepository) {
+        super(securityService, accessChecker, traduccionService, judokaRepository);
         this.securityService = securityService;
         this.planService = planService;
         this.ejecucionService = ejecucionService;
         this.ejecucionRepository = ejecucionRepository;
         this.traduccionService = traduccionService;
+        this.judokaRepository = judokaRepository;
 
         initJudoka();
         buildUI();

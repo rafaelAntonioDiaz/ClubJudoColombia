@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -67,17 +68,20 @@ public class SecurityService {
         return senseiRepository.findByUsuario(usuarioOpt.get());
     }
 
-    /**
-     * Busca el perfil de 'Judoka' del usuario actualmente logueado.
-     */
+
     @Transactional(readOnly = true)
     public Optional<Judoka> getAuthenticatedJudoka() {
-        Optional<Usuario> usuarioOpt = getAuthenticatedUsuario();
-        if (usuarioOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        return judokaRepository.findByUsuario(usuarioOpt.get());
+        return getAuthenticatedUserDetails().flatMap(userDetails -> {
+            return usuarioRepository.findByUsername(userDetails.getUsername())
+                    .flatMap(usuario -> {
+                        // Usamos el método armonizado
+                        List<Judoka> judokas = judokaRepository.findByAcudiente(usuario);
+                        // Retornamos el primero para no romper las vistas actuales
+                        return judokas.stream().findFirst();
+                    });
+        });
     }
+
     public boolean isSensei() {
         return getAuthenticatedUserDetails()
                 .map(user -> user.getAuthorities().stream()

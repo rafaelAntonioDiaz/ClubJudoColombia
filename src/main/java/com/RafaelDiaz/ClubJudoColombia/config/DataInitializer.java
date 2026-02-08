@@ -127,7 +127,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             crearTareasAcondicionamiento(kiuzo);
 
             PlanEntrenamiento planFisico = crearPlanAcondicionamiento(kiuzo);
-            PlanEntrenamiento planEvaluacion = crearPlanEvaluacion(kiuzo);
+            PlanEntrenamiento planEvaluacion = crearPlanEvaluacion(planFisico);
 
             programarSesiones(kiuzo);
 
@@ -358,9 +358,12 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         System.out.println(">>> VERIFICANDO ROLES DEL SISTEMA...");
         crearRolSiNoExiste("ROLE_SENSEI");
         crearRolSiNoExiste("ROLE_JUDOKA");
+        crearRolSiNoExiste("ROLE_JUDOKA_ADULTO");
         crearRolSiNoExiste("ROLE_COMPETIDOR");
         crearRolSiNoExiste("ROLE_ADMIN");
         crearRolSiNoExiste("ROLE_MASTER");
+        crearRolSiNoExiste("ROLE_ACUDIENTE");
+
 
     }
 
@@ -838,7 +841,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         u = usuarioService.saveUsuario(u, "123456");
 
         Judoka j = new Judoka();
-        j.setUsuario(u);
+        j.setAcudiente(u);
         j.setSensei(sensei);
         j.setFechaNacimiento(LocalDate.of(anio, mes, dia));
         j.setSexo(sexo);
@@ -931,30 +934,57 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         return planService.guardarPlan(plan);
     }
-    private PlanEntrenamiento crearPlanEvaluacion(Sensei sensei) {
-        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores").orElseThrow();        PlanEntrenamiento plan = new PlanEntrenamiento();
+    /**
+     * Crea el plan de evaluación SJFT.
+     * ARMONIZADO: Ahora recibe un PlanEntrenamiento de base y retorna el nuevo plan creado.
+     */
+    private PlanEntrenamiento crearPlanEvaluacion(PlanEntrenamiento planBase) {
+        Sensei sensei = planBase.getSensei();
+
+        // 1. Búsqueda segura del grupo (si no existe, toma el primero disponible o null)
+        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores")
+                .orElseGet(() -> {
+                    System.out.println("⚠️ Advertencia: Grupo 'Selección Mayores' no encontrado. Usando fallback.");
+                    return grupoRepository.findAll().stream().findFirst().orElse(null);
+                });
+
+        // 2. Configuración del Plan
+        PlanEntrenamiento plan = new PlanEntrenamiento();
         plan.setNombre("Test SJFT - Trimestre 1");
         plan.setSensei(sensei);
         plan.setFechaAsignacion(LocalDate.now());
         plan.setEstado(EstadoPlan.ACTIVO);
         plan.setTipoSesion(TipoSesion.EVALUACION);
-        plan.getGruposAsignados().add(grupo);
+
+        if (grupo != null) {
+            plan.getGruposAsignados().add(grupo);
+        }
+
+        // Guardado inicial para generar ID
         plan = planService.guardarPlan(plan);
 
-        PruebaEstandar sjft = pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre")
+        // 3. Búsqueda ROBUSTA de la prueba SJFT (Eliminado el orElseThrow que causaba el crash)
+        final PlanEntrenamiento finalPlan = plan;
+        pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre")
                 .or(() -> pruebaEstandarRepository.findByNombreKey("ejercicio.sjft"))
-                .orElseThrow(() -> new RuntimeException("Error: Datos V2 no encontrados (SJFT)"));
+                .ifPresentOrElse(sjft -> {
+                    EjercicioPlanificado ej = new EjercicioPlanificado();
+                    ej.setPlanEntrenamiento(finalPlan);
+                    ej.setPruebaEstandar(sjft);
+                    ej.setOrden(1);
+                    ej.setNotasSensei("Máximo esfuerzo requerido (Dato V2)");
+                    ej.getDiasAsignados().add(java.time.DayOfWeek.SATURDAY);
 
-        EjercicioPlanificado ej = new EjercicioPlanificado();
-        ej.setPlanEntrenamiento(plan);
-        ej.setPruebaEstandar(sjft);
-        ej.setOrden(1);
-        ej.setNotasSensei("Máximo esfuerzo requerido");
-        ej.getDiasAsignados().add(DayOfWeek.SATURDAY);
+                    finalPlan.addEjercicio(ej);
+                    System.out.println("✅ Ejercicio SJFT añadido al plan de evaluación.");
+                }, () -> {
+                    System.err.println("❌ ERROR CRÍTICO: No se encontró la prueba SJFT en el catálogo. El plan quedará vacío.");
+                });
 
-        plan.addEjercicio(ej);
-        return planService.guardarPlan(plan);
+        // 4. Retorno del plan (Indispensable para el flujo del run)
+        return planService.guardarPlan(finalPlan);
     }
+
     private void programarSesiones(Sensei sensei) {
         GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores").orElseThrow();        LocalDateTime base = LocalDateTime.now().plusDays(1).withHour(18).withMinute(0);
         List<SesionProgramada> sesiones = new ArrayList<>();
@@ -1203,7 +1233,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         // B. Crear Perfil Judoka
         Judoka julian = new Judoka();
-        julian.setUsuario(userJulian);
+        julian.setAcudiente(userJulian);
         julian.setSensei(sensei);
 
         // --- DATOS OBLIGATORIOS RESTAURADOS ---
@@ -1494,7 +1524,16 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "admin.note.title", "es", "Nota Importante:");
         crearSiNoExiste(repo, "admin.note.text", "es", "Los cambios en el 'Nivel Organizacional' pueden habilitar o deshabilitar módulos específicos.\nAsegúrese de guardar antes de salir.");
         crearSiNoExiste(repo, "msg.success.config_saved", "es", "Configuración guardada correctamente.");
+        crearSiNoExiste(repo,"config.nombre.org", "es","Nombre de la Organización", "Organization Name");
+        crearSiNoExiste(repo,"config.nivel.org", "es","Nivel Organizacional", "Organizational Level");
+        crearSiNoExiste(repo,"config.fin.canon_saas","es", "Canon Fijo SaaS (Plataforma)", "Fixed SaaS Fee");
+        crearSiNoExiste(repo,"config.fin.mensualidad_master", "es","Tu Mensualidad (Sensei Master)", "Master Monthly Fee");
+        crearSiNoExiste(repo,"config.fin.dia_cobro", "es","Día de Facturación", "Billing Day");
+        crearSiNoExiste(repo,"config.fin.dia_vencimiento", "es","Día de Suspensión (Mora)", "Suspension Day");
 
+        // Conceptos de Cuentas de Cobro
+        crearSiNoExiste(repo,"finanzas.concepto.mensualidad_saas", "es","Mensualidad SaaS", "SaaS Monthly Fee");
+        crearSiNoExiste(repo,"finanzas.concepto.mensualidad_master","es", "Mensualidad Master", "Master Monthly Fee");
         // --- MENSAJES DE ÉXITO Y ERROR ---
         crearSiNoExiste(repo, "msg.success.saved", "es", "Guardado exitosamente");
         crearSiNoExiste(repo, "msg.success.updated", "es", "Actualizado exitosamente");

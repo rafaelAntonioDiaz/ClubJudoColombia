@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Reflexion;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService; // <--- Nuevo
 import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
@@ -43,7 +44,8 @@ public class PerfilJudokaView extends JudokaLayout {
     private final SecurityService securityService;
     private final JudokaService judokaService;
     private final TraduccionService traduccionService;
-    private final AlmacenamientoCloudService almacenamientoCloudService; // <--- Nuevo
+    private final AlmacenamientoCloudService almacenamientoCloudService;
+    private final JudokaRepository  judokaRepository;
 
     private Judoka judokaActual;
     private Image avatarImage;
@@ -54,8 +56,8 @@ public class PerfilJudokaView extends JudokaLayout {
                             AccessAnnotationChecker accessChecker,
                             JudokaService judokaService,
                             TraduccionService traduccionService,
-                            AlmacenamientoCloudService almacenamientoCloudService) { // <--- Inyección
-        super(securityService, accessChecker, traduccionService);
+                            AlmacenamientoCloudService almacenamientoCloudService, JudokaRepository judokaRepository) { // <--- Inyección
+        super(securityService, accessChecker, traduccionService, judokaRepository);
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.traduccionService = traduccionService;
@@ -63,6 +65,7 @@ public class PerfilJudokaView extends JudokaLayout {
 
         this.judokaActual = securityService.getAuthenticatedJudoka()
                 .orElseThrow(() -> new RuntimeException("Judoka no encontrado"));
+        this.judokaRepository = judokaRepository;
 
         addClassName("perfil-view");
 

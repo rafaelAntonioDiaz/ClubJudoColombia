@@ -46,7 +46,7 @@ public class CleanupService {
 
         LocalDateTime fechaCorte = LocalDateTime.now().minusDays(15);
 
-        List<Judoka> caducados = judokaRepository.findByEstadoAndFechaPreRegistroBefore(
+        List<Judoka> caducados = judokaRepository.findByEstadoAndFechaGeneracionTokenBefore(
                 EstadoJudoka.PENDIENTE,
                 fechaCorte
         );
@@ -60,8 +60,7 @@ public class CleanupService {
 
         for (Judoka zombi : caducados) {
             try {
-                logger.info("Eliminando aspirante: {} (Registrado: {})",
-                        zombi.getUsuario().getUsername(), zombi.getFechaPreRegistro());
+
 
                 // --- CAMBIO AQUÍ: Borrado directamente en Cloudflare ---
                 if (zombi.getDocumentos() != null) {

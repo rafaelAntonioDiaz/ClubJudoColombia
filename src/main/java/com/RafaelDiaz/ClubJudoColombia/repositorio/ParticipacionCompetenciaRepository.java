@@ -14,8 +14,13 @@ public interface ParticipacionCompetenciaRepository extends JpaRepository<Partic
     // Para el Perfil del Judoka (Ver sus medallas)
     List<ParticipacionCompetencia> findByJudokaOrderByFechaDesc(Judoka judoka);
 
-    // Para la Gestión del Sensei (Ver todos los torneos)
-    // Usamos JOIN FETCH para optimizar la carga del Judoka y Usuario
-    @Query("SELECT p FROM ParticipacionCompetencia p JOIN FETCH p.judoka j JOIN FETCH j.usuario ORDER BY p.fecha DESC")
+    /**
+     * Para la Gestión del Sensei (Ver todos los torneos)
+     * ARMONIZADO: Se cambia 'j.usuario' por 'j.acudiente' para reflejar el modelo ManyToOne.
+     */
+    @Query("SELECT p FROM ParticipacionCompetencia p " +
+            "JOIN FETCH p.judoka j " +
+            "JOIN FETCH j.acudiente " + // <--- CAMBIO CLAVE
+            "ORDER BY p.fecha DESC")
     List<ParticipacionCompetencia> findAllWithDetails();
 }

@@ -27,6 +27,13 @@ public class DocumentoRequisito {
     @Column(nullable = false)
     @NotBlank(message = "{validation.doc.archivo_obligatorio}")
     private String urlArchivo; // Ruta donde se guardó el PDF/Imagen
+    /**
+     * Opcional: Nombre o ID del evento si es un documento efímero.
+     * Ej. "Campeonato Nacional 2026"
+     * Si es null, es un documento base (EPS, Waiver Anual).
+     */
+    @Column(name = "evento_asociado")
+    private String eventoAsociado;
 
     private boolean validadoPorSensei = false; // El Sensei debe darle visto bueno
 
@@ -56,4 +63,6 @@ public class DocumentoRequisito {
     public void setValidadoPorSensei(boolean validadoPorSensei) { this.validadoPorSensei = validadoPorSensei; }
     public LocalDateTime getFechaCarga() { return fechaCarga; }
     public void setFechaCarga(LocalDateTime fechaCarga) { this.fechaCarga = fechaCarga; }
+    public String getEventoAsociado() { return eventoAsociado; }
+    public void setEventoAsociado(String eventoAsociado) { this.eventoAsociado = eventoAsociado; }
 }

@@ -1,11 +1,9 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.ConfiguracionSistema;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
-import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -39,7 +37,12 @@ public class AsistenteAdmisionView extends VerticalLayout {
     private final AdmisionesService admisionesService;
     private final TraduccionService traduccionService;
     private final AlmacenamientoCloudService almacenamientoCloudService;
+    private final ConfiguracionService configuracionService;
+    private final SecurityService securityService;
+    // Flag para controlar la lógica visual
+    private boolean esSaaS = false;
 
+    private static final String MASTER_ADMIN_USERNAME = "master_admin";
     private final Judoka judokaActual;
 
     private final VerticalLayout contenidoPaso = new VerticalLayout();
@@ -56,14 +59,22 @@ public class AsistenteAdmisionView extends VerticalLayout {
 
     public AsistenteAdmisionView(AdmisionesService admisionesService,
                                  TraduccionService traduccionService,
-                                 AlmacenamientoCloudService almacenamientoCloudService,
+                                 AlmacenamientoCloudService almacenamientoCloudService, ConfiguracionService configuracionService, SecurityService securityService1,
                                  SecurityService securityService) {
         this.admisionesService = admisionesService;
         this.traduccionService = traduccionService;
         this.almacenamientoCloudService = almacenamientoCloudService;
+        this.configuracionService = configuracionService;
+        this.securityService = securityService;
 
         this.judokaActual = securityService.getAuthenticatedJudoka()
                 .orElseThrow(() -> new RuntimeException("Error: Ningún aspirante ha iniciado sesión."));
+        // 1. DETECTAR PERFIL
+        this.esSaaS = !judokaActual.getSensei().getUsuario().getUsername().equals(MASTER_ADMIN_USERNAME);
+
+        // 2. OBTENER PRECIO REAL
+        ConfiguracionSistema config = configuracionService.obtenerConfiguracion();
+        String precioFmt = configuracionService.obtenerFormatoMoneda().format(config.getFIN_SAAS_CANON_FIJO());
 
         configurarVista();
         renderizarPaso();
@@ -114,14 +125,18 @@ public class AsistenteAdmisionView extends VerticalLayout {
     private void mostrarPaso2Documentos() {
         H3 tituloPaso = new H3(traduccionService.get("vista.wizard.paso2.titulo"));
         Paragraph desc = new Paragraph(traduccionService.get("vista.wizard.paso2.desc.completa"));
-
-        Upload uploadWaiver = configurarUploadComponente("msg.waiver.instruccion", TipoDocumento.WAIVER);
-        Upload uploadEps = configurarUploadComponente("msg.eps.instruccion", TipoDocumento.EPS);
+        FormLayout gridDocumentos = new FormLayout();
+        if (!esSaaS) {
+            Upload uploadWaiver = configurarUploadComponente(
+                    "msg.waiver.instruccion", TipoDocumento.WAIVER);
+            Upload uploadEps = configurarUploadComponente(
+                    "msg.eps.instruccion", TipoDocumento.EPS);
+            gridDocumentos.add(uploadWaiver, uploadEps);
+        }
         Upload uploadPago = configurarUploadComponente(
                 "msg.pago.instruccion", TipoDocumento.COMPROBANTE_PAGO);
 
-        FormLayout gridDocumentos = new FormLayout();
-        gridDocumentos.add(uploadWaiver, uploadEps, uploadPago);
+        gridDocumentos.add(uploadPago);
         gridDocumentos.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("600px", 3)

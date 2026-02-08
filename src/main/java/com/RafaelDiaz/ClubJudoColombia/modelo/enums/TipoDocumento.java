@@ -5,7 +5,8 @@ public enum TipoDocumento {
     CERTIFICADO_MEDICO("enum.tipo_documento.certificado_medico"),
     EPS("enum.tipo_documento.certificado_afiliacion_eps"),
     DOCUMENTO_IDENTIDAD("enum.tipo_documento.documento_identidad"),
-    COMPROBANTE_PAGO("enum.tipo_documento.comprobante_pago");
+    COMPROBANTE_PAGO("enum.tipo_documento.comprobante_pago"),
+    OTRO("enum.tipo_documento.otro");
 
 
     private final String clave;

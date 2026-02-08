@@ -1,16 +1,9 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Insignia;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.JudokaInsignia;
-import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.InsigniaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaInsigniaRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.AsistenciaService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaDashboardService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.AgendaDialog;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.CheckInWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.CombatRadarWidget;
@@ -39,10 +32,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -59,9 +49,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("dashboard-judoka")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR","ROLE_ACUDIENTE"})
 @PageTitle("Combat Profile | Club Judo Colombia")
 @CssImport("./styles/dashboard-judoka.css")
 public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObserver {
@@ -73,6 +64,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     private final AsistenciaService asistenciaService;
     private final InsigniaRepository insigniaRepository;
     private final JudokaInsigniaRepository judokaInsigniaRepository;
+    private final JudokaRepository judokaRepository;
     private Judoka judokaActual;
 
     // Componentes UI
@@ -82,7 +74,8 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     private CombatRadarWidget radarWidget;
     private Div detailChartContainer;
     private Span lblInstruccionChart;
-
+    private final SabiduriaService sabiduriaService;
+    private Div seccionSabiduria;
     // Contenedor de botones para que sea accesible globalmente si se requiere
     private FlexLayout chipsLayout;
 
@@ -94,15 +87,19 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                                AccessAnnotationChecker accessChecker,
                                InsigniaRepository insigniaRepository,
                                JudokaInsigniaRepository judokaInsigniaRepository,
-                               AsistenciaService asistenciaService, InsigniaRepository insigniaRepository1, JudokaInsigniaRepository judokaInsigniaRepository1) {
-        super(securityService, accessChecker, traduccionService);
+                               AsistenciaService asistenciaService,
+                               SabiduriaService sabiduriaService,
+                               JudokaRepository judokaRepository) {
+        super(securityService, accessChecker, traduccionService, judokaRepository);
         this.dashboardService = dashboardService;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
         this.sesionService = sesionService;
         this.asistenciaService = asistenciaService;
-        this.insigniaRepository = insigniaRepository1;
-        this.judokaInsigniaRepository = judokaInsigniaRepository1;
+        this.insigniaRepository = insigniaRepository;
+        this.judokaInsigniaRepository = judokaInsigniaRepository;
+        this.sabiduriaService = sabiduriaService;
+        this.judokaRepository = judokaRepository;
 
         initJudoka();
         buildModernDashboard();
@@ -144,7 +141,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         header.setWidthFull();
         header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
-
+        Component widgetSabiduria = crearTarjetaSabiduria();
         // --- CHECK IN ---
         CheckInWidget checkInWidget = new CheckInWidget(asistenciaService, judokaActual, traduccionService);
         checkInWidget.getStyle().set("margin-bottom", "20px");
@@ -185,7 +182,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         lblInstruccionChart.getStyle().set("color", "var(--lumo-secondary-text-color)");
         detailChartContainer.add(lblInstruccionChart);
 
-        mainLayout.add(header, checkInWidget, radarWidget, chipsLayout, detailChartContainer);
+        mainLayout.add(header, widgetSabiduria, checkInWidget, radarWidget, chipsLayout, detailChartContainer);
         setContent(mainLayout);
 
         actualizarTextos();
@@ -415,6 +412,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     public void localeChange(LocaleChangeEvent event) {
         actualizarTextos();
         actualizarDatos();
+        actualizarContenidoSabiduria();
     }
 
     private String obtenerUnidadMedida(String clavePrueba) {
@@ -441,5 +439,40 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         }
 
         return "Valor";
+    }
+    private Component crearTarjetaSabiduria() {
+        seccionSabiduria = new Div();
+        seccionSabiduria.setWidthFull();
+        seccionSabiduria.getStyle()
+                .set("background", "linear-gradient(90deg, #fdfbfb 0%, #ebedee 100%)") // Sutil gris zen
+                .set("border-left", "6px solid var(--lumo-primary-color)")
+                .set("padding", "20px")
+                .set("border-radius", "8px")
+                .set("box-shadow", "0 2px 5px rgba(0,0,0,0.05)")
+                .set("margin-bottom", "25px");
+
+        actualizarContenidoSabiduria(); // Llenar datos
+        return seccionSabiduria;
+    }
+
+    private void actualizarContenidoSabiduria() {
+        seccionSabiduria.removeAll();
+        // Detectar idioma simple (puedes mejorar esto según tu lógica de locale)
+        String lang = UI.getCurrent().getLocale().getLanguage().equals("en") ? "en" : "es";
+
+        Traduccion frase = sabiduriaService.obtenerFraseSemanal(lang);
+
+        if (frase != null) {
+            H3 titulo = new H3(traduccionService.get("sabiduria.titulo", "Sabiduría del Sensei"));
+            titulo.getStyle().set("margin", "0 0 10px 0").set("font-size", "1.1rem").set("color", "#555");
+
+            Paragraph texto = new Paragraph("“" + frase.getTexto() + "”");
+            texto.getStyle().set("font-style", "italic").set("font-size", "1.2rem").set("font-weight", "500");
+
+            seccionSabiduria.add(titulo, texto);
+            seccionSabiduria.setVisible(true);
+        } else {
+            seccionSabiduria.setVisible(false);
+        }
     }
 }

@@ -10,6 +10,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.DocumentoRequisitoRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.RolRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,7 @@ public class AdmisionesService {
     private final TraduccionService traduccionService;
     private final TokenInvitacionRepository tokenRepository;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
     // 1. NUEVA INYECCIÓN: Necesitamos el servicio que sabe crear planes
     private final JudokaService judokaService;
@@ -38,7 +40,7 @@ public class AdmisionesService {
                              RolRepository rolRepository,
                              TraduccionService traduccionService,
                              TokenInvitacionRepository tokenRepository,
-                             EmailService emailService,
+                             EmailService emailService, PasswordEncoder passwordEncoder,
                              JudokaService judokaService) { // 2. Agregado al constructor
         this.judokaRepository = judokaRepository;
         this.usuarioRepository = usuarioRepository;
@@ -47,6 +49,7 @@ public class AdmisionesService {
         this.traduccionService = traduccionService;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
         this.judokaService = judokaService; // 3. Asignación
     }
 
@@ -63,7 +66,7 @@ public class AdmisionesService {
 
         // 2. Crear el Judoka (Estado PENDIENTE)
         Judoka nuevoJudoka = new Judoka();
-        nuevoJudoka.setUsuario(nuevoUsuario);
+        nuevoJudoka.setAcudiente(nuevoUsuario);
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
 
         judokaRepository.save(nuevoJudoka);
@@ -170,7 +173,7 @@ public class AdmisionesService {
         usuarioRepository.save(nuevoUsuario);
 
         Judoka nuevoJudoka = new Judoka();
-        nuevoJudoka.setUsuario(nuevoUsuario);
+        nuevoJudoka.setAcudiente(nuevoUsuario);
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
         judokaRepository.save(nuevoJudoka);
 
@@ -188,4 +191,48 @@ public class AdmisionesService {
         token.setUsado(true);
         tokenRepository.save(token);
     }
+    // En AdmisionesService.java
+
+    @Transactional
+    public void registrarJudokaAdulto(String nombre, String apellido, String email, String telefono, String nombreEmergencia, String telEmergencia) {
+
+        // 1. BUSCAR EL ROL EN LA BD (No puedes asignar el String directo)
+        // Asumimos que "ROLE_JUDOKA_ADULTO" ya existe en tu tabla de roles.
+        Rol rolAdulto = rolRepository.findByNombre("ROLE_JUDOKA_ADULTO")
+                .orElseThrow(() -> new RuntimeException("Error: El rol ROLE_JUDOKA_ADULTO no existe en la BD."));
+
+        // 2. CREAR EL USUARIO
+        Usuario usuarioAdulto = new Usuario();
+        usuarioAdulto.setNombre(nombre);
+        usuarioAdulto.setApellido(apellido);
+        usuarioAdulto.setEmail(email);
+        usuarioAdulto.setUsername(email);
+
+        // Asegúrate de inyectar passwordEncoder en el constructor de AdmisionesService
+        usuarioAdulto.setPasswordHash(passwordEncoder.encode("contraseña"));
+
+        // CORRECCIÓN: Asignamos un Set<Rol> que contiene el objeto encontrado
+        usuarioAdulto.setRoles(java.util.Set.of(rolAdulto));
+
+        usuarioAdulto.setActivo(true); // Importante para que pueda loguearse
+        usuarioRepository.save(usuarioAdulto);
+
+        // 3. CREAR EL JUDOKA (Perfil deportivo)
+        Judoka perfilDeportivo = new Judoka();
+        perfilDeportivo.setNombre(nombre);
+        perfilDeportivo.setApellido(apellido);
+        perfilDeportivo.setMayorEdad(true); // Flag de UI
+
+        // Datos de emergencia (Crítico para adultos)
+        perfilDeportivo.setNombreContactoEmergencia(nombreEmergencia);
+        perfilDeportivo.setTelefonoEmergencia(telEmergencia);
+
+        // 4. EL PATRÓN AUTO-ACUDIENTE
+        // El usuario se asigna a sí mismo como responsable financiero
+        perfilDeportivo.setAcudiente(usuarioAdulto);
+
+        // Inicializamos fechas para que no entre en NullPointer en las vistas
+        perfilDeportivo.setFechaVencimientoSuscripcion(java.time.LocalDate.now().plusDays(30)); // Regalo de bienvenida
+    }
+
 }

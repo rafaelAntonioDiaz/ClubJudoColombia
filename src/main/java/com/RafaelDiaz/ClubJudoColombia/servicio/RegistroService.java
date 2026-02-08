@@ -77,10 +77,9 @@ public class RegistroService {
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
 
         // 2. Configurar y guardar Judoka
-        judoka.setUsuario(usuarioGuardado);
+        judoka.setAcudiente(usuarioGuardado);
         judoka.setEstado(EstadoJudoka.PENDIENTE); // Estado inicial
         judoka.setGradoCinturon(GradoCinturon.BLANCO);
-        judoka.setFechaPreRegistro(LocalDateTime.now());
 
         judokaRepository.save(judoka);
 

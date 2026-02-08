@@ -1,5 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.layout;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.ComunidadJudokaView;
@@ -20,29 +22,55 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.Optional;
+
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR","ROLE_JUDOKA_ADULTO"})
 public class JudokaLayout extends AppLayout {
 
     private final SecurityService securityService;
     private final AccessAnnotationChecker accessChecker;
     private final TraduccionService traduccionService;
+    private final JudokaRepository judokaRepository;
 
     private Tabs menuTabs;
 
     @Autowired
     public JudokaLayout(SecurityService securityService,
                         AccessAnnotationChecker accessChecker,
-                        TraduccionService traduccionService) {
+                        TraduccionService traduccionService, JudokaRepository judokaRepository) {
         this.securityService = securityService;
         this.accessChecker = accessChecker;
         this.traduccionService = traduccionService;
+        this.judokaRepository = judokaRepository;
     }
+    private void crearHeader() {
+        H2 logo = new H2("Club Judo Colombia");
+        logo.addClassNames("text-l", "m-m");
 
+        // --- LÓGICA DE NOMBRE DINÁMICO ---
+        String nombreJudoka = "Judoka";
+        Optional<Judoka> judokaOpt = obtenerJudokaActual(); // Usamos el nuevo método
+        if (judokaOpt.isPresent()) {
+            nombreJudoka = judokaOpt.get().getNombre();
+        }
+
+        Avatar avatar = new Avatar(nombreJudoka);
+        HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), logo, avatar);
+        header.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
+        header.expand(logo);
+        header.setWidthFull();
+        header.addClassNames("py-0", "px-m");
+
+        addToNavbar(header);
+    }
     @PostConstruct
     private void init() {
         crearNavbar();
@@ -111,10 +139,21 @@ public class JudokaLayout extends AppLayout {
         menuTabs.setOrientation(Tabs.Orientation.VERTICAL);
         menuTabs.addClassName("judoka-menu-tabs");
 
+        // 1. Dashboard (Siempre visible)
         agregarTab(traduccionService.get("menu.dashboard"), VaadinIcon.DASHBOARD, JudokaDashboardView.class);
-        agregarTab(traduccionService.get("menu.mis.planes"), VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
-        agregarTab(traduccionService.get("menu.comunidad"), VaadinIcon.USERS, ComunidadJudokaView.class);
 
+        // 2. Mis Planes (Siempre visible)
+        agregarTab(traduccionService.get("menu.mis.planes"), VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
+
+        // 3. Comunidad (FILTRO: SOLO MAYORES DE 12 AÑOS) <--- CAMBIO CLAVE
+        Optional<Judoka> judokaOpt = obtenerJudokaActual();
+        if (judokaOpt.isPresent()) {
+            if (esMayorDe12(judokaOpt.get().getFechaNacimiento())) {
+                agregarTab(traduccionService.get("menu.comunidad"), VaadinIcon.USERS, ComunidadJudokaView.class);
+            }
+        }
+
+        // 4. Logout (Limpiando sesión)
         Tab logoutTab = new Tab(createLogoutLink());
         menuTabs.add(logoutTab);
 
@@ -135,12 +174,36 @@ public class JudokaLayout extends AppLayout {
             menuTabs.add(new Tab(link));
         }
     }
+    // -------------------------------------------------------------------
+    // --- NUEVA LÓGICA: MAGIC LINK + FILTRO EDAD ---
+    // -------------------------------------------------------------------
+
+    private Optional<Judoka> obtenerJudokaActual() {
+        // 1. Prioridad: ¿Viene por Magic Link? (Variable en Sesión)
+        Object magicIdObj = VaadinSession.getCurrent().getAttribute("JUDOKA_ACTUAL_ID");
+        if (magicIdObj != null) {
+            Long magicId = (Long) magicIdObj;
+            return judokaRepository.findById(magicId);
+        }
+
+        // 2. Fallback: ¿Es un login tradicional (Acudiente/Adulto)?
+        return securityService.getAuthenticatedJudoka();
+    }
+
+    private boolean esMayorDe12(LocalDate fechaNacimiento) {
+        if (fechaNacimiento == null) return false;
+        return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 12;
+    }
 
     private RouterLink createLogoutLink() {
         RouterLink link = new RouterLink();
         link.add(new Icon(VaadinIcon.SIGN_OUT), new Span(traduccionService.get("btn.cerrar.sesion")));
         link.addClassName("menu-link");
-        link.getElement().addEventListener("click", e -> logout());
+        link.getElement().addEventListener("click", e -> {
+            // --- LIMPIEZA DE SESIÓN ---
+            VaadinSession.getCurrent().setAttribute("JUDOKA_ACTUAL_ID", null);
+            securityService.logout();
+        });
         return link;
     }
 
