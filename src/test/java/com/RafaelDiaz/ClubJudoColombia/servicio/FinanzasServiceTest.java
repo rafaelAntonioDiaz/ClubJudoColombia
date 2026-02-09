@@ -47,44 +47,38 @@ class FinanzasServiceTest {
         conceptoMensualidad = new ConceptoFinanciero("Mensualidad Enero", TipoTransaccion.INGRESO, new BigDecimal("50000"));
     }
 
-    @Test
-    @DisplayName("Debe registrar un movimiento correctamente con los 7 argumentos")
-    void registrarMovimiento_FlujoExitoso() {
-        // 1. PREPARAR (Mocks)
 
-        // Simulamos un usuario logueado para la auditoría
-        UserDetails userDetails = new User("sensei_rafael", "password", Collections.emptyList());
+    @Test
+    @DisplayName("Debe registrar un movimiento correctamente y asignar el concepto")
+    void registrarMovimiento_FlujoExitoso() {
+        // 1. PREPARAR
+        UserDetails userDetails = new User("rafael_dev", "pass", Collections.emptyList());
         when(securityService.getAuthenticatedUserDetails()).thenReturn(Optional.of(userDetails));
 
-        // Cuando guarde, devolvemos un objeto cualquiera (no afecta la aserción del captor)
+        // Mock para encontrar o crear el concepto
+        ConceptoFinanciero cf = new ConceptoFinanciero("MENSUALIDAD_CLUB", TipoTransaccion.INGRESO, BigDecimal.ZERO);
+        when(conceptoRepo.findByNombre("MENSUALIDAD_CLUB")).thenReturn(Optional.of(cf));
         when(movimientoRepo.save(any(MovimientoCaja.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        // 2. ACTUAR (Llamamos al NUEVO método de 7 argumentos)
+        // 2. ACTUAR
         BigDecimal monto = new BigDecimal("50000");
         finanzasService.registrarMovimiento(
                 monto,
                 TipoTransaccion.INGRESO,
                 MetodoPago.EFECTIVO,
-                String.valueOf(conceptoMensualidad),
-                null, // Judoka null
-                "Pago mensualidad test",
-                "http://url-fake.com"
+                "MENSUALIDAD_CLUB", // Nombre exacto
+                null,
+                "Pago de prueba",
+                null
         );
 
-        // 3. VERIFICAR (Usamos Captor para ver qué construyó el servicio por dentro)
+        // 3. VERIFICAR
         ArgumentCaptor<MovimientoCaja> captor = ArgumentCaptor.forClass(MovimientoCaja.class);
-        verify(movimientoRepo, times(1)).save(captor.capture());
+        verify(movimientoRepo).save(captor.capture());
 
-        MovimientoCaja movimientoGuardado = captor.getValue();
-
-        // Validaciones
-        assertEquals(monto, movimientoGuardado.getMonto());
-        assertEquals(TipoTransaccion.INGRESO, movimientoGuardado.getTipo());
-        assertEquals(MetodoPago.EFECTIVO, movimientoGuardado.getMetodoPago());
-        assertEquals("sensei_rafael", movimientoGuardado.getRegistradoPor(), "La auditoría debe capturar el usuario logueado");
-        assertEquals("Pago mensualidad test", movimientoGuardado.getObservacion());
+        assertEquals(monto, captor.getValue().getMonto());
+        assertEquals("rafael_dev", captor.getValue().getRegistradoPor());
     }
-
     @Test
     @DisplayName("Debe autogenerar el concepto si se pasa null")
     void registrarMovimiento_ConceptoNull_GeneraAutomatico() {

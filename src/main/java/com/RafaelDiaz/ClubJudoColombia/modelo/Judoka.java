@@ -344,6 +344,7 @@ public class Judoka implements Serializable {
     }
 
     public void setSuscripcionActiva(boolean activa) {
+        this.suscripcionActiva = activa;
     }
     public String getNombre() {
         return nombre;

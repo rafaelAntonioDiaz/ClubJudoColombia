@@ -9,6 +9,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PublicacionService;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.time.*;
 import java.util.*;
 
 @Component
+@Profile("!test")
 public class DataInitializer implements CommandLineRunner { // 1. Implementamos la interfaz
 
     private final PasswordEncoder passwordEncoder;

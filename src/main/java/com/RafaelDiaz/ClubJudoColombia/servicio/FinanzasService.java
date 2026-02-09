@@ -31,7 +31,7 @@ public class FinanzasService {
     private final SecurityService securityService;
     private final TraduccionService traduccionService;
     private final ConfiguracionService configService;
-
+    private static final String CONCEPTO_OTROS = "OTROS";
     public FinanzasService(JudokaRepository judokaRepo,
                            SenseiRepository senseiRepo,
                            MovimientoCajaRepository movimientoRepo,
@@ -98,10 +98,11 @@ public class FinanzasService {
         mov.setUrlSoporte(urlSoporte);
 
         // Auto-gestión de Conceptos Financieros
-        ConceptoFinanciero concepto = conceptoRepo.findByNombre(nombreConcepto)
-                .orElseGet(() -> conceptoRepo.save(
-                        new ConceptoFinanciero(nombreConcepto, tipo, BigDecimal.ZERO)));
-        mov.setConcepto(concepto);
+        final String nombreABuscar = (nombreConcepto == null) ? CONCEPTO_OTROS : nombreConcepto;
+        ConceptoFinanciero concepto = conceptoRepo.findByNombre(nombreABuscar)
+                    .orElseGet(() -> conceptoRepo.save(
+                            new ConceptoFinanciero(nombreABuscar, tipo, BigDecimal.ZERO)));
+            mov.setConcepto(concepto);
 
         return registrarMovimiento(mov);
     }
