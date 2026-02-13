@@ -38,8 +38,7 @@ public class SenseiDashboardView extends VerticalLayout {
     public SenseiDashboardView(SenseiDashboardService dashboardService,
                                TraduccionService traduccionService) { // NUEVO: Parámetro añadido
         this.dashboardService = dashboardService;
-        this.traduccionService = traduccionService; // NUEVO: Inicialización
-
+        this.traduccionService = traduccionService;
         addClassName("dashboard-view");
         setSizeFull();
         setPadding(true);

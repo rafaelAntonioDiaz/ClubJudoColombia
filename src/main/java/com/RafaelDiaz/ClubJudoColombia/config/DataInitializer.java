@@ -112,10 +112,12 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
             // A. Configuraciones Globales
             cargarTraducciones(traduccionRepository);
+            crearTraduccionesDias();
+            crearTraduccionesFestivos();
             crearTraduccionesDashboard();
             crearTraduccionesComunidad();
             crearBibliotecaSabiduria();
-
+            cargarPruebasYMetricas();
             // B. Crear Senseis del Demo
             Sensei kiuzo = crearSensei("kiuzo", "Kiuzo", "Mifune", "123456", GradoCinturon.NEGRO_5_DAN);
             crearSensei("toshiro", "Toshiro", "Diago", "123456", GradoCinturon.NEGRO_5_DAN);
@@ -161,7 +163,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         cargarDatosJulianYMaria(todosLosJudokas, senseiPrincipal);
 
         System.out.println(">>> ✅ CARGA DE DATOS COMPLETADA CON ÉXITO.");
-    }    /**
+    }
+
+    /**
      * CHEQUEO 1: Asegura que el Master/Dueño siempre exista en el sistema.
      * Retorna el Perfil Sensei del Master (El Cliente #0).
      */

@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista.sensei;
 
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -20,7 +21,7 @@ import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @PageTitle("Invitar Nuevo Judoka | Club Judo Colombia")
-@Route(value = "sensei/invitar") // Asume que tienes un MainLayout, agrégalo si es así: layout = MainLayout.class
+@Route(value = "sensei/invitar", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_SENSEI")
 public class InvitarAspiranteView extends VerticalLayout {
 

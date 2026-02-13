@@ -18,7 +18,7 @@ import java.util.Optional;
  *
  * Hereda de JpaRepository<TipoDeEntidad, TipoDeID>
  */
-@Repository // (Buena práctica) Indica a Spring que esto es un Repositorio (Bean)
+@Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     /**

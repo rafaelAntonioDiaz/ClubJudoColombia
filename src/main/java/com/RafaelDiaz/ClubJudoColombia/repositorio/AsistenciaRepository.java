@@ -24,7 +24,7 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
      */
     @Query("SELECT a FROM Asistencia a " +
             "JOIN FETCH a.judoka j " +
-            "JOIN FETCH j.acudiente " + // <--- CAMBIO CLAVE: Referencia al nuevo campo
+            "JOIN FETCH j.acudiente " +
             "WHERE a.sesion.id = :sesionId")
     List<Asistencia> findBySesionIdWithAcudiente(@Param("sesionId") Long sesionId);
 

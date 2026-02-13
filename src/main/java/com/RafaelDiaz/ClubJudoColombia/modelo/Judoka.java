@@ -54,7 +54,8 @@ public class Judoka implements Serializable {
 
     @Column(name = "fecha_generacion_token")
     private LocalDateTime fechaGeneracionToken;
-    @ManyToOne(fetch = FetchType.LAZY)
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_sensei", nullable = false)
     private Sensei sensei;
 

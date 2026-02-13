@@ -68,15 +68,13 @@ public class SecurityService {
         return senseiRepository.findByUsuario(usuarioOpt.get());
     }
 
-
     @Transactional(readOnly = true)
     public Optional<Judoka> getAuthenticatedJudoka() {
         return getAuthenticatedUserDetails().flatMap(userDetails -> {
             return usuarioRepository.findByUsername(userDetails.getUsername())
                     .flatMap(usuario -> {
                         // Usamos el método armonizado
-                        List<Judoka> judokas = judokaRepository.findByAcudiente(usuario);
-                        // Retornamos el primero para no romper las vistas actuales
+                        List<Judoka> judokas = judokaRepository.findByAcudienteWithDetails(usuario);                        // Retornamos el primero para no romper las vistas actuales
                         return judokas.stream().findFirst();
                     });
         });

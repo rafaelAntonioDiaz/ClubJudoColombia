@@ -71,7 +71,7 @@ public class Usuario implements Serializable {
      * Perfil de Mecenas asociado (Opcional).
      * Un usuario puede ser Acudiente y Mecenas a la vez.
      */
-    @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Mecenas perfilMecenas;
     /**
      * Estado del usuario (activo, inactivo, pendiente de verificación).

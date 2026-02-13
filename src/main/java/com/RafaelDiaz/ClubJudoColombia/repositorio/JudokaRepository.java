@@ -39,4 +39,11 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
     // Para limpiar tokens/aspirantes caducados en toda la plataforma
     List<Judoka> findByEstadoAndFechaGeneracionTokenBefore(EstadoJudoka estado, LocalDateTime fechaLimite);
 
+    @Query("SELECT j FROM Judoka j " +
+            "LEFT JOIN FETCH j.acudiente " +
+            "LEFT JOIN FETCH j.sensei s " +
+            "LEFT JOIN FETCH s.usuario " +
+            "WHERE j.acudiente = :acudiente")
+    List<Judoka> findByAcudienteWithDetails(@Param("acudiente") Usuario acudiente);
+
 }

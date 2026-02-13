@@ -12,4 +12,13 @@ public interface DocumentoRequisitoRepository extends JpaRepository<DocumentoReq
     // Aquí podemos agregar métodos personalizados si los necesitamos en el futuro.
     // Por ahora, con los métodos básicos de JpaRepository (save, findById, delete) es suficiente.
     Optional<DocumentoRequisito> findByEventoAsociadoAndJudoka(String eventoAsociado, Judoka judoka);
+
+    @Override
+    <S extends DocumentoRequisito> S save(S entity);
+
+    @Override
+    void delete(DocumentoRequisito entity);
+
+    @Override
+    Optional<DocumentoRequisito> findById(Long id);
 }
