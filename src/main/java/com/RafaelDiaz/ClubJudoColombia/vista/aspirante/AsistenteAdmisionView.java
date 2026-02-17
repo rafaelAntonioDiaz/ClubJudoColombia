@@ -21,10 +21,12 @@ import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.streams.UploadHandler;
 import jakarta.annotation.security.PermitAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 @PageTitle("Completar Perfil | Club Judo Colombia")
@@ -123,6 +125,10 @@ public class AsistenteAdmisionView extends VerticalLayout {
     }
 
     private void mostrarPaso2Documentos() {
+        if (esSaaS) {
+            waiverSubido = true;
+            epsSubida = true;
+        }
         H3 tituloPaso = new H3(traduccionService.get("vista.wizard.paso2.titulo"));
         Paragraph desc = new Paragraph(traduccionService.get("vista.wizard.paso2.desc.completa"));
         FormLayout gridDocumentos = new FormLayout();
@@ -178,39 +184,44 @@ public class AsistenteAdmisionView extends VerticalLayout {
         contenidoPaso.add(iconSpan, titulo, mensaje, btnCerrarSesion);
     }
 
-    private Upload configurarUploadComponente(String i18nLabelKey,
-                                              TipoDocumento tipoDoc) {
+    private Upload configurarUploadComponente(String i18nLabelKey, TipoDocumento tipoDoc) {
         Upload upload = new Upload();
-        upload.setAcceptedFileTypes("application/pdf", "image/png", "image/jpeg"); // Importante: Aceptar imágenes para Nequi
+        upload.setAcceptedFileTypes("application/pdf", "image/png", "image/jpeg");
         upload.setDropLabel(new Span(traduccionService.get(i18nLabelKey)));
         upload.setMaxFiles(1);
 
-        upload.setUploadHandler(event -> {
-            log.info(">>>> Iniciando intento de subida para el archivo: {}", event.getFileName());
+        // 👇 LA API MODERNA: Usamos UploadHandler.inMemory
+        upload.setUploadHandler(UploadHandler.inMemory((metadata, bytes) -> {
+            String originalFileName = metadata.fileName();
+            log.info(">>>> Iniciando intento de subida directa a S3 para el archivo: {}", originalFileName);
 
             try {
-                InputStream in = event.getInputStream();
-                String originalFileName = event.getFileName();
+                // 1. Convertimos los bytes en memoria a InputStream para que tu AWS SDK (S3) lo consuma
+                InputStream in = new ByteArrayInputStream(bytes);
 
+                // 2. Subida directa a la nube
                 String keyEnLaNube = almacenamientoCloudService.subirArchivo(judokaActual.getId(), originalFileName, in);
                 String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), keyEnLaNube);
+
+                // 3. Registro en Base de Datos
                 admisionesService.cargarRequisito(judokaActual, tipoDoc, urlEnLaNube);
 
                 log.info("<<<< ÉXITO: Archivo {} subido a la nube correctamente.", originalFileName);
 
+                // 4. Actualización de la Interfaz Gráfica (Siempre dentro de ui.access)
                 getUI().ifPresent(ui -> ui.access(() -> {
                     Notification.show(traduccionService.get("msg.exito.archivo_subido"),
                                     3000, Notification.Position.TOP_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
+                    // Marcamos los flags
                     if (tipoDoc == TipoDocumento.WAIVER) waiverSubido = true;
                     if (tipoDoc == TipoDocumento.EPS) epsSubida = true;
                     if (tipoDoc == TipoDocumento.COMPROBANTE_PAGO) pagoSubido = true;
 
-                    // Si los 3 están subidos, habilitamos el botón
+                    // Si todos los requisitos están, habilitamos el botón
                     if (waiverSubido && epsSubida && pagoSubido && btnFinalizar != null) {
                         btnFinalizar.setEnabled(true);
-                        // --- I18n APLICADO AQUÍ ---
                         Notification.show(traduccionService.get("msg.exito.puede_continuar"),
                                         2000, Notification.Position.MIDDLE)
                                 .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
@@ -220,12 +231,12 @@ public class AsistenteAdmisionView extends VerticalLayout {
             } catch (Exception ex) {
                 log.error("!!!! ERROR CRÍTICO al subir a la nube !!!!", ex);
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    Notification.show(traduccionService.get("msg.error.nube")
-                                    + ": " + ex.getMessage(), 4000, Notification.Position.TOP_CENTER)
+                    Notification.show(traduccionService.get("msg.error.nube") + ": " + ex.getMessage(),
+                                    4000, Notification.Position.TOP_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 }));
             }
-        });
+        }));
         return upload;
     }
 }

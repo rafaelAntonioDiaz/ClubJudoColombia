@@ -2,24 +2,33 @@ package com.RafaelDiaz.ClubJudoColombia.modelo.enums;
 
 /**
  * Categoriza el tipo de Ejercicio o Prueba de Rendimiento.
- * (Versión actualizada para incluir pruebas de aptitud física general)
+ * Agrupadas por bloques según Agudelo.
  */
 public enum CategoriaEjercicio {
-
-    // De la primera tabla (Judo)
+    // Biometría
     MEDICION_ANTROPOMETRICA ("Medición Antropométrica"),
+
+    // Bloque Definitorio de Aptitudes Físicas
     POTENCIA ("Potencia"),
-    RESISTENCIA_ISOMETRICA ("Resistencia Isométrica"),
+    VELOCIDAD ("Velocidad"),
+
+    // Bloque de sustento
     RESISTENCIA_DINAMICA ("Resistencia Dinámica"),
+    RESISTENCIA_MUSCULAR_LOCALIZADA ("Resistencia Muscular Localizada"),
+    RESISTENCIA_ISOMETRICA ("Resistencia Isométrica"),
+
+   // Bloque de Eficiencia
     APTITUD_ANAEROBICA ("Aptitud Anaeróbica"),
     APTITUD_AEROBICA ("Aptitud Aeróbica"),
-    TECNICA ("Técnica"),
 
-    // De la segunda tabla (General)
+    // Bloque de Protección
     FLEXIBILIDAD ("Flexibilidad"),
-    RESISTENCIA_MUSCULAR_LOCALIZADA ("Resistencia Muscular Localizada"),
+
+    // Bloque Técnico-Coordinativo eje transversal
     AGILIDAD ("Agilidad"),
-    VELOCIDAD ("Velocidad");
+    TECNICA ("Técnica"),
+    ANTICIPACION ("Anticipación");
+
 
     private final String descripcion;
 

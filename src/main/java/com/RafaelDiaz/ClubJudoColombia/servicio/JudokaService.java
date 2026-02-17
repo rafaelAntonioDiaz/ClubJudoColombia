@@ -155,10 +155,9 @@ public class JudokaService {
         GrupoEntrenamiento grupoPersonal = new GrupoEntrenamiento();
         grupoPersonal.setNombre("Individual - " + judoka.getUsuario().getNombre());
         grupoPersonal.setDescripcion("Grupo automático para evaluación individual.");
-
-        // Asignamos el judoka al grupo (Asumiendo que Grupo tiene getJudokas())
-        // Si GrupoEntrenamiento no tiene getJudokas(), avísame, pero es lo estándar.
+        grupoPersonal.setSensei(judoka.getSensei());
         grupoPersonal.getJudokas().add(judoka);
+
 
         grupoRepository.save(grupoPersonal);
 

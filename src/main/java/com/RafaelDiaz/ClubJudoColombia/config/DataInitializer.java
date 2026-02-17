@@ -309,26 +309,22 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private void cargarPruebasYMetricas() {
         System.out.println(">>> CARGANDO PRUEBAS ESTÁNDAR Y MÉTRICAS...");
 
-        // 1. Crear el Test SJFT
+        // 1. Crear los tests
         if (pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre").isEmpty() &&
                 pruebaEstandarRepository.findByNombreKey("ejercicio.sjft").isEmpty()) {
 
             PruebaEstandar sjft = new PruebaEstandar();
             sjft.setNombreKey("ejercicio.sjft.nombre");
             sjft.setDescripcionKey("ejercicio.sjft.desc");
-            sjft.setObjetivoKey("ejercicio.sjft.objetivo"); // <-- OBLIGATORIO
-            sjft.setCategoria(CategoriaEjercicio.RESISTENCIA_DINAMICA); // <-- USANDO TU ENUM REAL
+            sjft.setObjetivoKey("ejercicio.sjft.objetivo");
+            sjft.setCategoria(CategoriaEjercicio.APTITUD_ANAEROBICA);
             pruebaEstandarRepository.save(sjft);
-
-            Metrica metricaTotal = new Metrica();
-            metricaTotal.setNombreKey("metrica.sjft_proyecciones_total.nombre");
-            metricaTotal.setUnidad("reps");
-            metricaRepository.save(metricaTotal);
-
-            Metrica metricaIndice = new Metrica();
-            metricaIndice.setNombreKey("metrica.sjft_indice.nombre");
-            metricaIndice.setUnidad("pts");
-            metricaRepository.save(metricaIndice);
+            if (!metricaRepository.findByNombreKey("metrica.sjft_indice.nombre").isPresent()) {
+                Metrica metricaIndice = new Metrica();
+                metricaIndice.setNombreKey("metrica.sjft_indice.nombre");
+                metricaIndice.setUnidad("pts");
+                metricaRepository.save(metricaIndice);
+            }
         }
 
         // 2. Crear las demás pruebas para el Radar de Combate
@@ -337,30 +333,45 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearPruebaSimple("ejercicio.lanzamiento_balon", "metrica.lanzamiento_balon.nombre", "cm", CategoriaEjercicio.POTENCIA);
         crearPruebaSimple("ejercicio.abdominales_1min", "metrica.abdominales_1min.nombre", "reps", CategoriaEjercicio.POTENCIA);
         crearPruebaSimple("ejercicio.carrera_6min", "metrica.distancia_6min.nombre", "m", CategoriaEjercicio.APTITUD_AEROBICA);
-        crearPruebaSimple("ejercicio.agilidad_4x4", "metrica.agilidad_4x4.nombre", "s", CategoriaEjercicio.AGILIDAD);
         crearPruebaSimple("ejercicio.carrera_20m", "metrica.velocidad_20m.nombre", "s", CategoriaEjercicio.VELOCIDAD);
+        // Dirección Técnico Coordinativa
+        crearPruebaSimple("ejercicio.hikidashi_uchi_komi", "metrica.hikidashi_uchi_komi.nombre", "reps", CategoriaEjercicio.TECNICA);
+        // En lugar de tocar el cono se hace un gesto ofensivo
+        crearPruebaSimple("ejercicio.agilidad_4x4", "metrica.agilidad_4x4.nombre", "s", CategoriaEjercicio.AGILIDAD);
+        // Test de Anticipación Perceptivo-Motriz
+        crearPruebaSimple("ejercicio.tapm", "metrica.tapm.nombre", "s", CategoriaEjercicio.ANTICIPACION);
+        // Capacidades de Sustento
+        crearPruebaSimple("ejercicio.resistencia_isometrica", "metrica.resistencia_isometrica.nombre", "s", CategoriaEjercicio.RESISTENCIA_ISOMETRICA);
+        crearPruebaSimple("ejercicio.resistencia_muscular_localizada", "metrica.resistencia_muscular_localizada.nombre", "reps", CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA);
+        // Eficiencia Metabólica
+        crearPruebaSimple("ejercicio.sjft", "metrica.sjft.nombre", "index", CategoriaEjercicio.APTITUD_ANAEROBICA);
+        // Protección y Amplitud
+        crearPruebaSimple("ejercicio.sjft", "metrica.sjft.nombre", "index", CategoriaEjercicio.APTITUD_ANAEROBICA);
+
     }
 
     // Método actualizado para cumplir con todas las reglas de la base de datos
+// Método actualizado, desacoplado y blindado contra violaciones de índice
     private void crearPruebaSimple(String keyPrueba, String keyMetrica, String unidad, CategoriaEjercicio categoria) {
+
+        // 1. Validar y crear SOLO la Prueba Estándar
         if (pruebaEstandarRepository.findByNombreKey(keyPrueba).isEmpty()) {
             PruebaEstandar p = new PruebaEstandar();
             p.setNombreKey(keyPrueba);
-            p.setCategoria(categoria); // <-- Enum CategoriaEjercicio
-
-            // Evitamos el error de NULL en la base de datos autogenerando las claves
+            p.setCategoria(categoria);
             p.setDescripcionKey(keyPrueba + ".desc");
             p.setObjetivoKey(keyPrueba + ".objetivo");
-
             pruebaEstandarRepository.save(p);
+        }
 
+        // 2. Validar y crear SOLO la Métrica (OJO: Usando metricaRepository)
+        if (metricaRepository.findByNombreKey(keyMetrica).isEmpty()) {
             Metrica m = new Metrica();
             m.setNombreKey(keyMetrica);
             m.setUnidad(unidad);
             metricaRepository.save(m);
         }
-    }
-    private void validarRolesExistentes() {
+    }    private void validarRolesExistentes() {
         System.out.println(">>> VERIFICANDO ROLES DEL SISTEMA...");
         crearRolSiNoExiste("ROLE_SENSEI");
         crearRolSiNoExiste("ROLE_JUDOKA");
@@ -825,13 +836,29 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         return senseiRepository.save(s);
     }
 
-    private List<Judoka> crearJudokas(Sensei sensei) { // <-- RECIBE SENSEI
+    private List<Judoka> crearJudokas(Sensei sensei) {
         List<Judoka> lista = new ArrayList<>();
-        lista.add(crearJudokaIndividual("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López", sensei));
-        lista.add(crearJudokaIndividual("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez", sensei));
-        lista.add(crearJudokaIndividual("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null, sensei));
-        lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null, sensei));
-        return judokaRepository.saveAll(lista);
+
+        // IDEMPOTENCIA: Verificamos uno por uno. Solo creamos el "cuerpo" si el "alma" no existe.
+        if (usuarioRepository.findByUsername("maria.lopez").isEmpty()) {
+            lista.add(crearJudokaIndividual("maria.lopez", "María", "López", 2010, 3, 15, Sexo.FEMENINO, GradoCinturon.AMARILLO, true, "Jorge López", sensei));
+        }
+        if (usuarioRepository.findByUsername("juan.gomez").isEmpty()) {
+            lista.add(crearJudokaIndividual("juan.gomez", "Juan Camilo", "Gómez", 2008, 7, 22, Sexo.MASCULINO, GradoCinturon.NARANJA, true, "Camilo Gómez", sensei));
+        }
+        if (usuarioRepository.findByUsername("laura.ramirez").isEmpty()) {
+            lista.add(crearJudokaIndividual("laura.ramirez", "Laura", "Ramírez", 2006, 4, 10, Sexo.FEMENINO, GradoCinturon.VERDE, false, null, sensei));
+        }
+        if (usuarioRepository.findByUsername("daniel.diaz").isEmpty()) {
+            lista.add(crearJudokaIndividual("daniel.diaz", "Daniel", "Díaz", 2003, 1, 30, Sexo.MASCULINO, GradoCinturon.NEGRO_1_DAN, true, null, sensei));
+        }
+
+        // Guardamos en bloque solo los nuevos (si hay alguno)
+        if (!lista.isEmpty()) {
+            return judokaRepository.saveAll(lista);
+        }
+
+        return new ArrayList<>(); // Si ya existían todos, devolvemos una lista vacía para no romper nada
     }
 
     private Judoka crearJudokaIndividual(String user, String nom, String ape,
@@ -839,14 +866,20 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                                          Sexo sexo, GradoCinturon grado,
                                          boolean competidor, String acudiente,
                                          Sensei sensei) {
+
+        // 1. Preparamos el Usuario
         Usuario u = new Usuario(user, "HASH_PENDIENTE", nom, ape);
         u.setEmail(user + "@judocolombia.com");
         u.setActivo(true);
         u.getRoles().add(rolRepository.findByNombre("ROLE_JUDOKA").orElseThrow());
         if (competidor) u.getRoles().add(rolRepository.findByNombre("ROLE_COMPETIDOR").orElseThrow());
+
+        // 2. Guardamos el Usuario en la BD (Aquí nace el "Alma")
         u = usuarioService.saveUsuario(u, "123456");
 
+        // 3. Preparamos el Judoka
         Judoka j = new Judoka();
+
         j.setAcudiente(u);
         j.setSensei(sensei);
         j.setFechaNacimiento(LocalDate.of(anio, mes, dia));
@@ -856,6 +889,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         j.setNombreAcudiente(acudiente);
         j.setPeso(sexo == Sexo.MASCULINO ? 73.0 : 57.0);
         j.setEstatura(sexo == Sexo.MASCULINO ? 175.0 : 160.0);
+
+        // Nota: Retornamos el objeto 'j'. El método padre (crearJudokas) se encargará
+        // de hacer el saveAll() en la base de datos.
         return j;
     }
     /**
@@ -1713,11 +1749,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "msg.error.campos.incompletos", "es", "Por favor, completa todos los campos requeridos.");
 
         // Paso 2: Documentos y Pago
-        crearSiNoExiste(repo, "vista.wizard.paso2.titulo", "es", "Paso 2: Documentos Legales y Pago");
-        crearSiNoExiste(repo, "vista.wizard.paso2.desc.completa", "es", "Sube tu Exoneración de Responsabilidad, Certificado de EPS y el Comprobante de Pago (Pantallazo de Nequi).");
+        crearSiNoExiste(repo, "vista.wizard.paso2.titulo", "es", "Paso 2: subir Pago y/o Documentos legales");
+        crearSiNoExiste(repo, "vista.wizard.paso2.desc.completa", "es", "Sube a la nube:");
         crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu PDF de Exoneración (Waiver) firmado.");
         crearSiNoExiste(repo, "msg.eps.instruccion", "es", "Arrastra aquí tu Certificado de Afiliación a la EPS.");
-        crearSiNoExiste(repo, "msg.pago.instruccion", "es", "Arrastra aquí el pantallazo de tu pago por Nequi o Consignación.");
+        crearSiNoExiste(repo, "msg.pago.instruccion", "es", "Arrastra aquí el pantallazo de tu transferencia al Nequi.");
         crearSiNoExiste(repo, "btn.atras", "es", "Atrás");
         crearSiNoExiste(repo, "btn.finalizar", "es", "Finalizar Registro");
 

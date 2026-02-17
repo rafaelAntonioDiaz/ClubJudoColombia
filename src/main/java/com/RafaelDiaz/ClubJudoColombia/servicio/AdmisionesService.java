@@ -6,10 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.Rol;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.DocumentoRequisitoRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.RolRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.TokenInvitacionRepository;
 
 @Service
 public class AdmisionesService {
-
+    private final SecurityService securityService;
     private final JudokaRepository judokaRepository;
     private final UsuarioRepository usuarioRepository;
     private final DocumentoRequisitoRepository documentoRepository;
@@ -31,17 +27,17 @@ public class AdmisionesService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
-    // 1. NUEVA INYECCIÓN: Necesitamos el servicio que sabe crear planes
     private final JudokaService judokaService;
 
-    public AdmisionesService(JudokaRepository judokaRepository,
+    public AdmisionesService(SecurityService securityService, JudokaRepository judokaRepository,
                              UsuarioRepository usuarioRepository,
                              DocumentoRequisitoRepository documentoRepository,
                              RolRepository rolRepository,
                              TraduccionService traduccionService,
                              TokenInvitacionRepository tokenRepository,
                              EmailService emailService, PasswordEncoder passwordEncoder,
-                             JudokaService judokaService) { // 2. Agregado al constructor
+                             JudokaService judokaService) {
+        this.securityService = securityService;
         this.judokaRepository = judokaRepository;
         this.usuarioRepository = usuarioRepository;
         this.documentoRepository = documentoRepository;
@@ -61,16 +57,16 @@ public class AdmisionesService {
         // 1. Crear el Usuario (Inactivo y sin clave aún)
         Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
         nuevoUsuario.setEmail(email);
+        nuevoUsuario.setUsername(email);
         nuevoUsuario.setActivo(false);
-        usuarioRepository.save(nuevoUsuario);
-
+        usuarioRepository.saveAndFlush(nuevoUsuario);
         // 2. Crear el Judoka (Estado PENDIENTE)
         Judoka nuevoJudoka = new Judoka();
         nuevoJudoka.setAcudiente(nuevoUsuario);
+        nuevoJudoka.setSensei(securityService.getAuthenticatedSensei().get());
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
 
-        judokaRepository.save(nuevoJudoka);
-
+        judokaRepository.saveAndFlush(nuevoJudoka);
         // --- 4. EL DISPARADOR MÁGICO: Crear Plan de Evaluación Automático ---
         // Justo después de guardar, le asignamos su carpeta de pruebas vacía.
         judokaService.inicializarJudokaNuevo(nuevoJudoka);
@@ -114,21 +110,38 @@ public class AdmisionesService {
     public void activarJudoka(Judoka judoka) {
         List<String> faltantes = new ArrayList<>();
 
-        boolean tieneWaiver = judoka.getDocumentos().stream()
-                .anyMatch(d -> d.getTipo() == TipoDocumento.WAIVER);
+        // Identificar si es SaaS o alumno directo del Master
+        boolean esSaaS = !judoka.getSensei().getUsuario().getUsername().equals("master_admin");
 
-        if (!tieneWaiver) {
-            faltantes.add(traduccionService.get("error.admisiones.falta_waiver"));
+        // --- LA TRINIDAD DEL DOJO PRINCIPAL ---
+        // Solo exigimos Waiver y EPS si NO es SaaS
+        if (!esSaaS) {
+            boolean tieneWaiver = judoka.getDocumentos().stream()
+                    .anyMatch(d -> d.getTipo() == TipoDocumento.WAIVER);
+            if (!tieneWaiver) {
+                faltantes.add(traduccionService.get("error.admisiones.falta_waiver"));
+            }
+
+            boolean tieneEps = judoka.getDocumentos().stream()
+                    .anyMatch(d -> d.getTipo() == TipoDocumento.EPS);
+            if (!tieneEps) {
+                faltantes.add(traduccionService.get("error.admisiones.falta_eps") != null ?
+                        traduccionService.get("error.admisiones.falta_eps") : "Falta Certificado EPS");
+            }
         }
 
+        // --- REQUISITO UNIVERSAL ---
+        // El pago sí es obligatorio para absolutamente todos
         if (!judoka.isMatriculaPagada()) {
             faltantes.add(traduccionService.get("error.admisiones.falta_pago"));
         }
 
+        // Si falta algo, bloqueamos la activación y mostramos la lista exacta de lo que falta
         if (!faltantes.isEmpty()) {
-            throw new RuntimeException(traduccionService.get("error.admisiones.requisitos_incompletos") + ": " + String.join(" ", faltantes));
+            throw new RuntimeException(traduccionService.get("error.admisiones.requisitos_incompletos") + ": " + String.join(", ", faltantes));
         }
 
+        // --- SI PASA TODAS LAS PRUEBAS, LO ACTIVAMOS ---
         judoka.setEstado(EstadoJudoka.ACTIVO);
 
         Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
@@ -169,11 +182,14 @@ public class AdmisionesService {
     public String crearAspiranteYGenerarToken(String nombre, String apellido, String email) {
         Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
         nuevoUsuario.setEmail(email);
+        nuevoUsuario.setUsername(email);
+
         nuevoUsuario.setActivo(false);
         usuarioRepository.save(nuevoUsuario);
 
         Judoka nuevoJudoka = new Judoka();
         nuevoJudoka.setAcudiente(nuevoUsuario);
+        nuevoJudoka.setSensei(securityService.getAuthenticatedSensei().get());
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
         judokaRepository.save(nuevoJudoka);
 
@@ -222,6 +238,7 @@ public class AdmisionesService {
         perfilDeportivo.setNombre(nombre);
         perfilDeportivo.setApellido(apellido);
         perfilDeportivo.setMayorEdad(true); // Flag de UI
+
 
         // Datos de emergencia (Crítico para adultos)
         perfilDeportivo.setNombreContactoEmergencia(nombreEmergencia);

@@ -27,7 +27,12 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
     List<Judoka> findBySenseiIdWithAcudiente(@Param("senseiId") Long senseiId);
 
     // 4. Ajustamos la vista de admisiones
-    @Query("SELECT DISTINCT j FROM Judoka j JOIN FETCH j.acudiente LEFT JOIN FETCH j.documentos WHERE j.estado = :estado")
+    @Query("SELECT DISTINCT j FROM Judoka j " +
+            "JOIN FETCH j.acudiente " +
+            "LEFT JOIN FETCH j.documentos " +
+            "LEFT JOIN FETCH j.sensei s " +
+            "LEFT JOIN FETCH s.usuario " +
+            "WHERE j.estado = :estado")
     List<Judoka> findByEstadoWithDetails(@Param("estado") EstadoJudoka estado);
     // Mantenemos compatibilidad con nombres genéricos si es necesario
     List<Judoka> findByEstado(EstadoJudoka estadoJudoka);
@@ -45,5 +50,4 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
             "LEFT JOIN FETCH s.usuario " +
             "WHERE j.acudiente = :acudiente")
     List<Judoka> findByAcudienteWithDetails(@Param("acudiente") Usuario acudiente);
-
 }

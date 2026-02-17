@@ -7,7 +7,7 @@ import java.io.Serializable;
 
 /**
  * Entidad que almacena una norma de evaluación (benchmark).
- * (Actualizada para apuntar a 'PruebaEstandar' en lugar de 'Ejercicio')
+ * (Actualizada para apuntar a 'PruebaEstandar')
  */
 @Entity
 @Table(name = "normas_evaluacion")

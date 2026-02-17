@@ -40,6 +40,7 @@ public class TokenInvitacion implements Serializable {
         this.token = UUID.randomUUID().toString();
         this.fechaCreacion = LocalDateTime.now();
         this.fechaExpiracion = this.fechaCreacion.plusHours(horasValidez);
+        this.sensei = judoka.getSensei();
     }
 
     // --- Getters, Setters y Lógica ---

@@ -13,4 +13,5 @@ public interface AlmacenamientoCloudService {
      * Elimina un archivo de la nube dado su URL o Key.
      */
     boolean eliminarArchivo(String urlArchivoEnLaNube);
+
 }

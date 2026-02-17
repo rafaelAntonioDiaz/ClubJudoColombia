@@ -2,12 +2,14 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.MetricaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.SenseiRepository; // NUEVO
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.form.ResultadoPruebaForm;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.notification.Notification;
@@ -44,6 +46,7 @@ public class SenseiResultadosView extends VerticalLayout {
     private ResultadoPruebaForm resultadoForm;
     private Judoka judokaSeleccionado;
     private Sensei senseiActual; // El Sensei logueado
+    private JudokaRepository judokaRepository;
 
     public SenseiResultadosView(JudokaService judokaService,
                                 PlanEntrenamientoService planEntrenamientoService,
@@ -51,7 +54,8 @@ public class SenseiResultadosView extends VerticalLayout {
                                 MetricaRepository metricaRepository,
                                 ResultadoPruebaService resultadoPruebaService,
                                 SecurityService securityService,
-                                SenseiRepository senseiRepository) {
+                                SenseiRepository senseiRepository,
+                                JudokaRepository judokaRepository) {
         this.judokaService = judokaService;
         this.planEntrenamientoService = planEntrenamientoService;
         this.traduccionService = traduccionService;
@@ -59,6 +63,7 @@ public class SenseiResultadosView extends VerticalLayout {
         this.resultadoPruebaService = resultadoPruebaService;
         this.securityService = securityService;
         this.senseiRepository = senseiRepository;
+        this.judokaRepository = judokaRepository;
 
         setSizeFull();
         add(new H1(traduccionService.get("resultados.titulo")));
@@ -91,34 +96,15 @@ public class SenseiResultadosView extends VerticalLayout {
     }
 
     private void cargarSenseiLogueado() {
-        Optional<UserDetails> userDetails = securityService.getAuthenticatedUserDetails();
-        if (userDetails.isPresent()) {
-            // Buscamos al Sensei por su Usuario asociado
-            // Nota: Asumimos que findByUsuarioUsername existe o usamos una consulta similar
-            // Si no, podemos buscar por el ID del usuario si lo tenemos en sesión
-            Optional<Sensei> senseiOpt = senseiRepository.findByUsuarioUsername(userDetails.get().getUsername());
-            if (senseiOpt.isPresent()) {
-                this.senseiActual = senseiOpt.get();
-            } else {
-                // Manejo de error si es un Admin que no es Sensei, por ejemplo
-                Notification.show("Error: Perfil de Sensei no encontrado.", 3000, Notification.Position.MIDDLE);
-                // Deshabilitar UI
-                setEnabled(false);
-            }
-        }
+
     }
 
     private void configurarJudokaComboBox() {
         judokaComboBox = new ComboBox<>(traduccionService.get("resultados.selector.judoka"));
-
-        // --- CAMBIO CRÍTICO: SOLO LOS JUDOKAS DEL SENSEI ---
-        if (this.senseiActual != null) {
-            // Necesitas crear este método en JudokaService si no existe
-            List<Judoka> misJudokas = judokaService.buscarPorSensei(this.senseiActual);
-            judokaComboBox.setItems(misJudokas);
-        } else {
-            judokaComboBox.setItems(Collections.emptyList());
-        }
+        Long miSenseiId = securityService.getSenseiIdActual();
+        judokaComboBox.setItems(judokaRepository.findBySenseiIdWithAcudiente(miSenseiId));
+        judokaComboBox.setItemLabelGenerator(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido());
+        judokaComboBox.setWidthFull();
         // ----------------------------------------------------
 
         judokaComboBox.setItemLabelGenerator(judoka ->
@@ -133,9 +119,6 @@ public class SenseiResultadosView extends VerticalLayout {
             pruebasGrid.setItems(Collections.emptyList());
         });
     }
-
-    // ... (El resto de métodos configurarGridPlanes, configurarGridPruebas, etc. quedan igual) ...
-    // Solo copia el resto del archivo original aquí abajo
 
     private void configurarGridPlanes() {
         planesGrid = new Grid<>(PlanEntrenamiento.class);

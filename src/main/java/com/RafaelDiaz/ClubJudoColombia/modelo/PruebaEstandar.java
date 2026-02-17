@@ -8,7 +8,7 @@ import java.util.Set;
 
 /**
  * ENTIDAD REFACTORIZADA
- * (Antes 'Ejercicio')
+ *
  * Representa una Prueba Estandarizada (SJFT, Salto, etc.)
  * que es cargada por Flyway y evaluada por un Sensei.
  */
