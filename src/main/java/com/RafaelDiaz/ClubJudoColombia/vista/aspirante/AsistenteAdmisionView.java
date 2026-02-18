@@ -8,10 +8,8 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
@@ -109,11 +107,13 @@ public class AsistenteAdmisionView extends VerticalLayout {
 
         FormLayout formLayout = new FormLayout(fechaNacimientoField, pesoField);
 
-        Button btnSiguiente = new Button(traduccionService.get("btn.siguiente.paso"), VaadinIcon.ARROW_RIGHT.create());
+        Button btnSiguiente = new Button(traduccionService
+                .get("btn.siguiente.paso"), VaadinIcon.ARROW_RIGHT.create());
         btnSiguiente.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnSiguiente.addClickListener(e -> {
             if(pesoField.isEmpty() || fechaNacimientoField.isEmpty()){
-                Notification.show(traduccionService.get("msg.error.campos.incompletos"), 3000, Notification.Position.TOP_CENTER)
+                Notification.show(traduccionService.get("msg.error.campos.incompletos"),
+                                3000, Notification.Position.TOP_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
@@ -135,9 +135,18 @@ public class AsistenteAdmisionView extends VerticalLayout {
         if (!esSaaS) {
             Upload uploadWaiver = configurarUploadComponente(
                     "msg.waiver.instruccion", TipoDocumento.WAIVER);
+            Paragraph instrucciones = new Paragraph(traduccionService.get("vista.wizard.paso2.desc.descarga"));
+            // 2. El botón mágico de descarga
+            // La ruta asume que el archivo está en META-INF/resources/documentos/formato_waiver.pdf
+            Anchor enlaceDescarga = new Anchor("documentos/formato_waiver.pdf", "");
+            enlaceDescarga.getElement().setAttribute("download", true); // Fuerza la descarga en lugar de abrirlo
+
+            Button btnDescargar = new Button("Descargar Formato", new Icon(VaadinIcon.DOWNLOAD));
+            btnDescargar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_CONTRAST);
+            enlaceDescarga.add(btnDescargar);
             Upload uploadEps = configurarUploadComponente(
                     "msg.eps.instruccion", TipoDocumento.EPS);
-            gridDocumentos.add(uploadWaiver, uploadEps);
+            gridDocumentos.add(instrucciones, enlaceDescarga, uploadWaiver, uploadEps);
         }
         Upload uploadPago = configurarUploadComponente(
                 "msg.pago.instruccion", TipoDocumento.COMPROBANTE_PAGO);
@@ -186,7 +195,9 @@ public class AsistenteAdmisionView extends VerticalLayout {
 
     private Upload configurarUploadComponente(String i18nLabelKey, TipoDocumento tipoDoc) {
         Upload upload = new Upload();
-        upload.setAcceptedFileTypes("application/pdf", "image/png", "image/jpeg");
+        upload.setAcceptedFileTypes("application/pdf", ".pdf", "image/jpeg", ".jpg", ".jpeg", "image/png", ".png");
+        int maxFileSizeInBytes = 10 * 1024 * 1024; // 10 Megabytes
+        upload.setMaxFileSize(maxFileSizeInBytes);
         upload.setDropLabel(new Span(traduccionService.get(i18nLabelKey)));
         upload.setMaxFiles(1);
 

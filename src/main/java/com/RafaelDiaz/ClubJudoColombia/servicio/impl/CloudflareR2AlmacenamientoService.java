@@ -16,6 +16,8 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.InputStream;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -89,31 +91,47 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
 
     public String generarUrlSegura(String objectKey) {
         try {
-            // 1. Extraemos la "llave" real conservando las carpetas
+            // 1. Limpieza y extracción de la llave exacta
             if (objectKey != null && objectKey.startsWith("http")) {
                 java.net.URL url = new java.net.URL(objectKey);
-                objectKey = url.getPath(); // Esto extrae: "/carpetas/subcarpetas/archivo.pdf"
+                // Decodificamos %20 (espacios) para evitar errores
+                objectKey = URLDecoder.decode(url.getPath(), StandardCharsets.UTF_8);
 
-                // R2 y S3 son estrictos: las llaves NUNCA empiezan con "/", así que se lo quitamos
                 if (objectKey.startsWith("/")) {
                     objectKey = objectKey.substring(1);
                 }
+
+                // Blindaje extra: Si la ruta incluyó el bucket, lo cortamos
+                if (objectKey.startsWith("judo-assets/")) {
+                    objectKey = objectKey.substring("judo-assets/".length());
+                }
             }
 
-            // A este punto objectKey se ve así: "carpetas/subcarpetas/archivo.pdf"
+            // 2. MAGIA PURA: Detectamos el tipo real analizando la extensión
+            String tipoContenido = "application/pdf"; // Asumimos PDF por defecto
+            String nombreMinusculas = objectKey.toLowerCase();
+
+            if (nombreMinusculas.endsWith(".png")) {
+                tipoContenido = "image/png";
+            } else if (nombreMinusculas.endsWith(".jpg") || nombreMinusculas.endsWith(".jpeg")) {
+                tipoContenido = "image/jpeg";
+            }
+
+            // 3. Construimos la petición obligando al navegador a obedecer
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket("judo-assets")
                     .key(objectKey)
+                    .responseContentType(tipoContenido) // <--- ¡Corrige el pantallazo negro!
+                    .responseContentDisposition("inline") // <--- ¡Lo muestra en la pestaña sí o sí!
                     .build();
 
-            // 2. Firmamos la URL por 15 minutos
+            // 4. Firmamos la URL por 15 minutos
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
                     .signatureDuration(Duration.ofMinutes(15))
                     .getObjectRequest(getObjectRequest)
                     .build();
 
-            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
-            return presignedRequest.url().toString();
+            return s3Presigner.presignGetObject(presignRequest).url().toString();
 
         } catch (Exception e) {
             throw new RuntimeException("Fallo crítico al firmar el documento: " + objectKey, e);

@@ -1697,7 +1697,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "btn.editar", "es", "Editar");
         crearSiNoExiste(repo, "btn.eliminar", "es", "Eliminar");
         crearSiNoExiste(repo, "btn.crear", "es", "Crear");
-        crearSiNoExiste(repo, "btn.ver_pdf", "es", "Ver PDF");
+        crearSiNoExiste(repo, "btn.ver_pdf", "es", "Ver Soporte");
         crearSiNoExiste(repo, "btn.activar", "es", "Activar");
         crearSiNoExiste(repo, "btn.rechazar", "es", "Rechazar");
         crearSiNoExiste(repo, "btn.agregar", "es", "Agregar");
@@ -1750,8 +1750,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         // Paso 2: Documentos y Pago
         crearSiNoExiste(repo, "vista.wizard.paso2.titulo", "es", "Paso 2: subir Pago y/o Documentos legales");
-        crearSiNoExiste(repo, "vista.wizard.paso2.desc.completa", "es", "Sube a la nube:");
-        crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu PDF de Exoneración (Waiver) firmado.");
+        crearSiNoExiste(repo, "vista.wizard.paso2.desc.completa", "es", "Sube a la nube lo solicitado para completar tu registro.");
+
+        crearSiNoExiste(repo, "vista.wizard.paso2.desc.descarga", "es",
+                "Primero descargue el formato de exoneración de responsabilidades, fírmelo y genere un PDF.");
+        crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí el PDF de exoneración de responsabilidades generado.");
         crearSiNoExiste(repo, "msg.eps.instruccion", "es", "Arrastra aquí tu Certificado de Afiliación a la EPS.");
         crearSiNoExiste(repo, "msg.pago.instruccion", "es", "Arrastra aquí el pantallazo de tu transferencia al Nequi.");
         crearSiNoExiste(repo, "btn.atras", "es", "Atrás");
@@ -1769,10 +1772,10 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         // Enum del nuevo tipo de documento
         crearSiNoExiste(repo, "enum.tipo_documento.comprobante_pago", "es", "Comprobante de Pago / Nequi");
 // --- MENSAJES DE UPLOAD ---
-        crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu WAIVER (PDF)");
-        crearSiNoExiste(repo, "msg.waiver.instruccion", "en", "Drag your WAIVER (PDF) here");
-        crearSiNoExiste(repo, "msg.eps.instruccion", "es", "Arrastra aquí tu Certificado EPS (PDF)");
-        crearSiNoExiste(repo, "msg.eps.instruccion", "en", "Drag your Social Security certificate (PDF) here");
+        crearSiNoExiste(repo, "msg.waiver.instruccion", "es", "Arrastra aquí tu exoneración de responsabilidades");
+        crearSiNoExiste(repo, "msg.waiver.instruccion", "en", "Drag your WAIVER here");
+        crearSiNoExiste(repo, "msg.eps.instruccion", "es", "Arrastra aquí tu Certificado EPS");
+        crearSiNoExiste(repo, "msg.eps.instruccion", "en", "Drag your Social Security certificate here");
 
         crearSiNoExiste(repo, "msg.exito.archivo_subido", "es", "Documento guardado correctamente en la nube.");
         crearSiNoExiste(repo, "msg.exito.archivo_subido", "en", "Document successfully saved to the cloud.");

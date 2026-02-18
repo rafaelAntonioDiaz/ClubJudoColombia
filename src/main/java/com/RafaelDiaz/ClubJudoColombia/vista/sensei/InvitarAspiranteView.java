@@ -107,8 +107,9 @@ public class InvitarAspiranteView extends VerticalLayout {
             );
 
             // 4. Éxito: Limpiar formulario y notificar
-            mostrarNotificacion(traduccionService.get("exito.invitacion_enviada"), NotificationVariant.LUMO_SUCCESS);
             limpiarFormulario();
+
+            mostrarNotificacion(traduccionService.get("exito.invitacion_enviada"), NotificationVariant.LUMO_SUCCESS);
 
         } catch (Exception e) {
             mostrarNotificacion(traduccionService.get("error.sistema") + ": " + e.getMessage(), NotificationVariant.LUMO_ERROR);
@@ -130,8 +131,11 @@ public class InvitarAspiranteView extends VerticalLayout {
 
     private void limpiarFormulario() {
         nombreField.clear();
+        nombreField.setInvalid(false);
         apellidoField.clear();
+        apellidoField.setInvalid(false);
         emailField.clear();
+        emailField.setInvalid(false);
     }
 
     private void mostrarNotificacion(String mensaje, NotificationVariant variante) {
