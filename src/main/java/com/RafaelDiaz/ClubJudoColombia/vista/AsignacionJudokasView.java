@@ -33,15 +33,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.stream.Stream;
-
+import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.OptionalParameter;
 /**
  * Vista para asignar y remover Judokas de Grupos de Entrenamiento.
  * Actualizada con TraduccionService.
  */
 @Route("asignar-judokas")
 @RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
-public class AsignacionJudokasView extends SenseiLayout implements Serializable {
-
+public class AsignacionJudokasView extends SenseiLayout implements Serializable, HasUrlParameter<Long> {
     private static final long serialVersionUID = 1L;
     private static final Logger logger = LoggerFactory.getLogger(AsignacionJudokasView.class);
 
@@ -220,9 +221,9 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable 
         mainContent.setPadding(true);
         mainContent.setSpacing(true);
 
-        com.vaadin.flow.component.html.Div content =
-                (com.vaadin.flow.component.html.Div) getContent();
-        content.add(mainContent);
+        com.vaadin.flow.component.html.Div wrapper = new com.vaadin.flow.component.html.Div(mainContent);
+        wrapper.setSizeFull();
+        setContent(wrapper);
     }
 
     private void actualizarAmbosGrids() {
@@ -305,5 +306,18 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable 
                 params.sexo(),
                 params.grado()
         ).size();
+    }
+    @Override
+    public void setParameter(BeforeEvent event, @OptionalParameter Long grupoId) {
+        if (grupoId != null) {
+            // Asumiendo que tienes un método findById en tu servicio.
+            // Si devuelve Optional, usamos ifPresent. Si devuelve la entidad directo, ajústalo.
+            grupoService.findById(grupoId).ifPresent(grupo -> {
+                this.grupoSeleccionado = grupo;
+                this.grupoCombo.setValue(grupo);
+                this.grupoCombo.setReadOnly(true); // Bloqueamos el combo para que el Sensei no se salga del contexto
+                actualizarAmbosGrids();
+            });
+        }
     }
 }

@@ -25,14 +25,12 @@ public class SenseiRevisionView extends VerticalLayout {
 
     private Grid<EjecucionTarea> grid;
 
-    // NUEVO: Inyectar TraduccionService en el constructor
     public SenseiRevisionView(EjecucionTareaService ejecucionTareaService,
                               TraduccionService traduccionService) {
         this.ejecucionTareaService = ejecucionTareaService;
-        this.traduccionService = traduccionService; // NUEVO: Inicialización
+        this.traduccionService = traduccionService;
 
         setSizeFull();
-        // NUEVO: Título traducido
         add(new H1(traduccionService.get("revision.titulo")));
 
         configurarGrid();

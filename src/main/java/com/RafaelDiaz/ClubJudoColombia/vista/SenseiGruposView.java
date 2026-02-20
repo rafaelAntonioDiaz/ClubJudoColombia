@@ -1,29 +1,24 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- INYECCIÓN
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.FiltroJudokaLayout;
+import com.RafaelDiaz.ClubJudoColombia.vista.form.BaseForm;
 import com.RafaelDiaz.ClubJudoColombia.vista.form.GrupoForm;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.DataProvider;
@@ -58,18 +53,14 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
     private final FiltroJudokaLayout filtros;
     private final Button btnNuevoGrupo;
 
-    private Dialog dialogoMiembros;
-    private Grid<Judoka> gridMiembros;
-    private ComboBox<Judoka> comboCandidatos;
+    private SecurityService securityService;
 
     public SenseiGruposView(GrupoEntrenamientoService grupoService,
                             SecurityService securityService,
-                            AccessAnnotationChecker accessChecker,
-                            ConfiguracionService configuracionService,
-                            AuthenticationContext authenticationContext,
-                            TraduccionService traduccionService) { // <--- CONSTRUCTOR
+                            TraduccionService traduccionService) {
         this.grupoService = grupoService;
         this.traduccionService = traduccionService;
+        this.securityService = securityService;
 
         setSizeFull();
         setPadding(true);
@@ -131,7 +122,9 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
         Button btnMiembros = new Button(new Icon(VaadinIcon.USERS));
         btnMiembros.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
         btnMiembros.setTooltipText(traduccionService.get("grupos.tooltip.gestionar_miembros"));
-        btnMiembros.addClickListener(e -> abrirDialogoMiembros(grupo));
+        btnMiembros.addClickListener(e ->
+                getUI().ifPresent(ui -> ui.navigate(AsignacionJudokasView.class, grupo.getId()))
+        );
 
         Button btnEditar = new Button(new Icon(VaadinIcon.EDIT));
         btnEditar.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
@@ -147,82 +140,9 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
         return actions;
     }
 
-    private void abrirDialogoMiembros(GrupoEntrenamiento grupo) {
-        dialogoMiembros = new Dialog();
-        dialogoMiembros.setHeaderTitle(traduccionService.get("grupos.dialog.miembros.titulo") + ": " + grupo.getNombre());
-        dialogoMiembros.setWidth("800px");
-        dialogoMiembros.setHeight("600px");
-
-        VerticalLayout layout = new VerticalLayout();
-        layout.setSizeFull();
-
-        HorizontalLayout addLayout = new HorizontalLayout();
-        addLayout.setWidthFull();
-        addLayout.setAlignItems(Alignment.BASELINE);
-
-        comboCandidatos = new ComboBox<>(traduccionService.get("grupos.field.buscar_alumno"));
-        comboCandidatos.setWidthFull();
-        comboCandidatos.setItems(grupoService.findJudokasDisponibles(grupo.getId(), "", null, null));
-        comboCandidatos.setItemLabelGenerator(j ->
-                j.getUsuario().getNombre() + " " + j.getUsuario().getApellido() + " (" + j.getGradoCinturon() + ")"
-        );
-
-        Button btnAgregar = new Button(traduccionService.get("btn.agregar"), new Icon(VaadinIcon.PLUS));
-        btnAgregar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        btnAgregar.addClickListener(e -> {
-            Judoka seleccionado = comboCandidatos.getValue();
-            if (seleccionado != null) {
-                grupoService.addJudokaToGrupo(grupo.getId(), seleccionado.getId());
-                Notification.show(traduccionService.get("msg.success.added")).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                actualizarListaMiembros(grupo);
-                comboCandidatos.clear();
-                comboCandidatos.setItems(grupoService.findJudokasDisponibles(grupo.getId(), "", null, null));
-                gruposGrid.getDataProvider().refreshItem(grupo);
-            }
-        });
-
-        addLayout.add(comboCandidatos, btnAgregar);
-        addLayout.expand(comboCandidatos);
-
-        gridMiembros = new Grid<>(Judoka.class, false);
-        gridMiembros.setSizeFull();
-        gridMiembros.addColumn(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido())
-                .setHeader(traduccionService.get("generic.nombre")).setAutoWidth(true);
-        gridMiembros.addColumn(Judoka::getGradoCinturon)
-                .setHeader(traduccionService.get("generic.cinturon")).setAutoWidth(true);
-
-        gridMiembros.addComponentColumn(judoka -> {
-            Button btnSacar = new Button(new Icon(VaadinIcon.CLOSE_SMALL));
-            btnSacar.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
-            btnSacar.addClickListener(e -> {
-                grupoService.removeJudokaFromGrupo(grupo.getId(), judoka.getId());
-                actualizarListaMiembros(grupo);
-                comboCandidatos.setItems(grupoService.findJudokasDisponibles(grupo.getId(), "", null, null));
-                gruposGrid.getDataProvider().refreshItem(grupo);
-            });
-            return btnSacar;
-        }).setHeader(traduccionService.get("btn.quitar"));
-
-        actualizarListaMiembros(grupo);
-
-        layout.add(new H3(traduccionService.get("grupos.section.agregar")), addLayout,
-                new H3(traduccionService.get("grupos.section.actuales")), gridMiembros);
-
-        Button btnCerrar = new Button(traduccionService.get("btn.cerrar"), e -> dialogoMiembros.close());
-        dialogoMiembros.getFooter().add(btnCerrar);
-
-        dialogoMiembros.add(layout);
-        dialogoMiembros.open();
-    }
-
-    private void actualizarListaMiembros(GrupoEntrenamiento grupo) {
-        List<Judoka> miembros = grupoService.findJudokasEnGrupo(grupo.getId(), "", null, null);
-        gridMiembros.setItems(miembros);
-    }
-
     private void configureForm() {
         form.setVisible(false);
-        form.addSaveListener(event -> guardarGrupo(event.getData()));
+        form.addSaveListener(this::guardarGrupo);
         form.addCancelListener(event -> cerrarFormulario());
     }
 
@@ -262,9 +182,14 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
         gruposGrid.asSingleSelect().clear();
     }
 
-    private void guardarGrupo(GrupoEntrenamiento grupo) {
+    private void guardarGrupo(BaseForm.SaveEvent<GrupoEntrenamiento> event) {
         try {
+            GrupoEntrenamiento grupo = event.getData();
+
+            securityService.getAuthenticatedSensei().ifPresent(grupo::setSensei);
+
             grupoService.save(grupo);
+
             NotificationHelper.success(traduccionService.get("msg.success.saved") + ": " + grupo.getNombre());
             cerrarFormulario();
             gruposGrid.getDataProvider().refreshAll();

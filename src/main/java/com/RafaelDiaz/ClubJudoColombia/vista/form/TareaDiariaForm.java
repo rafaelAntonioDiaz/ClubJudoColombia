@@ -1,6 +1,8 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.form;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.TareaDiaria;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.CategoriaEjercicio;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
@@ -26,18 +28,20 @@ import com.vaadin.flow.data.binder.Binder;
 public class TareaDiariaForm extends BaseForm<TareaDiaria> {
 
     // --- Campos específicos de TareaDiaria ---
+    private final ComboBox<CategoriaEjercicio> categoria = new ComboBox<>();
     private final TextField nombre = new TextField("Nombre de la Tarea");
     private final TextField metaTexto = new TextField("Meta (ej. 4x15 reps, 30 min)");
     private final TextArea descripcion = new TextArea("Descripción/Procedimiento");
     private final TextField videoUrl = new TextField("URL del Video (YouTube)");
-
     /**
      * Constructor. Configura campos y layout.
      */
     public TareaDiariaForm() {
+
         super(); // Llama al constructor de BaseForm (configura botones)
         configureFields();
         addFieldsToForm();
+
     }
 
 
@@ -45,9 +49,11 @@ public class TareaDiariaForm extends BaseForm<TareaDiaria> {
      * Configura validación y propiedades de los campos.
      */
     private void configureFields() {
-        nombre.setRequired(true);
-        nombre.setRequiredIndicatorVisible(true);
-        nombre.setMaxLength(150);
+        categoria.setRequired(true);
+        categoria.setRequiredIndicatorVisible(true);
+        categoria.setPlaceholder("Bloque Metodológico");
+        categoria.setItems(CategoriaEjercicio.values());
+        categoria.setItemLabelGenerator(CategoriaEjercicio::getDescripcion);
 
         metaTexto.setRequired(true);
         metaTexto.setRequiredIndicatorVisible(true);
@@ -68,7 +74,7 @@ public class TareaDiariaForm extends BaseForm<TareaDiaria> {
      */
     private void addFieldsToForm() {
         // Los campos se añaden ANTES del layout de botones (que ya está en BaseForm)
-        add(nombre, metaTexto, descripcion, videoUrl);
+        add(categoria, nombre, metaTexto, descripcion, videoUrl);
     }
 
     /**
@@ -81,7 +87,10 @@ public class TareaDiariaForm extends BaseForm<TareaDiaria> {
     protected Binder<TareaDiaria> createBinder() {
         Binder<TareaDiaria> binder = new Binder<>(TareaDiaria.class);
 
-        // Binding con validación
+        binder.forField(categoria)
+                .asRequired("El bloque metodológico es obligatorio")
+                .bind(TareaDiaria::getCategoria, TareaDiaria::setCategoria);
+
         binder.forField(nombre)
                 .asRequired("El nombre de la tarea es obligatorio")
                 .bind(TareaDiaria::getNombre, TareaDiaria::setNombre);

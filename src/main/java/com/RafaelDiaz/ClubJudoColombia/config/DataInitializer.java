@@ -302,54 +302,73 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         traduccionRepository.saveAll(lista);
     }
 
-    // --- MÉTODOS PRIVADOS  ---
 
 // --- NUEVOS MÉTODOS PARA CREAR PRUEBAS MAESTRAS ---
 
     private void cargarPruebasYMetricas() {
-        System.out.println(">>> CARGANDO PRUEBAS ESTÁNDAR Y MÉTRICAS...");
+        System.out.println(">>> CARGANDO PRUEBAS ESTÁNDAR Y MÉTRICAS (ESTRUCTURA 5 BLOQUES CAAV)...");
 
-        // 1. Crear los tests
-        if (pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre").isEmpty() &&
-                pruebaEstandarRepository.findByNombreKey("ejercicio.sjft").isEmpty()) {
+        // BLOQUE 1: Dirección Técnico-Coordinativa (El Eje Transversal)
+        crearPruebaConMetricas("ejercicio.hikidashi_uchi_komi", CategoriaEjercicio.TECNICA,
+                Map.of("metrica.hikidashi_uchi_komi.nombre", "reps"));
 
-            PruebaEstandar sjft = new PruebaEstandar();
-            sjft.setNombreKey("ejercicio.sjft.nombre");
-            sjft.setDescripcionKey("ejercicio.sjft.desc");
-            sjft.setObjetivoKey("ejercicio.sjft.objetivo");
-            sjft.setCategoria(CategoriaEjercicio.APTITUD_ANAEROBICA);
-            pruebaEstandarRepository.save(sjft);
-            if (!metricaRepository.findByNombreKey("metrica.sjft_indice.nombre").isPresent()) {
-                Metrica metricaIndice = new Metrica();
-                metricaIndice.setNombreKey("metrica.sjft_indice.nombre");
-                metricaIndice.setUnidad("pts");
-                metricaRepository.save(metricaIndice);
-            }
-        }
+        crearPruebaConMetricas("ejercicio.agilidad_4x4", CategoriaEjercicio.AGILIDAD,
+                Map.of("metrica.agilidad_4x4.nombre", "s"));
 
-        // 2. Crear las demás pruebas para el Radar de Combate
-        // (Ajusta los nombres del Enum si en tu código son diferentes a POTENCIA, FUERZA, etc.)
-        crearPruebaSimple("ejercicio.salto_horizontal_proesp", "metrica.distancia.nombre", "cm", CategoriaEjercicio.POTENCIA);
-        crearPruebaSimple("ejercicio.lanzamiento_balon", "metrica.lanzamiento_balon.nombre", "cm", CategoriaEjercicio.POTENCIA);
-        crearPruebaSimple("ejercicio.abdominales_1min", "metrica.abdominales_1min.nombre", "reps", CategoriaEjercicio.POTENCIA);
-        crearPruebaSimple("ejercicio.carrera_6min", "metrica.distancia_6min.nombre", "m", CategoriaEjercicio.APTITUD_AEROBICA);
-        crearPruebaSimple("ejercicio.carrera_20m", "metrica.velocidad_20m.nombre", "s", CategoriaEjercicio.VELOCIDAD);
-        // Dirección Técnico Coordinativa
-        crearPruebaSimple("ejercicio.hikidashi_uchi_komi", "metrica.hikidashi_uchi_komi.nombre", "reps", CategoriaEjercicio.TECNICA);
-        // En lugar de tocar el cono se hace un gesto ofensivo
-        crearPruebaSimple("ejercicio.agilidad_4x4", "metrica.agilidad_4x4.nombre", "s", CategoriaEjercicio.AGILIDAD);
-        // Test de Anticipación Perceptivo-Motriz
-        crearPruebaSimple("ejercicio.tapm", "metrica.tapm.nombre", "s", CategoriaEjercicio.ANTICIPACION);
-        // Capacidades de Sustento
-        crearPruebaSimple("ejercicio.resistencia_isometrica", "metrica.resistencia_isometrica.nombre", "s", CategoriaEjercicio.RESISTENCIA_ISOMETRICA);
-        crearPruebaSimple("ejercicio.resistencia_muscular_localizada", "metrica.resistencia_muscular_localizada.nombre", "reps", CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA);
-        // Eficiencia Metabólica
-        crearPruebaSimple("ejercicio.sjft", "metrica.sjft.nombre", "index", CategoriaEjercicio.APTITUD_ANAEROBICA);
-        // Protección y Amplitud
-        crearPruebaSimple("ejercicio.sjft", "metrica.sjft.nombre", "index", CategoriaEjercicio.APTITUD_ANAEROBICA);
+        crearPruebaConMetricas("ejercicio.tapm", CategoriaEjercicio.ANTICIPACION,
+                Map.of("metrica.tapm.nombre", "s"));
 
+        // BLOQUE 2: Potencia (Definitorio)
+        crearPruebaConMetricas("ejercicio.salto_horizontal", CategoriaEjercicio.POTENCIA,
+                Map.of("metrica.distancia_salto.nombre", "cm"));
+
+        // BLOQUE 3: Sustento
+        crearPruebaConMetricas("ejercicio.resistencia_isometrica", CategoriaEjercicio.RESISTENCIA_ISOMETRICA,
+                Map.of("metrica.resistencia_isometrica.nombre", "s"));
+
+        crearPruebaConMetricas("ejercicio.traccion_judogi", CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA,
+                Map.of("metrica.repeticiones_traccion.nombre", "reps"));
+
+        // BLOQUE 4: Metabólico Máximo
+        // Nota: El SJFT comúnmente usa múltiples métricas. Mapeamos las que usa tu bloque de código de Julián/María.
+        crearPruebaConMetricas("ejercicio.sjft", CategoriaEjercicio.APTITUD_ANAEROBICA,
+                Map.of(
+                        "metrica.sjft_indice.nombre", "index",
+                        "metrica.sjft_proyecciones_total.nombre", "reps"
+                ));
+
+        // BLOQUE 5: Protección
+        crearPruebaConMetricas("ejercicio.flexibilidad", CategoriaEjercicio.FLEXIBILIDAD,
+                Map.of("metrica.flexibilidad.nombre", "cm"));
     }
 
+    // Método refactorizado para soportar múltiples métricas y asegurar la relación ManyToMany
+    private void crearPruebaConMetricas(String keyPrueba, CategoriaEjercicio categoria, Map<String, String> metricas) {
+
+        // 1. Crear o recuperar las Métricas y guardarlas en un Set
+        Set<Metrica> metricasAsignar = new HashSet<>();
+        for (Map.Entry<String, String> entry : metricas.entrySet()) {
+            Metrica m = metricaRepository.findByNombreKey(entry.getKey()).orElseGet(() -> {
+                Metrica nueva = new Metrica();
+                nueva.setNombreKey(entry.getKey());
+                nueva.setUnidad(entry.getValue());
+                return metricaRepository.save(nueva);
+            });
+            metricasAsignar.add(m);
+        }
+
+        // 2. Crear la Prueba Estándar y asociar las métricas
+        if (pruebaEstandarRepository.findByNombreKey(keyPrueba).isEmpty()) {
+            PruebaEstandar p = new PruebaEstandar();
+            p.setNombreKey(keyPrueba);
+            p.setCategoria(categoria);
+            p.setDescripcionKey(keyPrueba + ".desc");
+            p.setObjetivoKey(keyPrueba + ".objetivo");
+            p.setMetricas(metricasAsignar);
+            p.setEsGlobal(true);
+            pruebaEstandarRepository.save(p);
+        }
+    }
     // Método actualizado para cumplir con todas las reglas de la base de datos
 // Método actualizado, desacoplado y blindado contra violaciones de índice
     private void crearPruebaSimple(String keyPrueba, String keyMetrica, String unidad, CategoriaEjercicio categoria) {
@@ -928,17 +947,26 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private void crearTareasAcondicionamiento(Sensei sensei) {
         if(tareaDiariaRepository.count() > 0) return;
 
-        // Creamos un "Menú" variado de ejercicios
+        // Creamos un "Menú" variado de ejercicios, ahora categorizados estrictamente bajo el modelo CAAV
         tareaDiariaRepository.saveAll(List.of(
-                new TareaDiaria("Calentamiento Articular", "10 min movilidad", sensei),
-                new TareaDiaria("Trote Suave", "15 min zona 2", sensei),
-                new TareaDiaria("Uchikomi Sombra", "50 entradas (Der/Izq)", sensei),
-                new TareaDiaria("Flexiones de Pecho", "4 series x 15 reps", sensei),
-                new TareaDiaria("Sentadillas con Salto", "4 series x 20 reps", sensei),
-                new TareaDiaria("Uchikomi Gomas", "100 repeticiones velocidad", sensei),
-                new TareaDiaria("Burpees", "3 series al fallo", sensei),
-                new TareaDiaria("Abdominales en V", "3 series x 30", sensei),
-                new TareaDiaria("Estiramiento Final", "15 min estático", sensei)
+                // BLOQUE PROTECCIÓN
+                new TareaDiaria("Calentamiento Articular", "10 min movilidad", sensei, CategoriaEjercicio.FLEXIBILIDAD),
+                new TareaDiaria("Estiramiento Final", "15 min estático", sensei, CategoriaEjercicio.FLEXIBILIDAD),
+
+                // BLOQUE METABÓLICO / EFICIENCIA
+                new TareaDiaria("Trote Suave", "15 min zona 2", sensei, CategoriaEjercicio.APTITUD_AEROBICA),
+                new TareaDiaria("Burpees", "3 series al fallo", sensei, CategoriaEjercicio.APTITUD_ANAEROBICA),
+
+                // BLOQUE TÉCNICO-COORDINATIVO
+                new TareaDiaria("Uchikomi Sombra", "50 entradas (Der/Izq)", sensei, CategoriaEjercicio.TECNICA),
+
+                // BLOQUE SUSTENTO
+                new TareaDiaria("Flexiones de Pecho", "4 series x 15 reps", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
+                new TareaDiaria("Abdominales en V", "3 series x 30", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
+
+                // BLOQUE POTENCIA / DEFINITORIO
+                new TareaDiaria("Sentadillas con Salto", "4 series x 20 reps", sensei, CategoriaEjercicio.POTENCIA),
+                new TareaDiaria("Uchikomi Gomas", "100 repeticiones velocidad", sensei, CategoriaEjercicio.VELOCIDAD)
         ));
     }
 

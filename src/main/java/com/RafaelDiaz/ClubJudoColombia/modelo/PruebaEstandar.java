@@ -18,18 +18,18 @@ public class PruebaEstandar implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_ejercicio") // Mantenemos el nombre de columna por consistencia de FKs
+    @Column(name = "id_ejercicio")
     private Long id;
 
-    @Column(name = "nombre_key", nullable = false, unique = true, length = 200)
+    @Column(name = "nombre_key", unique = true, length = 200)
     private String nombreKey;
 
     @Lob
-    @Column(name = "objetivo_key", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "objetivo_key", columnDefinition = "TEXT")
     private String objetivoKey;
 
     @Lob
-    @Column(name = "descripcion_key", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "descripcion_key", columnDefinition = "TEXT")
     private String descripcionKey;
 
     @Column(name = "video_url", length = 255)
@@ -39,6 +39,24 @@ public class PruebaEstandar implements Serializable {
     @Column(name = "categoria", nullable = false)
     private CategoriaEjercicio categoria;
 
+    @Column(name = "es_global", nullable = false)
+    private boolean esGlobal = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei_creador")
+    private Sensei senseiCreador;
+
+    @Column(name = "nombre_personalizado", length = 200)
+    private String nombrePersonalizado;
+
+    @Lob
+    @Column(name = "objetivo_personalizado", columnDefinition = "TEXT")
+    private String objetivoPersonalizado;
+
+    @Lob
+    @Column(name = "descripcion_personalizada", columnDefinition = "TEXT")
+    private String descripcionPersonalizada;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "prueba_estandar_metricas", // Tabla de unión corregida
@@ -47,7 +65,42 @@ public class PruebaEstandar implements Serializable {
     )
     private Set<Metrica> metricas = new HashSet<>();
 
-    // Getters, Setters, hashCode, equals...
+    public void setEsGlobal(boolean esGlobal) {
+        this.esGlobal = esGlobal;
+    }
+
+    public boolean isEsGlobal() {
+        return esGlobal;
+    }
+
+    public String getDescripcionPersonalizada() {
+        return descripcionPersonalizada;
+    }
+
+    public void setDescripcionPersonalizada(String descripcionPersonalizada) {
+        this.descripcionPersonalizada = descripcionPersonalizada;
+    }
+
+    public String getObjetivoPersonalizado() {
+        return objetivoPersonalizado;
+    }
+
+    public void setObjetivoPersonalizado(String objetivoPersonalizado) {
+        this.objetivoPersonalizado = objetivoPersonalizado;
+    }
+
+    public Sensei getSenseiCreador() {
+        return senseiCreador;
+    }
+
+    public void setNombrePersonalizado(String nombrePersonalizado) {
+        this.nombrePersonalizado = nombrePersonalizado;
+    }
+
+    public String getNombrePersonalizado() {
+        return nombrePersonalizado;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNombreKey() { return nombreKey; }
@@ -63,6 +116,39 @@ public class PruebaEstandar implements Serializable {
     public Set<Metrica> getMetricas() { return metricas; }
     public void setMetricas(Set<Metrica> metricas) { this.metricas = metricas; }
 
+    public void setSenseiCreador(Sensei senseiCreador) {
+        this.senseiCreador = senseiCreador;
+    }
+
+    /**
+     * Devuelve el nombre correcto dependiendo del origen de la prueba.
+     */
+    public String getNombreMostrar(com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService traduccionService) {
+        if (this.esGlobal && this.nombreKey != null) {
+            return traduccionService.get(this.nombreKey);
+        }
+        return this.nombrePersonalizado != null ? this.nombrePersonalizado : "Prueba sin nombre";
+    }
+
+    /**
+     * Devuelve la descripción correcta dependiendo del origen de la prueba.
+     */
+    public String getDescripcionMostrar(com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService traduccionService) {
+        if (this.esGlobal && this.descripcionKey != null) {
+            return traduccionService.get(this.descripcionKey);
+        }
+        return this.descripcionPersonalizada != null ? this.descripcionPersonalizada : "Sin descripción";
+    }
+
+    /**
+     * Devuelve el objetivo correcto dependiendo del origen de la prueba.
+     */
+    public String getObjetivoMostrar(com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService traduccionService) {
+        if (this.esGlobal && this.objetivoKey != null) {
+            return traduccionService.get(this.objetivoKey);
+        }
+        return this.objetivoPersonalizado != null ? this.objetivoPersonalizado : "Sin objetivo definido";
+    }
     @Override
     public int hashCode() { return nombreKey != null ? nombreKey.hashCode() : 0; }
     @Override

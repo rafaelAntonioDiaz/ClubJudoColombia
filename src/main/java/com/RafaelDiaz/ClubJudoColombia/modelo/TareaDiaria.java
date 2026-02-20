@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.CategoriaEjercicio;
 import jakarta.persistence.*;
 import java.io.Serializable;
 
@@ -30,21 +31,33 @@ public class TareaDiaria implements Serializable {
     @Column(name = "meta_texto") // Ej. "4x15 reps"
     private String metaTexto;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "categoria", nullable = false)
+    private CategoriaEjercicio categoria;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_sensei")
     private Sensei senseiCreador;
 
-    public TareaDiaria(String nombre, String metaTexto, Sensei sensei) {
+    public TareaDiaria(String nombre, String metaTexto, Sensei sensei, CategoriaEjercicio categoria) {
         this.nombre = nombre;
         this.metaTexto = metaTexto;
         this.senseiCreador = sensei;
+        this.categoria = categoria;
     }
 
     public TareaDiaria() {
 
     }
 
-    // Getters, Setters, hashCode, equals...
+    public CategoriaEjercicio getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(CategoriaEjercicio categoria) {
+        this.categoria = categoria;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNombre() { return nombre; }

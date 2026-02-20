@@ -104,6 +104,7 @@ public class SenseiLayout extends AppLayout {
         agregarTab(tabs, getTexto("menu.invitar.sensei", "Invitar Sensei"), VaadinIcon.USER_STAR, InvitarSenseiView.class);
         agregarTab(tabs, getTexto("menu.invitar", "Invitar Aspirante"), VaadinIcon.PAPERPLANE, com.RafaelDiaz.ClubJudoColombia.vista.sensei.InvitarAspiranteView.class);
         agregarTab(tabs, getTexto("menu.admisiones", "Admisiones"), VaadinIcon.CLIPBOARD_USER, ValidacionIngresoView.class);
+
         agregarTab(tabs, getTexto("grupos.titulo", "Grupos"), VaadinIcon.GROUP, SenseiGruposView.class);
         agregarTab(tabs, getTexto("menu.asistencia", "Asistencia"), VaadinIcon.CHECK_SQUARE_O, RegistroAsistenciaView.class);
 
