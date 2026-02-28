@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
-
+import java.time.LocalTime;
+import java.time.DayOfWeek;
 /**
  * Entidad que representa un "equipo" o "grupo de entrenamiento".
  * Ej. "Equipo Masculino Sub-13", "Equipo Femenino Mayores".
@@ -28,6 +29,25 @@ public class GrupoEntrenamiento implements Serializable {
     @Column(name = "descripcion")
     private String descripcion;
 
+    @Column(name = "lugar_practica", length = 150)
+    private String lugarPractica;
+
+    @Column(name = "hora_inicio")
+    private LocalTime horaInicio;
+
+    @Column(name = "hora_fin")
+    private LocalTime horaFin;
+
+    /**
+     * Guarda los días de la semana en los que entrena este grupo.
+     * FetchType.EAGER asegura que los días carguen de inmediato para la vista.
+     */
+    @ElementCollection(targetClass = DayOfWeek.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "grupo_dias", joinColumns = @JoinColumn(name = "id_grupo"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dia")
+    private Set<DayOfWeek> diasSemana = new HashSet<>();
+
     /**
      * --- RELACIÓN (Muchos-a-Muchos con Judoka) ---
      * Un grupo tiene muchos Judokas.
@@ -42,19 +62,47 @@ public class GrupoEntrenamiento implements Serializable {
     )
     private Set<Judoka> judokas = new HashSet<>();
 
-    /**
-     * --- RELACIÓN (Muchos-a-Muchos con Plan) ---
-     * Un grupo puede tener asignados muchos planes.
-     * Un plan puede ser asignado a muchos grupos.
-     */
+    public Set<DayOfWeek> getDiasSemana() {
+        return diasSemana;
+    }
+
+    public void setDiasSemana(Set<DayOfWeek> diasSemana) {
+        this.diasSemana = diasSemana;
+    }
+
+
     @ManyToMany(mappedBy = "gruposAsignados", fetch = FetchType.LAZY)
-    private Set<PlanEntrenamiento> planesAsignados = new HashSet<>();
+    private Set<Microciclo> microciclosAsignados = new HashSet<>();
 
 
     // --- Constructores ---
     public GrupoEntrenamiento() {}
 
     // --- Getters y Setters ---
+
+    public String getLugarPractica() {
+        return lugarPractica;
+    }
+
+    public void setLugarPractica(String lugarPractica) {
+        this.lugarPractica = lugarPractica;
+    }
+
+    public LocalTime getHoraInicio() {
+        return horaInicio;
+    }
+
+    public void setHoraInicio(LocalTime horaInicio) {
+        this.horaInicio = horaInicio;
+    }
+
+    public LocalTime getHoraFin() {
+        return horaFin;
+    }
+
+    public void setHoraFin(LocalTime horaFin) {
+        this.horaFin = horaFin;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -64,9 +112,7 @@ public class GrupoEntrenamiento implements Serializable {
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public Set<Judoka> getJudokas() { return judokas; }
     public void setJudokas(Set<Judoka> judokas) { this.judokas = judokas; }
-    public Set<PlanEntrenamiento> getPlanesAsignados() { return planesAsignados; }
-    public void setPlanesAsignados(Set<PlanEntrenamiento> planesAsignados) { this.planesAsignados = planesAsignados; }
-    public Sensei getSensei() { return sensei; }
+   public Sensei getSensei() { return sensei; }
     public void setSensei(Sensei sensei) { this.sensei = sensei; }
     // --- hashCode y equals ---
     @Override

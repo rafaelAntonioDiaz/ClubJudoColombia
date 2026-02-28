@@ -22,6 +22,9 @@ public class Sensei implements Serializable {
     @JoinColumn(name = "id_usuario", referencedColumnName = "id_usuario", unique = true, nullable = false)
     private Usuario usuario;
 
+    @Column(name = "nombre_dojo", length = 100)
+    private String nombreDojo;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "grado_cinturon", nullable = false)
     private GradoCinturon grado;
@@ -67,6 +70,34 @@ public class Sensei implements Serializable {
     }
 
     // --- Getters y Setters (Actualizados) ---
+
+    public void setSaldoWallet(BigDecimal saldoWallet) {
+        this.saldoWallet = saldoWallet;
+    }
+
+    public BigDecimal getTotalGanadoHistorico() {
+        return totalGanadoHistorico;
+    }
+
+    public void setTotalGanadoHistorico(BigDecimal totalGanadoHistorico) {
+        this.totalGanadoHistorico = totalGanadoHistorico;
+    }
+
+    public String getDatosNequi() {
+        return datosNequi;
+    }
+
+    public void setDatosNequi(String datosNequi) {
+        this.datosNequi = datosNequi;
+    }
+
+    public String getNombreDojo() {
+        return nombreDojo;
+    }
+
+    public void setNombreDojo(String nombreDojo) {
+        this.nombreDojo = nombreDojo;
+    }
 
     public Long getId() {
         return id;

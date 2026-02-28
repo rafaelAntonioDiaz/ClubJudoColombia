@@ -85,7 +85,7 @@ public class CheckInWidget extends VerticalLayout {
         try {
             statusLabel.setText(traduccionService.get("checkin.status.validating"));
 
-            asistenciaService.realizarCheckInGps(judoka, lat, lon);
+           // asistenciaService.realizarCheckInGps(judoka, lat, lon);
 
             btnCheckIn.setText(traduccionService.get("checkin.btn.success"));
             btnCheckIn.setIcon(new Icon(VaadinIcon.CHECK));

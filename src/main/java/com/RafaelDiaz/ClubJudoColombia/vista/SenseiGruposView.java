@@ -46,12 +46,14 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(SenseiGruposView.class);
 
     private final GrupoEntrenamientoService grupoService;
-    private final TraduccionService traduccionService; // <--- SERVICIO I18N
+    private final TraduccionService traduccionService;
 
     private final Grid<GrupoEntrenamiento> gruposGrid = new Grid<>(GrupoEntrenamiento.class, false);
-    private final GrupoForm form = new GrupoForm();
+    private final GrupoForm form;
+
     private final FiltroJudokaLayout filtros;
     private final Button btnNuevoGrupo;
+    private FiltroJudokaLayout.SearchParams currentFilter = null;
 
     private SecurityService securityService;
 
@@ -61,7 +63,7 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
         this.grupoService = grupoService;
         this.traduccionService = traduccionService;
         this.securityService = securityService;
-
+        this.form = new GrupoForm(traduccionService);
         setSizeFull();
         setPadding(true);
         setSpacing(true);
@@ -71,10 +73,10 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
         configureGrid();
 
         this.filtros = new FiltroJudokaLayout(
-                (SerializableConsumer<FiltroJudokaLayout.SearchParams>)
-                        searchParams -> {
-                            gruposGrid.getDataProvider().refreshAll();
-                        }
+                searchParams -> {
+                    this.currentFilter = searchParams; // 1. Guardamos lo que el usuario escribió
+                    gruposGrid.getDataProvider().refreshAll(); // 2. Disparamos la búsqueda
+                }
         );
 
         configureForm();
@@ -209,15 +211,13 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
         }
     }
 
-    private Stream<GrupoEntrenamiento> fetchGrupos(Query<GrupoEntrenamiento, FiltroJudokaLayout.SearchParams> query) {
-        FiltroJudokaLayout.SearchParams filtros = query.getFilter().orElse(null);
-        String filter = (filtros != null && filtros.nombre() != null) ? filtros.nombre() : "";
+    private Stream<GrupoEntrenamiento> fetchGrupos(Query<GrupoEntrenamiento, Void> query) {
+        String filter = (currentFilter != null && currentFilter.nombre() != null) ? currentFilter.nombre() : "";
         return grupoService.findAll(query.getOffset(), query.getLimit(), filter).stream();
     }
 
-    private int countGrupos(Query<GrupoEntrenamiento, FiltroJudokaLayout.SearchParams> query) {
-        FiltroJudokaLayout.SearchParams filtros = query.getFilter().orElse(null);
-        String filter = (filtros != null && filtros.nombre() != null) ? filtros.nombre() : "";
+    private int countGrupos(Query<GrupoEntrenamiento, Void> query) {
+        String filter = (currentFilter != null && currentFilter.nombre() != null) ? currentFilter.nombre() : "";
         return (int) grupoService.count(filter);
     }
 }

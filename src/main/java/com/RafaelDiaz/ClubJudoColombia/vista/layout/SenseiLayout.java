@@ -4,7 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.*;
-import com.RafaelDiaz.ClubJudoColombia.vista.sensei.InvitarSenseiView;
+import com.RafaelDiaz.ClubJudoColombia.vista.sensei.GestorInvitacionesView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -101,16 +101,21 @@ public class SenseiLayout extends AppLayout {
         agregarTab(tabs, getTexto("menu.comunidad", "Comunidad"), VaadinIcon.USERS, ComunidadSenseiView.class);
 
         // --- 2. GESTIÓN DE PERSONAS ---
-        agregarTab(tabs, getTexto("menu.invitar.sensei", "Invitar Sensei"), VaadinIcon.USER_STAR, InvitarSenseiView.class);
-        agregarTab(tabs, getTexto("menu.invitar", "Invitar Aspirante"), VaadinIcon.PAPERPLANE, com.RafaelDiaz.ClubJudoColombia.vista.sensei.InvitarAspiranteView.class);
+        agregarTab(tabs, getTexto("menu.invitar", "Invitar"), VaadinIcon.PAPERPLANE, GestorInvitacionesView.class);
         agregarTab(tabs, getTexto("menu.admisiones", "Admisiones"), VaadinIcon.CLIPBOARD_USER, ValidacionIngresoView.class);
-
         agregarTab(tabs, getTexto("grupos.titulo", "Grupos"), VaadinIcon.GROUP, SenseiGruposView.class);
         agregarTab(tabs, getTexto("menu.asistencia", "Asistencia"), VaadinIcon.CHECK_SQUARE_O, RegistroAsistenciaView.class);
 
-        // --- 3. GESTIÓN TÉCNICA ---
+        // --- 3. GESTIÓN TÉCNICA & EJECUCIÓN ---
         agregarTab(tabs, getTexto("menu.biblioteca", "Biblioteca"), VaadinIcon.BOOK, BibliotecaView.class);
-        agregarTab(tabs, getTexto("view.sensei.plan.titulo", "Planes"), VaadinIcon.CLIPBOARD_CHECK, SenseiPlanView.class);
+        agregarTab(tabs, getTexto("view.sensei.plan.titulo", "Microciclos"), VaadinIcon.CLIPBOARD_CHECK, SenseiMicrociclosView.class);
+        agregarTab(tabs, getTexto("view.sensei.macrociclo", "Macrociclo"), VaadinIcon.CLIPBOARD_CHECK, SenseiMacrocicloView.class);
+
+        // >>> PARCHE AÑADIDO: MODO TATAMI Y BITÁCORA <<<
+        agregarTab(tabs, getTexto("menu.tatami", "Modo Tatami"), VaadinIcon.PLAY, SenseiTatamiView.class);
+        agregarTab(tabs, getTexto("menu.historial", "Bitácora (Fase R)"), VaadinIcon.ARCHIVE, SenseiHistorialView.class);
+        // >>> FIN DEL PARCHE <<<
+
         agregarTab(tabs, getTexto("menu.resultados", "Resultados"), VaadinIcon.TROPHY, SenseiResultadosView.class);
         agregarTab(tabs, getTexto("campeonatos.titulo", "Campeonatos"), VaadinIcon.TROPHY, SenseiCampeonatosView.class);
         agregarTab(tabs, getTexto("campos.titulo", "Campos"), VaadinIcon.MEDAL, SenseiCamposView.class);

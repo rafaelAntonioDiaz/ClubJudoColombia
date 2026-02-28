@@ -1,11 +1,13 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoAsistencia;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoSesion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -63,20 +65,23 @@ public class SenseiDashboardService {
                         .orElseThrow(() -> new RuntimeException("Sensei no autenticado")));
     }
 
-    public int calcularAsistenciaPromedio() {
-        Sensei sensei = securityService.getAuthenticatedSensei()
-                .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));
+    // (Asegúrate de importar com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoAsistencia;)
 
-        LocalDateTime inicio = LocalDateTime.now().minusDays(30);
-        List<Object[]> resultados = asistenciaRepository.countAsistenciasUltimos30Dias(sensei.getId(), inicio);
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public double calcularAsistenciaPromedio(Long senseiId) {
+        try {
+            LocalDateTime hace30Dias = LocalDateTime.now().minusDays(30);
 
-        if (resultados.isEmpty()) return 0;
-        Object[] datos = resultados.get(0);
-        Long asistencias = (Long) datos[0];
-        Long posibles = (Long) datos[1];
+            long totales = asistenciaRepository.contarTotalesUltimos30Dias(senseiId, hace30Dias);
+            if (totales == 0) return 0.0;
 
-        if (posibles == 0) return 0;
-        return (int) ((asistencias * 100) / posibles);
+            long presentes = asistenciaRepository.contarPorEstadoUltimos30Dias(senseiId, hace30Dias, EstadoAsistencia.PRESENTE);
+            return (double) presentes / totales * 100.0;
+
+        } catch (Exception e) {
+
+            return 0.0;
+        }
     }
 
     public Map<String, Double> getPromedioPoderDeCombatePorGrupo() {

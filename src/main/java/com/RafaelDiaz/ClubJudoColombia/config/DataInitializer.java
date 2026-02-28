@@ -4,7 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ChatService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.PlanEntrenamientoService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.MicrocicloService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.PublicacionService;
 
@@ -25,7 +25,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private final PasswordEncoder passwordEncoder;
     private final UsuarioRepository usuarioRepository;
     private final UsuarioService usuarioService;
-    private final PlanEntrenamientoService planService;
+    private final MicrocicloService planService;
     private final RolRepository rolRepository;
     private final SenseiRepository senseiRepository;
     private final JudokaRepository judokaRepository;
@@ -48,7 +48,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     private final PublicacionRepository publicacionRepository;
 
     public DataInitializer(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository, UsuarioService usuarioService,
-                           PlanEntrenamientoService planService,
+                           MicrocicloService planService,
                            RolRepository rolRepository,
                            SenseiRepository senseiRepository,
                            JudokaRepository judokaRepository,
@@ -130,15 +130,15 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
             crearGruposYAsignar(judokasGenericos, kiuzo);
             crearTareasAcondicionamiento(kiuzo);
 
-            PlanEntrenamiento planFisico = crearPlanAcondicionamiento(kiuzo);
-            PlanEntrenamiento planEvaluacion = crearPlanEvaluacion(planFisico);
+            Microciclo planFisico = crearPlanAcondicionamiento(kiuzo);
+            Microciclo planEvaluacion = crearPlanEvaluacion(planFisico);
 
-            programarSesiones(kiuzo);
+           // programarSesiones(kiuzo);
 
             // D. Generar Historia (Resultados, Asistencia, Chat)
             generarResultadosEvaluacion(judokasGenericos, planEvaluacion);
             generarEjecucionesTareas(judokasGenericos, planFisico);
-            generarAsistencias(judokasGenericos);
+            //generarAsistencias(judokasGenericos);
             generarDatosHistoricosCompletos(judokasGenericos);
             crearChatInicial();
 
@@ -970,14 +970,13 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         ));
     }
 
-    private PlanEntrenamiento crearPlanAcondicionamiento(Sensei sensei) {
+    private Microciclo crearPlanAcondicionamiento(Sensei sensei) {
         GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores").orElseThrow();
-        PlanEntrenamiento plan = new PlanEntrenamiento();
+        Microciclo plan = new Microciclo();
         plan.setNombre("Programa Intensivo - Pretemporada 2025");
         plan.setSensei(sensei);
-        plan.setFechaAsignacion(LocalDate.now());
-        plan.setEstado(EstadoPlan.ACTIVO);
-        plan.setTipoSesion(TipoSesion.ACONDICIONAMIENTO);
+        plan.setEstado(EstadoMicrociclo.ACTIVO);
+        plan.setTipoMicrociclo(TipoMicrociclo.AJUSTE);
         plan.getGruposAsignados().add(grupo);
 
         // Guardamos el plan primero para tener ID
@@ -989,7 +988,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         int orden = 1;
         for (TareaDiaria tarea : tareasDisponibles) {
             EjercicioPlanificado ej = new EjercicioPlanificado();
-            ej.setPlanEntrenamiento(plan);
+            ej.setMicrociclo(plan);
             ej.setTareaDiaria(tarea);
             ej.setOrden(orden++);
             ej.setNotasSensei("¡Enfócate en la técnica, no solo velocidad!");
@@ -1006,9 +1005,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     }
     /**
      * Crea el plan de evaluación SJFT.
-     * ARMONIZADO: Ahora recibe un PlanEntrenamiento de base y retorna el nuevo plan creado.
+     * ARMONIZADO: Ahora recibe un Microciclo de base y retorna el nuevo plan creado.
      */
-    private PlanEntrenamiento crearPlanEvaluacion(PlanEntrenamiento planBase) {
+    private Microciclo crearPlanEvaluacion(Microciclo planBase) {
         Sensei sensei = planBase.getSensei();
 
         // 1. Búsqueda segura del grupo (si no existe, toma el primero disponible o null)
@@ -1019,12 +1018,11 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                 });
 
         // 2. Configuración del Plan
-        PlanEntrenamiento plan = new PlanEntrenamiento();
+        Microciclo plan = new Microciclo();
         plan.setNombre("Test SJFT - Trimestre 1");
         plan.setSensei(sensei);
-        plan.setFechaAsignacion(LocalDate.now());
-        plan.setEstado(EstadoPlan.ACTIVO);
-        plan.setTipoSesion(TipoSesion.EVALUACION);
+        plan.setEstado(EstadoMicrociclo.ACTIVO);
+        plan.setTipoMicrociclo(TipoMicrociclo.CONTROL);
 
         if (grupo != null) {
             plan.getGruposAsignados().add(grupo);
@@ -1034,12 +1032,12 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         plan = planService.guardarPlan(plan);
 
         // 3. Búsqueda ROBUSTA de la prueba SJFT (Eliminado el orElseThrow que causaba el crash)
-        final PlanEntrenamiento finalPlan = plan;
+        final Microciclo finalPlan = plan;
         pruebaEstandarRepository.findByNombreKey("ejercicio.sjft.nombre")
                 .or(() -> pruebaEstandarRepository.findByNombreKey("ejercicio.sjft"))
                 .ifPresentOrElse(sjft -> {
                     EjercicioPlanificado ej = new EjercicioPlanificado();
-                    ej.setPlanEntrenamiento(finalPlan);
+                    ej.setMicrociclo(finalPlan);
                     ej.setPruebaEstandar(sjft);
                     ej.setOrden(1);
                     ej.setNotasSensei("Máximo esfuerzo requerido (Dato V2)");
@@ -1072,7 +1070,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     }
 
     private void generarResultadosEvaluacion(List<Judoka> judokas,
-                                             PlanEntrenamiento planEval) {
+                                             Microciclo planEval) {
         if (planEval.getEjerciciosPlanificados().isEmpty()) return;
         EjercicioPlanificado ejSjft = planEval.getEjerciciosPlanificados().get(0);
 
@@ -1102,7 +1100,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
     }
 
     private void generarEjecucionesTareas(List<Judoka> judokas,
-                                          PlanEntrenamiento planFisico) {
+                                          Microciclo planFisico) {
         if (planFisico.getEjerciciosPlanificados().isEmpty()) return;
         EjercicioPlanificado tareaBurpees = planFisico.getEjerciciosPlanificados().get(0);
         Judoka maria = judokas.get(0);
@@ -1123,9 +1121,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
         Asistencia asistencia = new Asistencia();
         asistencia.setJudoka(maria);
-        asistencia.setSesion(sesion);
-        asistencia.setPresente(true);
-        asistencia.setFechaHoraMarcacion(sesion.getFechaHoraInicio().plusMinutes(5));
+
         asistenciaRepository.save(asistencia);
     }
 
@@ -1237,9 +1233,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         Sensei kiuzo = senseiRepository.findByUsuario(usuarioKiuzo).orElseThrow();
 
         // 2. Buscamos planes
-        List<PlanEntrenamiento> planes = planService.buscarPlanesPorSensei(kiuzo);
+        List<Microciclo> planes = planService.buscarPlanesPorSensei(kiuzo);
         if (planes.isEmpty()) throw new RuntimeException("No hay planes de Kiuzo");
-        PlanEntrenamiento plan = planes.get(0);
+        Microciclo plan = planes.get(0);
 
         // 3. Buscar o crear ejercicio (usando comparación por ID para evitar LazyInit en equals)
         return plan.getEjerciciosPlanificados().stream()
@@ -1248,7 +1244,7 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
                 .findFirst()
                 .orElseGet(() -> {
                     EjercicioPlanificado nuevo = new EjercicioPlanificado();
-                    nuevo.setPlanEntrenamiento(plan);
+                    nuevo.setMicrociclo(plan);
                     nuevo.setPruebaEstandar(prueba);
                     nuevo.setOrden(99);
                     nuevo.getDiasAsignados().add(DayOfWeek.SATURDAY);
@@ -1424,8 +1420,9 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
 
 
         // --- VISTAS SENSEI ---
-        crearSiNoExiste(repo, "view.sensei.plan.titulo", "es", "Gestión de Planes");
-        crearSiNoExiste(repo, "view.sensei.plan.nuevo", "es", "Nuevo Plan");
+        crearSiNoExiste(repo, "view.sensei.plan.titulo", "es", "Taller de Microciclos");
+        crearSiNoExiste(repo, "view.sensei.macrociclo", "es", "Macrociclo");
+        crearSiNoExiste(repo, "view.sensei.plan.nuevo", "es", "Nuevo Microciclo");
 
         // --- ADMISIONES ---
         crearSiNoExiste(repo, "admisiones.titulo", "es", "Validación de Ingresos");
@@ -1436,7 +1433,8 @@ public class DataInitializer implements CommandLineRunner { // 1. Implementamos 
         crearSiNoExiste(repo, "admisiones.btn.marcar_pago", "es", "Marcar Pago Manual");
         crearSiNoExiste(repo, "admisiones.msg.activado", "es", "¡Judoka activado con éxito!");
         crearSiNoExiste(repo, "admisiones.msg.rechazado", "es", "Aspirante rechazado.");
-        crearSiNoExiste(repo, "menu.invitar", "es", "Invitar Aspirante.");
+        crearSiNoExiste(repo, "menu.invitar", "es", "Invitar");
+        crearSiNoExiste(repo, "menu.invitar.sensei", "es", "Invitar Sensé");
 
         // --- FINANZAS / TESORERÍA ---
         crearSiNoExiste(repo, "finanzas.titulo", "es", "Gestión Financiera");

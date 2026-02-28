@@ -2,7 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,20 +25,20 @@ public class ResultadoPruebaService {
     private final NormaEvaluacionRepository normaRepository;
     private final PruebaEstandarRepository pruebaEstandarRepository;
     private final TraduccionService traduccionService;
-    private final PlanEntrenamientoRepository planEntrenamientoRepository;
+    private final MicrocicloRepository microcicloRepository;
     private final EjecucionTareaRepository ejecucionTareaRepository;
 
     public ResultadoPruebaService(ResultadoPruebaRepository resultadoPruebaRepository,
                                   NormaEvaluacionRepository normaRepository,
                                   PruebaEstandarRepository pruebaEstandarRepository,
                                   TraduccionService traduccionService,
-                                  PlanEntrenamientoRepository planEntrenamientoRepository,
+                                  MicrocicloRepository microcicloRepository,
                                   EjecucionTareaRepository ejecucionTareaRepository) {
         this.resultadoPruebaRepository = resultadoPruebaRepository;
         this.normaRepository = normaRepository;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
         this.traduccionService = traduccionService;
-        this.planEntrenamientoRepository = planEntrenamientoRepository;
+        this.microcicloRepository = microcicloRepository;
         this.ejecucionTareaRepository = ejecucionTareaRepository;
     }
 
@@ -166,9 +166,9 @@ public class ResultadoPruebaService {
     /** KPI: Planes activos (PENDIENTE o EN_PROGRESO) */
     @Transactional(readOnly = true)
     public long contarPlanesActivos(Judoka judoka) {
-        return planEntrenamientoRepository.contarPlanesActivosParaJudoka(
+        return microcicloRepository.contarPlanesActivosParaJudoka(
                 judoka,
-                List.of(EstadoPlan.ACTIVO)
+                List.of(EstadoMicrociclo.ACTIVO)
         );
     }
 

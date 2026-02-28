@@ -162,16 +162,25 @@ public class PerfilAcudienteView extends VerticalLayout {
         top.add(avatar, info);
         top.setFlexGrow(1, info);
 
-        // Estado y Patrocinio
+        // --- ESTADO Y PATROCINIO (CORREGIDO) ---
         HorizontalLayout badges = new HorizontalLayout();
 
-        boolean activo = hijo.getFechaVencimientoSuscripcion() != null &&
-                hijo.getFechaVencimientoSuscripcion().isAfter(java.time.LocalDate.now());
-        Span badgeEstado = new Span(activo ? "Activo" : "Pago Pendiente");
-        badgeEstado.getElement().getThemeList().add(activo ? "badge success" : "badge error");
+        boolean activo = hijo.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.ACTIVO;
+        boolean enRevision = hijo.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.EN_REVISION;
+
+        Span badgeEstado = new Span();
+        if (activo) {
+            badgeEstado.setText("Activo");
+            badgeEstado.getElement().getThemeList().add("badge success");
+        } else if (enRevision) {
+            badgeEstado.setText("En Revisión (Auditoría)");
+            badgeEstado.getElement().getThemeList().add("badge contrast");
+        } else {
+            badgeEstado.setText("Pago Pendiente");
+            badgeEstado.getElement().getThemeList().add("badge error");
+        }
         badges.add(badgeEstado);
 
-        // OPTIMIZACIÓN: Mostrar si tiene Mecenas
         if (hijo.getMecenas() != null) {
             Span badgeMecenas = new Span("Patrocinado");
             badgeMecenas.getElement().getThemeList().add("badge contrast");
@@ -180,24 +189,33 @@ public class PerfilAcudienteView extends VerticalLayout {
             badges.add(badgeMecenas);
         }
 
-        // Acciones
+        // --- ACCIONES (CORREGIDO Y PROTEGIDO) ---
         HorizontalLayout acciones = new HorizontalLayout();
         acciones.setWidthFull();
         acciones.addClassNames(LumoUtility.Margin.Top.SMALL);
 
         Button btnMagicLink = new Button("Pase QR", VaadinIcon.QRCODE.create());
         btnMagicLink.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        btnMagicLink.addClickListener(e -> generarMagicLink(hijo)); // Lógica conectada
+        btnMagicLink.addClickListener(e -> generarMagicLink(hijo));
 
         Button btnDetalle = new Button("Progreso", VaadinIcon.LINE_CHART.create());
         btnDetalle.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
         btnDetalle.addClassNames(LumoUtility.Margin.Left.AUTO);
 
-        acciones.add(btnMagicLink, btnDetalle);
+        // Bloqueamos el botón si el niño aún no es admitido oficialmente
+        if (!activo) {
+            btnDetalle.setEnabled(false);
+            btnDetalle.getElement().setProperty("title", "Disponible cuando el Master apruebe el ingreso");
+        } else {
+            btnDetalle.addClickListener(e -> {
+                // Aquí pondrás la navegación a la vista real de Progreso cuando la construyas
+                Notification.show("Navegando al progreso de " + hijo.getNombre());
+            });
+        }
 
-        card.add(top, badges, new Hr(), acciones);
-        return card;
-    }
+        acciones.add(btnMagicLink, btnDetalle);
+        card.add(top, badges, new com.vaadin.flow.component.html.Hr(), acciones);
+        return card;}
 
     // --- LÓGICA DE MAGIC LINK (OPTIMIZADA) ---
     private void generarMagicLink(Judoka judoka) {
@@ -266,28 +284,39 @@ public class PerfilAcudienteView extends VerticalLayout {
 
     private void abrirDialogoPago(CuentaCobro cuenta) {
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle("Registrar Pago");
+        dialog.setHeaderTitle("Reportar Pago");
 
         VerticalLayout layout = new VerticalLayout();
 
         Select<MetodoPago> metodo = new Select<>();
-        metodo.setLabel("Método");
+        metodo.setLabel("Método de Pago");
         metodo.setItems(MetodoPago.values());
         metodo.setValue(MetodoPago.NEQUI);
 
-        TextField referencia = new TextField("Comprobante / Referencia");
+        // Si prefieres usar un uploader real aquí en el futuro, inyectas el servicio Cloud.
+        // Por ahora mantenemos tu TextField para la referencia / URL.
+        TextField referencia = new TextField("Referencia Nequi o URL del Comprobante");
+        referencia.setWidthFull();
 
         // USO DEL FORMATO DINÁMICO
-        layout.add(new Paragraph("Monto: " + formatearMoneda(cuenta.getValorTotal())), metodo, referencia);
+        layout.add(new Paragraph("Monto a transferir: " + formatearMoneda(cuenta.getValorTotal())), metodo, referencia);
 
-        Button btnConfirmar = new Button("Pagar", e -> {
+        Button btnConfirmar = new Button("Enviar Soporte", e -> {
             try {
-                finanzasService.pagarCuentaCobro(cuenta.getId(), metodo.getValue(), referencia.getValue());
-                Notification.show("Pago registrado exitosamente").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                if (referencia.getValue().isEmpty()) {
+                    Notification.show("Debes ingresar la referencia o comprobante.").addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    return;
+                }
+
+                // LLAMADA AL NUEVO BUZÓN (No entra a caja todavía)
+                finanzasService.reportarPagoParaRevision(cuenta.getId(), metodo.getValue(), referencia.getValue());
+
+                Notification.show("Soporte enviado. En espera de aprobación del Master.", 5000, Notification.Position.MIDDLE)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 dialog.close();
                 actualizarFinanzas(cuenta.getResponsablePago());
             } catch (Exception ex) {
-                Notification.show(ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                Notification.show("Error: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         });
         btnConfirmar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);

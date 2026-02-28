@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoAsistencia;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -9,11 +10,8 @@ import java.time.LocalDateTime;
  * Judoka a una SesionProgramada específica.
  */
 @Entity
-@Table(name = "asistencias",
-        // Creamos un índice único para evitar que un judoka
-        // sea marcado dos veces en la misma sesión.
-        uniqueConstraints = @UniqueConstraint(columnNames = {"id_judoka", "id_sesion"})
-)
+@Table(name = "asistencias")
+
 public class Asistencia implements Serializable {
 
     @Id
@@ -32,21 +30,13 @@ public class Asistencia implements Serializable {
      * La Sesión a la que se asiste.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_sesion", nullable = false)
-    private SesionProgramada sesion;
+    @JoinColumn(name = "id_sesion_ejecutada", nullable = false)
+    private SesionEjecutada sesion;
 
-    /**
-     * 'true' si asistió, 'false' si fue una ausencia justificada o no.
-     */
-    @Column(name = "presente", nullable = false)
-    private boolean presente;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false)
+    private EstadoAsistencia estado;
 
-    /**
-     * La fecha y hora exactas en que se marcó esta asistencia
-     * (útil para auditoría).
-     */
-    @Column(name = "fecha_hora_marcacion", nullable = false)
-    private LocalDateTime fechaHoraMarcacion;
 
     /**
      * (Opcional) Notas del sensei, ej. "Llegó tarde", "Justificado".
@@ -60,21 +50,26 @@ public class Asistencia implements Serializable {
     @Column(name = "longitud")
     private Double longitud;
 
-    // --- Constructores ---
     public Asistencia() {}
+    public Asistencia(Judoka judoka, EstadoAsistencia estado) {
+        this.judoka = judoka;
+        this.estado = estado;
+    }
 
-    // --- Getters y Setters ---
+    public EstadoAsistencia getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoAsistencia estado) {
+        this.estado = estado;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Judoka getJudoka() { return judoka; }
     public void setJudoka(Judoka judoka) { this.judoka = judoka; }
-    public SesionProgramada getSesion() { return sesion; }
-    public void setSesion(SesionProgramada sesion) { this.sesion = sesion; }
-    public boolean isPresente() { return presente; }
-    public void setPresente(boolean presente) { this.presente = presente; }
-    public LocalDateTime getFechaHoraMarcacion() { return fechaHoraMarcacion; }
-    public void setFechaHoraMarcacion(LocalDateTime fechaHoraMarcacion) { this.fechaHoraMarcacion = fechaHoraMarcacion; }
+    public SesionEjecutada getSesion() { return sesion; }
+    public void setSesion(SesionEjecutada sesion) { this.sesion = sesion; }
     public String getNotas() { return notas; }
     public void setNotas(String notas) { this.notas = notas; }
     public Double getLatitud() { return latitud; }

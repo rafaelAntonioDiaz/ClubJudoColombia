@@ -20,7 +20,7 @@ public class Pago implements Serializable {
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_producto", nullable = false)
+    @JoinColumn(name = "id_producto", nullable = true)
     private Producto producto;
 
     @OneToOne(fetch = FetchType.LAZY)

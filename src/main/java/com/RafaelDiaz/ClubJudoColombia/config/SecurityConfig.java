@@ -82,8 +82,16 @@ public class SecurityConfig extends VaadinWebSecurity {
     @Bean
     public RoleHierarchy roleHierarchy() {
         RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
-        // El MASTER puede hacer todo lo del SENSEI, el SENSEI todo lo del JUDOKA
-        hierarchy.setHierarchy("ROLE_MASTER > ROLE_SENSEI \n ROLE_SENSEI > ROLE_JUDOKA");
+        // Estructura piramidal actualizada para soportar el SaaS:
+        // MASTER lo puede todo -> ADMIN (Dueños de club) -> SENSEI (Profesores)
+        // El SENSEI puede ver/actuar sobre las vistas de JUDOKA, ACUDIENTE y MECENAS
+        String hierarchyString = "ROLE_MASTER > ROLE_ADMIN \n" +
+                "ROLE_ADMIN > ROLE_SENSEI \n" +
+                "ROLE_SENSEI > ROLE_JUDOKA \n" +
+                "ROLE_SENSEI > ROLE_ACUDIENTE \n" +
+                "ROLE_SENSEI > ROLE_MECENAS";
+
+        hierarchy.setHierarchy(hierarchyString);
         return hierarchy;
     }
 

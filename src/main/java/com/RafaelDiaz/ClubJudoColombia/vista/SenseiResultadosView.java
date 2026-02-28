@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 public class SenseiResultadosView extends VerticalLayout {
 
     private final JudokaService judokaService;
-    private final PlanEntrenamientoService planEntrenamientoService;
+    private final MicrocicloService MicrocicloService;
     private final TraduccionService traduccionService;
     private final MetricaRepository metricaRepository;
     private final ResultadoPruebaService resultadoPruebaService;
@@ -41,7 +41,7 @@ public class SenseiResultadosView extends VerticalLayout {
     private final SenseiRepository senseiRepository;
 
     private ComboBox<Judoka> judokaComboBox;
-    private Grid<PlanEntrenamiento> planesGrid;
+    private Grid<Microciclo> planesGrid;
     private Grid<EjercicioPlanificado> pruebasGrid;
     private ResultadoPruebaForm resultadoForm;
     private Judoka judokaSeleccionado;
@@ -49,7 +49,7 @@ public class SenseiResultadosView extends VerticalLayout {
     private JudokaRepository judokaRepository;
 
     public SenseiResultadosView(JudokaService judokaService,
-                                PlanEntrenamientoService planEntrenamientoService,
+                                MicrocicloService MicrocicloService,
                                 TraduccionService traduccionService,
                                 MetricaRepository metricaRepository,
                                 ResultadoPruebaService resultadoPruebaService,
@@ -57,7 +57,7 @@ public class SenseiResultadosView extends VerticalLayout {
                                 SenseiRepository senseiRepository,
                                 JudokaRepository judokaRepository) {
         this.judokaService = judokaService;
-        this.planEntrenamientoService = planEntrenamientoService;
+        this.MicrocicloService = MicrocicloService;
         this.traduccionService = traduccionService;
         this.metricaRepository = metricaRepository;
         this.resultadoPruebaService = resultadoPruebaService;
@@ -121,12 +121,12 @@ public class SenseiResultadosView extends VerticalLayout {
     }
 
     private void configurarGridPlanes() {
-        planesGrid = new Grid<>(PlanEntrenamiento.class);
+        planesGrid = new Grid<>(Microciclo.class);
         planesGrid.setWidth("50%");
         planesGrid.setVisible(false);
         planesGrid.removeAllColumns();
 
-        planesGrid.addColumn(PlanEntrenamiento::getNombre)
+        planesGrid.addColumn(Microciclo::getNombre)
                 .setHeader(traduccionService.get("resultados.grid.planes.header"));
         planesGrid.asSingleSelect().addValueChangeListener(event -> {
             cargarPruebasDelPlan(event.getValue());
@@ -154,9 +154,9 @@ public class SenseiResultadosView extends VerticalLayout {
             return;
         }
 
-        List<PlanEntrenamiento> planes = planEntrenamientoService.buscarPlanesPorJudoka(judoka);
+        List<Microciclo> planes = MicrocicloService.buscarPlanesPorJudoka(judoka);
 
-        List<PlanEntrenamiento> planesDeEvaluacion = planes.stream()
+        List<Microciclo> planesDeEvaluacion = planes.stream()
                 .filter(plan -> plan.getEjerciciosPlanificados().stream()
                         .anyMatch(ep -> ep.getPruebaEstandar() != null))
                 .collect(Collectors.toList());
@@ -165,7 +165,7 @@ public class SenseiResultadosView extends VerticalLayout {
         planesGrid.setVisible(true);
     }
 
-    private void cargarPruebasDelPlan(PlanEntrenamiento plan) {
+    private void cargarPruebasDelPlan(Microciclo plan) {
         if (plan == null) {
             pruebasGrid.setVisible(false);
             return;

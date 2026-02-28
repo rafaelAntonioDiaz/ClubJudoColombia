@@ -59,6 +59,8 @@ public class Usuario implements Serializable {
     @Column(name = "email", length = 150)
     private String email;
 
+    @Column(name = "celular", length = 20)
+    private String celular;
     /**
      * Lista de Judokas bajo la responsabilidad de este Usuario.
      * Puede ser él mismo (si es adulto) o sus hijos/representados.
@@ -119,9 +121,13 @@ public class Usuario implements Serializable {
         this.activo = true; // Por defecto, los nuevos usuarios están activos
     }
 
-    // --- Getters y Setters ---
-    // Son necesarios para que JPA (y Vaadin) puedan leer y escribir
-    // los valores de los campos privados.
+    public String getCelular() {
+        return celular;
+    }
+
+    public void setCelular(String celular) {
+        this.celular = celular;
+    }
 
     public Long getId() {
         return id;

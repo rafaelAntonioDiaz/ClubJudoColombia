@@ -58,6 +58,13 @@ public class Judoka implements Serializable {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_sensei", nullable = false)
     private Sensei sensei;
+    /**
+     * Grupo de entrenamiento asignado.
+     * Es nullable=true porque al ingresar (en la sala de espera) aún no tienen grupo.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_grupo", nullable = true)
+    private GrupoEntrenamiento grupo;
 
     // --- DATOS FÍSICOS ---
     @Column(name = "peso_kg")
@@ -161,6 +168,13 @@ public class Judoka implements Serializable {
 
     public Judoka() {}
 
+    public GrupoEntrenamiento getGrupo() {
+        return grupo;
+    }
+
+    public void setGrupo(GrupoEntrenamiento grupo) {
+        this.grupo = grupo;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -316,23 +330,6 @@ public class Judoka implements Serializable {
                 fechaVencimientoSuscripcion.isAfter(LocalDate.now());
     }
 
-    @Override
-    public int hashCode() {
-        if (acudiente != null && acudiente.getId() != null) {
-            return acudiente.getId().hashCode();
-        }
-        return id != null ? id.hashCode() : super.hashCode();
-    }
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Judoka that = (Judoka) obj;
-        if (acudiente != null && acudiente.getId() != null) {
-            return acudiente.getId().equals(that.acudiente != null ? that.acudiente.getId() : null);
-        }
-        return id != null ? id.equals(that.id) : super.equals(obj);
-    }
 
     public LocalDate getFechaVencimientoSuscripcion() {
         return fechaVencimientoSuscripcion;
@@ -387,4 +384,20 @@ public class Judoka implements Serializable {
     public boolean isSuscripcionActiva() {
         return suscripcionActiva;
     }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Judoka that = (Judoka) obj;
+
+        return id != null ? id.equals(that.id) : super.equals(obj);
+    }
+
+
 }

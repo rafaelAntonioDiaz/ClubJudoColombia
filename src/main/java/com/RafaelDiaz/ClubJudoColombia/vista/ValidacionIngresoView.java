@@ -8,7 +8,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.FinanzasService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- INYECCIÓN
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.impl.CloudflareR2AlmacenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.Component;
@@ -27,15 +27,13 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
-import com.vaadin.flow.data.renderer.LocalDateTimeRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.streams.DownloadHandler;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.io.File;
-import java.time.LocalDate;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -49,9 +47,11 @@ public class ValidacionIngresoView extends VerticalLayout {
     private final TraduccionService traduccionService;
     private final FinanzasService finanzasService;
     private final CloudflareR2AlmacenamientoService cloudflareR2AlmacenamientoService;
-    // Dividimos en dos tablas
+
     private Grid<Judoka> gridDojoPrincipal;
     private Grid<Judoka> gridSaaS;
+
+    private List<Judoka> judokasPendientes;
 
     private static final String MASTER_ADMIN_USERNAME = "master_admin";
 
@@ -84,8 +84,9 @@ public class ValidacionIngresoView extends VerticalLayout {
         gridDojoPrincipal = new Grid<>(Judoka.class, false);
         gridDojoPrincipal.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
 
-        gridDojoPrincipal.addColumn(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido())
+        gridDojoPrincipal.addColumn(this::obtenerNombreAspirante)
                 .setHeader(traduccionService.get("generic.aspirante")).setAutoWidth(true);
+
         gridDojoPrincipal.addColumn(new ComponentRenderer<>(this::crearComponenteWaiver))
                 .setHeader(traduccionService.get("admisiones.grid.documentos")).setAutoWidth(true);
         gridDojoPrincipal.addColumn(new ComponentRenderer<>(this::crearComponenteEps))
@@ -95,123 +96,127 @@ public class ValidacionIngresoView extends VerticalLayout {
         gridDojoPrincipal.addColumn(new ComponentRenderer<>(this::crearBotonesAccion))
                 .setHeader(traduccionService.get("generic.decision")).setAutoWidth(true);
 
-        // --- 2. GRID SAAS (Solo muestra Comprobante de Pago) ---
+        // --- 2. GRID SAAS ---
         gridSaaS = new Grid<>(Judoka.class, false);
         gridSaaS.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
 
         gridSaaS.addColumn(j -> j.getSensei().getUsuario().getNombre() + " " + j.getSensei().getUsuario().getApellido())
-                .setHeader("Sensei a Cargo").setAutoWidth(true); // Puedes añadir esto al TraduccionService luego
-        gridSaaS.addColumn(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido())
+                .setHeader("Sensei a Cargo").setAutoWidth(true);
+
+        gridSaaS.addColumn(this::obtenerNombreAspirante)
                 .setHeader(traduccionService.get("generic.aspirante")).setAutoWidth(true);
+
         gridSaaS.addColumn(new ComponentRenderer<>(this::crearComponentePago))
                 .setHeader(traduccionService.get("admisiones.grid.pago")).setAutoWidth(true);
         gridSaaS.addColumn(new ComponentRenderer<>(this::crearBotonesAccion))
                 .setHeader(traduccionService.get("generic.decision")).setAutoWidth(true);
 
-        // Añadimos a la vista con títulos separados
+        // AÑADIDO UNA SOLA VEZ A LA VISTA (Limpiando duplicados visuales)
         add(new H3("Alumnos Dojo Principal"));
         add(gridDojoPrincipal);
         add(new H3("Nuevas Suscripciones SaaS (Otros Dojos)"));
         add(gridSaaS);
     }
 
+    private void actualizarGrid() {
+        // 1. Escudo Anti-Clones (Agrupamos estrictamente por ID)
+        Map<Long, Judoka> mapaUnicos = new java.util.LinkedHashMap<>();
+        for (Judoka j : admisionesService.obtenerJudokasParaValidacion()) {
+            if (j.getFechaNacimiento() != null) {
+                mapaUnicos.put(j.getId(), j);
+            }
+        }
+        judokasPendientes = new java.util.ArrayList<>(mapaUnicos.values());
 
+        List<Judoka> dojoPrincipal = judokasPendientes.stream()
+                .filter(j -> j.getSensei() != null && j.getSensei().getUsuario().getUsername().equals(MASTER_ADMIN_USERNAME))
+                .collect(Collectors.toList());
+
+        List<Judoka> saas = judokasPendientes.stream()
+                .filter(j -> j.getSensei() != null && !j.getSensei().getUsuario().getUsername().equals(MASTER_ADMIN_USERNAME))
+                .collect(Collectors.toList());
+
+        // 2. Escudo Anti-Sobrescritura de Vaadin (Forzamos a la tabla a reconocer a los hermanos)
+        com.vaadin.flow.data.provider.ListDataProvider<Judoka> dpPrincipal = new com.vaadin.flow.data.provider.ListDataProvider<>(dojoPrincipal) {
+            @Override
+            public Object getId(Judoka item) {
+                return item.getId(); // ¡Esto evita que Vaadin crea que los hermanos son la misma persona!
+            }
+        };
+        gridDojoPrincipal.setDataProvider(dpPrincipal);
+
+        com.vaadin.flow.data.provider.ListDataProvider<Judoka> dpSaas = new com.vaadin.flow.data.provider.ListDataProvider<>(saas) {
+            @Override
+            public Object getId(Judoka item) {
+                return item.getId();
+            }
+        };
+        gridSaaS.setDataProvider(dpSaas);
+    }
 
     private Component crearBotonesAccion(Judoka judoka) {
-        Button btnAprobar = new Button(traduccionService.get("btn.activar"), new Icon(VaadinIcon.USER_CHECK));
+        Button btnAprobar = new Button("Aprobar Grupo", new Icon(VaadinIcon.USER_CHECK));
         btnAprobar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
 
-        Button btnRechazar = new Button(traduccionService.get("btn.rechazar"), new Icon(VaadinIcon.TRASH));
+        Button btnRechazar = new Button("Rechazar", new Icon(VaadinIcon.TRASH));
         btnRechazar.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL);
 
-        btnAprobar.addClickListener(e -> {
-            try {
-                admisionesService.activarJudoka(judoka);
-                Notification.show(traduccionService.get("admisiones.msg.activado") + " " + judoka.getUsuario().getNombre()).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                actualizarGrid();
-            } catch (RuntimeException ex) {
-                Notification.show(ex.getMessage(), 5000, Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
-            }
-        });
+        btnAprobar.addClickListener(e -> aprobarFamiliar(judoka));
 
         btnRechazar.addClickListener(e -> {
-            admisionesService.rechazarAspirante(judoka, "Rechazado por el Sensei");
-            Notification.show(traduccionService.get("admisiones.msg.rechazado")).addThemeVariants(NotificationVariant.LUMO_CONTRAST);
+            judoka.setEstado(EstadoJudoka.RECHAZADO);
+            judokaRepository.save(judoka);
+            admisionesService.rechazarAspirante(judoka, "Rechazado por el Master");
+            Notification.show("Ingreso rechazado.").addThemeVariants(NotificationVariant.LUMO_CONTRAST);
             actualizarGrid();
         });
 
         return new HorizontalLayout(btnAprobar, btnRechazar);
     }
 
-    // --- SEPARACIÓN DE LAS LISTAS ---
-    private void actualizarGrid() {
-        List<Judoka> todosPendientes = judokaRepository.findByEstadoWithDetails(EstadoJudoka.PENDIENTE);
+    private void procesarPagoFamiliar(Judoka judokaPivot) {
+        try {
+            List<Judoka> hermanos = obtenerHermanosPendientes(judokaPivot);
+            Optional<DocumentoRequisito> pagoOpt = obtenerDocumentoCompartido(judokaPivot, TipoDocumento.COMPROBANTE_PAGO);
+            String urlComprobante = pagoOpt.map(DocumentoRequisito::getUrlArchivo).orElse("Aprobado_Por_Master_Sin_Soporte");
 
-        // Alumnos del Dojo Principal (El Sensei es master_admin)
-        List<Judoka> dojoPrincipal = todosPendientes.stream()
-                .filter(j -> j.getSensei().getUsuario().getUsername().equals(MASTER_ADMIN_USERNAME))
-                .collect(Collectors.toList());
+            for (Judoka j : hermanos) {
+                if (!j.isMatriculaPagada()) {
+                    finanzasService.procesarPagoOnboarding(j, urlComprobante);
+                }
+            }
 
-        // Suscripciones SaaS (El Sensei es cualquier otro)
-        List<Judoka> saas = todosPendientes.stream()
-                .filter(j -> !j.getSensei().getUsuario().getUsername().equals(MASTER_ADMIN_USERNAME))
-                .collect(Collectors.toList());
-
-        gridDojoPrincipal.setItems(dojoPrincipal);
-        gridSaaS.setItems(saas);
+            Notification.show("Pago validado y registrado en Caja para toda la familia.").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            actualizarGrid();
+        } catch (Exception ex) {
+            Notification.show("Error al registrar pago: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
     }
 
-    // MUESTRA EL COMPROBANTE DE PAGO ---
-    private Component crearComponentePago(Judoka judoka) {
-        HorizontalLayout layout = new HorizontalLayout();
-        layout.setAlignItems(Alignment.CENTER);
+    private void aprobarFamiliar(Judoka judokaPivot) {
+        try {
+            List<Judoka> hermanos = obtenerHermanosPendientes(judokaPivot);
+            Optional<DocumentoRequisito> pagoOpt = obtenerDocumentoCompartido(judokaPivot, TipoDocumento.COMPROBANTE_PAGO);
+            String urlComprobante = pagoOpt.map(DocumentoRequisito::getUrlArchivo).orElse("Aprobado_Por_Master_Sin_Soporte");
 
-        // 1. Mostrar el enlace del documento a la Nube (AWS S3 / R2)
-        Optional<DocumentoRequisito> pagoOpt = judoka.getDocumentos().stream()
-                .filter(d -> d.getTipo() == TipoDocumento.COMPROBANTE_PAGO)
-                .findFirst();
+            for (Judoka j : hermanos) {
+                if (!j.isMatriculaPagada()) {
+                    finanzasService.procesarPagoOnboarding(j, urlComprobante);
+                }
+                j.setEstado(EstadoJudoka.ACTIVO);
+                judokaRepository.save(j);
+                admisionesService.activarJudoka(j);
+            }
 
-        if (pagoOpt.isPresent()) {
-            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(pagoOpt.get().getUrlArchivo());
-            Anchor link = new Anchor(urlSegura, traduccionService.get("btn.ver_pdf"));
-            link.getElement().setAttribute("target", "_blank");
-            Button btnVer = new Button(new Icon(VaadinIcon.DOLLAR));
-            btnVer.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
-            link.add(btnVer);
-            layout.add(link);
-        } else {
-            Span sinDoc = new Span("Sin Comprobante");
-            sinDoc.getElement().getThemeList().add("badge contrast");
-            layout.add(sinDoc);
+            Notification.show("¡Grupo familiar activado y finanzas procesadas exitosamente!").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            actualizarGrid();
+        } catch (RuntimeException ex) {
+            Notification.show(ex.getMessage(), 5000, Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
-
-        // 2. Estado de pago y Botón de Marcar
-        if (judoka.isMatriculaPagada()) {
-            Span span = new Span(traduccionService.get("generic.pagado"));
-            span.getElement().getThemeList().add("badge success");
-            layout.add(span);
-        } else {
-            Button btnMarcar = new Button(traduccionService.get("admisiones.btn.marcar_pago"));
-            btnMarcar.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
-            btnMarcar.addClickListener(e -> {
-                admisionesService.registrarPagoMatricula(judoka);
-                Notification.show(traduccionService.get("msg.success.payment_manual")).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-                finanzasService.procesarPagoMensualidad(judoka,"EFECTIVO");
-                judoka.setMatriculaPagada(true);
-                judoka.setFechaVencimientoSuscripcion(LocalDate.now());
-                actualizarGrid();
-            });
-            layout.add(btnMarcar);
-        }
-
-        return layout;
     }
 
     private Component crearComponenteWaiver(Judoka judoka) {
-        Optional<DocumentoRequisito> waiverOpt = judoka.getDocumentos().stream()
-                .filter(d -> d.getTipo() == TipoDocumento.WAIVER)
-                .findFirst();
-
+        Optional<DocumentoRequisito> waiverOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.WAIVER);
         if (waiverOpt.isPresent()) {
             String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(waiverOpt.get().getUrlArchivo());
             Anchor link = new Anchor(urlSegura, traduccionService.get("btn.ver_pdf"));
@@ -230,13 +235,42 @@ public class ValidacionIngresoView extends VerticalLayout {
         }
     }
 
-    private Component crearComponenteEps(Judoka judoka) {
-        Optional<DocumentoRequisito> epsOpt = judoka.getDocumentos().stream()
-                .filter(d -> d.getTipo() == TipoDocumento.EPS)
-                .findFirst();
+    private Component crearComponentePago(Judoka judoka) {
+        HorizontalLayout layout = new HorizontalLayout();
+        layout.setAlignItems(Alignment.CENTER);
 
+        Optional<DocumentoRequisito> pagoOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.COMPROBANTE_PAGO);
+
+        if (pagoOpt.isPresent()) {
+            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(pagoOpt.get().getUrlArchivo());
+            Anchor link = new Anchor(urlSegura, "Ver Recibo Nequi");
+            link.getElement().setAttribute("target", "_blank");
+            Button btnVer = new Button(new Icon(VaadinIcon.PICTURE));
+            btnVer.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
+            link.add(btnVer);
+            layout.add(link);
+        } else {
+            Span sinDoc = new Span("Pendiente de Pago");
+            sinDoc.getElement().getThemeList().add("badge error contrast");
+            layout.add(sinDoc);
+        }
+
+        if (judoka.isMatriculaPagada()) {
+            Span span = new Span(traduccionService.get("generic.pagado"));
+            span.getElement().getThemeList().add("badge success");
+            layout.add(span);
+        } else {
+            Button btnMarcar = new Button(traduccionService.get("admisiones.btn.marcar_pago"));
+            btnMarcar.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
+            btnMarcar.addClickListener(e -> procesarPagoFamiliar(judoka));
+            layout.add(btnMarcar);
+        }
+        return layout;
+    }
+
+    private Component crearComponenteEps(Judoka judoka) {
+        Optional<DocumentoRequisito> epsOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.EPS);
         if (epsOpt.isPresent()) {
-// Pedimos la URL temporal justo en el momento que se pinta la tabla
             String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(epsOpt.get().getUrlArchivo());
             Anchor link = new Anchor(urlSegura, traduccionService.get("btn.ver_pdf"));
             link.getElement().setAttribute("target", "_blank");
@@ -252,5 +286,48 @@ public class ValidacionIngresoView extends VerticalLayout {
             span.getElement().getThemeList().add("badge error");
             return span;
         }
+    }
+
+    private List<Judoka> obtenerHermanosPendientes(Judoka judoka) {
+        if (judoka.getAcudiente() == null || judokasPendientes == null) return List.of(judoka);
+        return judokasPendientes.stream()
+                .filter(j -> j.getAcudiente() != null &&
+                        j.getAcudiente().getId().equals(judoka.getAcudiente().getId()))
+                .collect(Collectors.toList());
+    }
+
+    private Optional<DocumentoRequisito> obtenerDocumentoCompartido(Judoka judoka, TipoDocumento tipo) {
+        List<DocumentoRequisito> misDocs = judoka.getDocumentos() != null ? judoka.getDocumentos() : java.util.Collections.emptyList();
+        Optional<DocumentoRequisito> docPropio = misDocs.stream()
+                .filter(d -> d.getTipo() == tipo)
+                .findFirst();
+
+        if (docPropio.isPresent()) {
+            return docPropio;
+        }
+
+        // --- REGLA ESTRICTA ---
+        // SÓLO compartimos el comprobante de pago con los hermanos.
+        // EPS y Waiver NO se comparten porque pertenecen a cada niño.
+        if (tipo != TipoDocumento.COMPROBANTE_PAGO || judoka.getAcudiente() == null || judokasPendientes == null) {
+            return Optional.empty();
+        }
+
+        return judokasPendientes.stream()
+                .filter(j -> j.getAcudiente() != null &&
+                        j.getAcudiente().getId().equals(judoka.getAcudiente().getId()) &&
+                        !j.getId().equals(judoka.getId()))
+                .flatMap(j -> j.getDocumentos() != null ? j.getDocumentos().stream() : java.util.stream.Stream.empty())
+                .filter(d -> d != null && d.getTipo() == TipoDocumento.COMPROBANTE_PAGO)
+                .findFirst();
+    }
+
+    private String obtenerNombreAspirante(Judoka j) {
+        if (j.getNombre() != null && !j.getNombre().isEmpty()) {
+            return j.getNombre() + " " + j.getApellido();
+        } else if (j.getUsuario() != null) {
+            return j.getUsuario().getNombre() + " " + j.getUsuario().getApellido();
+        }
+        return "Aspirante Sin Nombre";
     }
 }

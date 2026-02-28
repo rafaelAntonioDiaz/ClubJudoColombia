@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 import com.RafaelDiaz.ClubJudoColombia.modelo.ConfiguracionSistema;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -16,6 +17,7 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
+import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -23,6 +25,7 @@ import com.vaadin.flow.server.streams.UploadHandler;
 import jakarta.annotation.security.PermitAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -56,11 +59,14 @@ public class AsistenteAdmisionView extends VerticalLayout {
 
     private final DatePicker fechaNacimientoField = new DatePicker();
     private final NumberField pesoField = new NumberField();
-
+    private final PasswordEncoder passwordEncoder;
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordField passwordField = new PasswordField();
+    private final PasswordField confirmarPasswordField = new PasswordField();
     public AsistenteAdmisionView(AdmisionesService admisionesService,
                                  TraduccionService traduccionService,
                                  AlmacenamientoCloudService almacenamientoCloudService, ConfiguracionService configuracionService, SecurityService securityService1,
-                                 SecurityService securityService) {
+                                 SecurityService securityService, PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepository) {
         this.admisionesService = admisionesService;
         this.traduccionService = traduccionService;
         this.almacenamientoCloudService = almacenamientoCloudService;
@@ -69,6 +75,8 @@ public class AsistenteAdmisionView extends VerticalLayout {
 
         this.judokaActual = securityService.getAuthenticatedJudoka()
                 .orElseThrow(() -> new RuntimeException("Error: Ningún aspirante ha iniciado sesión."));
+        this.passwordEncoder = passwordEncoder;
+        this.usuarioRepository = usuarioRepository;
         // 1. DETECTAR PERFIL
         this.esSaaS = !judokaActual.getSensei().getUsuario().getUsername().equals(MASTER_ADMIN_USERNAME);
 
@@ -105,25 +113,48 @@ public class AsistenteAdmisionView extends VerticalLayout {
         pesoField.setLabel(traduccionService.get("label.peso_kg"));
         pesoField.setSuffixComponent(new Span("kg"));
 
-        FormLayout formLayout = new FormLayout(fechaNacimientoField, pesoField);
+        // --- NUEVOS CAMPOS DE CONTRASEÑA ---
+        // (Usa traducciones si las tienes, o el texto por defecto)
+        passwordField.setLabel(traduccionService.get("label.contrasena", "Crea tu Contraseña"));
+        passwordField.setRequired(true);
+        confirmarPasswordField.setLabel(traduccionService.get("label.confirmar_contrasena", "Confirmar Contraseña"));
+        confirmarPasswordField.setRequired(true);
 
-        Button btnSiguiente = new Button(traduccionService
-                .get("btn.siguiente.paso"), VaadinIcon.ARROW_RIGHT.create());
+        FormLayout formLayout = new FormLayout(fechaNacimientoField, pesoField, passwordField, confirmarPasswordField);
+
+        Button btnSiguiente = new Button(traduccionService.get("btn.siguiente.paso"), VaadinIcon.ARROW_RIGHT.create());
         btnSiguiente.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnSiguiente.addClickListener(e -> {
-            if(pesoField.isEmpty() || fechaNacimientoField.isEmpty()){
+
+            // 1. Validar que no haya campos vacíos
+            if(pesoField.isEmpty() || fechaNacimientoField.isEmpty() || passwordField.isEmpty() || confirmarPasswordField.isEmpty()){
                 Notification.show(traduccionService.get("msg.error.campos.incompletos"),
                                 3000, Notification.Position.TOP_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
+
+            // 2. Validar que las contraseñas coincidan
+            if (!passwordField.getValue().equals(confirmarPasswordField.getValue())) {
+                Notification.show(traduccionService.get("error.contrasenas_no_coinciden", "Las contraseñas no coinciden."),
+                                3000, Notification.Position.TOP_CENTER)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+
+            // 3. --- MAGIA: ENCRIPTAR Y GUARDAR CONTRASEÑA ---
+            // Usamos getUsuario() (o getAcudiente()) que ya mapeaste en tu entidad Judoka
+            com.RafaelDiaz.ClubJudoColombia.modelo.Usuario usuario = judokaActual.getUsuario();
+            usuario.setPasswordHash(passwordEncoder.encode(passwordField.getValue()));
+            usuarioRepository.save(usuario);
+
+            // 4. Continuar al Paso 2
             pasoActual = 2;
             renderizarPaso();
         });
 
         contenidoPaso.add(tituloPaso, desc, formLayout, btnSiguiente);
     }
-
     private void mostrarPaso2Documentos() {
         if (esSaaS) {
             waiverSubido = true;

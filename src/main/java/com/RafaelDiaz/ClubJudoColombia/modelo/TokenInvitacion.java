@@ -17,12 +17,19 @@ public class TokenInvitacion implements Serializable {
     private String token;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_sensei", nullable = false)
+    @JoinColumn(name = "id_sensei", nullable = true)
     private Sensei sensei;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_judoka", nullable = false)
+    @JoinColumn(name = "id_judoka", nullable = true)
     private Judoka judoka;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario")
+    private Usuario usuarioInvitado;
+
+    @Column(name = "rol_esperado", length = 50)
+    private String rolEsperado;
 
     @Column(nullable = false)
     private LocalDateTime fechaCreacion;
@@ -42,8 +49,69 @@ public class TokenInvitacion implements Serializable {
         this.fechaExpiracion = this.fechaCreacion.plusHours(horasValidez);
         this.sensei = judoka.getSensei();
     }
-
+    public void generarToken(int horasValidez) {
+        this.token = UUID.randomUUID().toString();
+        this.fechaCreacion = LocalDateTime.now();
+        this.fechaExpiracion = this.fechaCreacion.plusHours(horasValidez);
+        this.usado = false;
+    }
     // --- Getters, Setters y Lógica ---
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public Sensei getSensei() {
+        return sensei;
+    }
+
+    public void setSensei(Sensei sensei) {
+        this.sensei = sensei;
+    }
+
+    public void setJudoka(Judoka judoka) {
+        this.judoka = judoka;
+    }
+
+    public Usuario getUsuarioInvitado() {
+        return usuarioInvitado;
+    }
+
+    public void setUsuarioInvitado(Usuario usuarioInvitado) {
+        this.usuarioInvitado = usuarioInvitado;
+    }
+
+    public String getRolEsperado() {
+        return rolEsperado;
+    }
+
+    public void setRolEsperado(String rolEsperado) {
+        this.rolEsperado = rolEsperado;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+
+    public LocalDateTime getFechaExpiracion() {
+        return fechaExpiracion;
+    }
+
+    public void setFechaExpiracion(LocalDateTime fechaExpiracion) {
+        this.fechaExpiracion = fechaExpiracion;
+    }
+
+    public boolean isUsado() {
+        return usado;
+    }
 
     public boolean isValido() {
         return !usado && LocalDateTime.now().isBefore(fechaExpiracion);

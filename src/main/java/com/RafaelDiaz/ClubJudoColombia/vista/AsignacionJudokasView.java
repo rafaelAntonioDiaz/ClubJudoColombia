@@ -6,7 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- Importado
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.FiltroJudokaLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
@@ -22,8 +22,9 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.data.provider.DataProvider;
-import com.vaadin.flow.data.provider.Query;
+import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.OptionalParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import com.vaadin.flow.spring.security.AuthenticationContext;
@@ -32,14 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.stream.Stream;
-import com.vaadin.flow.router.HasUrlParameter;
-import com.vaadin.flow.router.BeforeEvent;
-import com.vaadin.flow.router.OptionalParameter;
-/**
- * Vista para asignar y remover Judokas de Grupos de Entrenamiento.
- * Actualizada con TraduccionService.
- */
+import java.util.List;
+
 @Route("asignar-judokas")
 @RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 public class AsignacionJudokasView extends SenseiLayout implements Serializable, HasUrlParameter<Long> {
@@ -52,7 +47,7 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
 
     private final Grid<Judoka> gridDisponibles = new Grid<>(Judoka.class, false);
     private final Grid<Judoka> gridAsignados = new Grid<>(Judoka.class, false);
-    private final com.vaadin.flow.component.combobox.ComboBox<GrupoEntrenamiento> grupoCombo; // Inicializar en constructor
+    private final com.vaadin.flow.component.combobox.ComboBox<GrupoEntrenamiento> grupoCombo;
     private final FiltroJudokaLayout filtrosDisponibles;
     private final FiltroJudokaLayout filtrosAsignados;
 
@@ -64,7 +59,7 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
                                  AccessAnnotationChecker accessChecker,
                                  ConfiguracionService configuracionService,
                                  AuthenticationContext authenticationContext,
-                                 TraduccionService traduccionService) { // <--- Inyección
+                                 TraduccionService traduccionService) {
 
         super(securityService, accessChecker, configuracionService, authenticationContext);
 
@@ -72,7 +67,6 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         this.judokaService = judokaService;
         this.traduccionService = traduccionService;
 
-        // Inicializar componentes UI con traducción
         this.grupoCombo = new com.vaadin.flow.component.combobox.ComboBox<>(
                 traduccionService.get("lbl.seleccionar.grupo")
         );
@@ -80,15 +74,25 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         configureGrupoCombo();
         configureGrids();
 
+        // Al filtrar, también usamos inyección directa
         this.filtrosDisponibles = new FiltroJudokaLayout(
-                (FiltroJudokaLayout.SearchParams searchParams) -> gridDisponibles.getDataProvider().refreshAll()
+                (FiltroJudokaLayout.SearchParams searchParams) -> actualizarAmbosGrids()
         );
         this.filtrosAsignados = new FiltroJudokaLayout(
-                (FiltroJudokaLayout.SearchParams searchParams) -> gridAsignados.getDataProvider().refreshAll()
+                (FiltroJudokaLayout.SearchParams searchParams) -> actualizarAmbosGrids()
         );
 
         buildLayout();
         logger.info("AsignacionJudokasView inicializada correctamente");
+    }
+
+    private String obtenerNombreCompleto(Judoka j) {
+        if (j.getNombre() != null && !j.getNombre().isEmpty()) {
+            return j.getNombre() + " " + j.getApellido();
+        } else if (j.getUsuario() != null) {
+            return j.getUsuario().getNombre() + " " + j.getUsuario().getApellido();
+        }
+        return "Sin Nombre";
     }
 
     private void configureGrupoCombo() {
@@ -97,90 +101,55 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         grupoCombo.setWidth("400px");
         grupoCombo.addValueChangeListener(event -> {
             this.grupoSeleccionado = event.getValue();
-            if (grupoSeleccionado != null) {
-                actualizarAmbosGrids();
-            }
+            actualizarAmbosGrids();
         });
     }
 
     private void configureGrids() {
         // --- Grid de Judokas Disponibles ---
-        gridDisponibles.addColumn(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido())
+        gridDisponibles.addColumn(this::obtenerNombreCompleto)
                 .setHeader(traduccionService.get("col.nombre.completo"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
-        // i18n: Traducción automática de Enum Grado
+                .setSortable(true).setAutoWidth(true);
         gridDisponibles.addColumn(j -> traduccionService.get(j.getGrado()))
                 .setHeader(traduccionService.get("col.grado"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
-        // i18n: Traducción automática de Enum Sexo (si existe como Enum)
+                .setSortable(true).setAutoWidth(true);
         gridDisponibles.addColumn(j -> traduccionService.get(j.getSexo()))
                 .setHeader(traduccionService.get("col.sexo"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
+                .setSortable(true).setAutoWidth(true);
         gridDisponibles.addColumn(j -> j.getEdad() + " " + traduccionService.get("lbl.anios"))
                 .setHeader(traduccionService.get("col.edad"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
+                .setSortable(true).setAutoWidth(true);
         gridDisponibles.addComponentColumn(this::crearBotonAsignar)
                 .setHeader(traduccionService.get("col.accion"))
-                .setAutoWidth(true)
-                .setFlexGrow(0);
+                .setAutoWidth(true).setFlexGrow(0);
 
         // --- Grid de Judokas Asignados ---
-        gridAsignados.addColumn(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido())
+        gridAsignados.addColumn(this::obtenerNombreCompleto)
                 .setHeader(traduccionService.get("col.nombre.completo"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
+                .setSortable(true).setAutoWidth(true);
         gridAsignados.addColumn(j -> traduccionService.get(j.getGrado()))
                 .setHeader(traduccionService.get("col.grado"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
+                .setSortable(true).setAutoWidth(true);
         gridAsignados.addColumn(j -> traduccionService.get(j.getSexo()))
                 .setHeader(traduccionService.get("col.sexo"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
+                .setSortable(true).setAutoWidth(true);
         gridAsignados.addColumn(j -> j.getEdad() + " " + traduccionService.get("lbl.anios"))
                 .setHeader(traduccionService.get("col.edad"))
-                .setSortable(true)
-                .setAutoWidth(true);
-
+                .setSortable(true).setAutoWidth(true);
         gridAsignados.addComponentColumn(this::crearBotonRemover)
                 .setHeader(traduccionService.get("col.accion"))
-                .setAutoWidth(true)
-                .setFlexGrow(0);
+                .setAutoWidth(true).setFlexGrow(0);
 
-        gridDisponibles.setPageSize(20);
-        gridAsignados.setPageSize(20);
         gridDisponibles.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
         gridAsignados.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
 
-        gridDisponibles.setDataProvider(DataProvider.fromFilteringCallbacks(
-                this::fetchJudokasDisponibles,
-                this::countJudokasDisponibles
-        ));
-        gridAsignados.setDataProvider(DataProvider.fromFilteringCallbacks(
-                this::fetchJudokasAsignados,
-                this::countJudokasAsignados
-        ));
+        // ¡MAGIA! Hemos eliminado los DataProviders de Vaadin que causaban el caché fantasma.
     }
 
     private com.vaadin.flow.component.Component crearBotonAsignar(Judoka judoka) {
         Button btn = new Button(new Icon(VaadinIcon.ARROW_RIGHT));
         btn.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_SMALL);
-        // i18n: Tooltip dinámico
-        String tooltip = traduccionService.get("tooltip.asignar.grupo") +
-                (grupoSeleccionado != null ? " " + grupoSeleccionado.getNombre() : "");
-        btn.setTooltipText(tooltip);
-
+        btn.setTooltipText(traduccionService.get("tooltip.asignar.grupo"));
         btn.addClickListener((ComponentEventListener<ClickEvent<Button>> & Serializable) event -> asignarJudoka(judoka));
         return btn;
     }
@@ -188,19 +157,16 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
     private com.vaadin.flow.component.Component crearBotonRemover(Judoka judoka) {
         Button btn = new Button(new Icon(VaadinIcon.ARROW_LEFT));
         btn.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL);
-        // i18n: Tooltip
         btn.setTooltipText(traduccionService.get("tooltip.remover.grupo"));
-
         btn.addClickListener((ComponentEventListener<ClickEvent<Button>> & Serializable) event -> removerJudoka(judoka));
         return btn;
     }
 
     private void buildLayout() {
-        // i18n: Título
         H2 titulo = new H2(traduccionService.get("view.asignacion.titulo"));
 
         VerticalLayout panelDisponibles = new VerticalLayout(
-                new Span(traduccionService.get("lbl.judokas.disponibles")),
+                new Span(traduccionService.get("lbl.judokas.disponibles") + " (Sala de Espera)"),
                 filtrosDisponibles,
                 gridDisponibles
         );
@@ -226,24 +192,63 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         setContent(wrapper);
     }
 
+    // --- EL CORAZÓN DE LA SOLUCIÓN: INYECCIÓN DIRECTA DE ITEMS ---
+// --- EL CORAZÓN DE LA SOLUCIÓN: LIST DATA PROVIDER CON ID REFORZADO ---
     private void actualizarAmbosGrids() {
-        gridDisponibles.getDataProvider().refreshAll();
-        gridAsignados.getDataProvider().refreshAll();
+        Long groupId = grupoSeleccionado != null ? grupoSeleccionado.getId() : null;
+
+        // 1. Extraer listas frescas y limpias desde la Base de Datos
+        FiltroJudokaLayout.SearchParams pDisp = filtrosDisponibles.getSearchParams();
+        List<Judoka> disponibles = grupoService.findJudokasDisponibles(
+                groupId,
+                pDisp != null ? pDisp.nombre() : null,
+                pDisp != null ? pDisp.sexo() : null,
+                pDisp != null ? pDisp.grado() : null
+        );
+
+        // 🛡️ ESCUDO DE IDENTIDAD: Recreamos el proveedor forzando el ID (Destruye caché y evita clones)
+        com.vaadin.flow.data.provider.ListDataProvider<Judoka> dpDisp = new com.vaadin.flow.data.provider.ListDataProvider<>(disponibles) {
+            @Override
+            public Object getId(Judoka item) {
+                return item.getId(); // ¡La regla de oro de identidad!
+            }
+        };
+        gridDisponibles.setDataProvider(dpDisp);
+
+        // 2. Repetir la misma protección para los asignados
+        if (groupId != null) {
+            FiltroJudokaLayout.SearchParams pAsig = filtrosAsignados.getSearchParams();
+            List<Judoka> asignados = grupoService.findJudokasEnGrupo(
+                    groupId,
+                    pAsig != null ? pAsig.nombre() : null,
+                    pAsig != null ? pAsig.sexo() : null,
+                    pAsig != null ? pAsig.grado() : null
+            );
+
+            com.vaadin.flow.data.provider.ListDataProvider<Judoka> dpAsig = new com.vaadin.flow.data.provider.ListDataProvider<>(asignados) {
+                @Override
+                public Object getId(Judoka item) {
+                    return item.getId();
+                }
+            };
+            gridAsignados.setDataProvider(dpAsig);
+
+        } else {
+            gridAsignados.setDataProvider(new com.vaadin.flow.data.provider.ListDataProvider<>(java.util.Collections.emptyList()));
+        }
     }
 
     private void asignarJudoka(Judoka judoka) {
-        if (grupoSeleccionado == null) return;
+        if (grupoSeleccionado == null) {
+            NotificationHelper.error("Debes seleccionar o crear un grupo primero.");
+            return;
+        }
         try {
             grupoService.addJudokaToGrupo(grupoSeleccionado.getId(), judoka.getId());
-            // i18n: Mensaje de éxito
-            NotificationHelper.success(traduccionService.get("msg.exito.asignacion") +
-                    " " + grupoSeleccionado.getNombre());
-            actualizarAmbosGrids();
-            logger.info("Asignación exitosa: Judoka {} -> Grupo {}", judoka.getId(), grupoSeleccionado.getId());
+            NotificationHelper.success(traduccionService.get("msg.exito.asignacion") + " " + grupoSeleccionado.getNombre());
+            actualizarAmbosGrids(); // Repinta en tiempo real inyectando las listas nuevas
         } catch (Exception e) {
-            // i18n: Mensaje de error
             NotificationHelper.error(traduccionService.get("msg.error.asignacion") + ": " + e.getMessage());
-            logger.error("Error en asignación", e);
         }
     }
 
@@ -251,73 +256,24 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         if (grupoSeleccionado == null) return;
         try {
             grupoService.removeJudokaFromGrupo(grupoSeleccionado.getId(), judoka.getId());
-            // i18n: Mensaje de éxito
             NotificationHelper.success(traduccionService.get("msg.exito.remocion"));
-            actualizarAmbosGrids();
-            logger.info("Remoción exitosa: Judoka {} <- Grupo {}", judoka.getId(), grupoSeleccionado.getId());
+            actualizarAmbosGrids(); // Repinta en tiempo real inyectando las listas nuevas
         } catch (Exception e) {
-            // i18n: Mensaje de error
             NotificationHelper.error(traduccionService.get("msg.error.remocion") + ": " + e.getMessage());
-            logger.error("Error en remoción", e);
         }
     }
 
-    // Lazy Loading para Judokas Disponibles
-    private Stream<Judoka> fetchJudokasDisponibles(Query<Judoka, Void> query) {
-        if (grupoSeleccionado == null) return Stream.empty();
-        FiltroJudokaLayout.SearchParams params = filtrosDisponibles.getSearchParams();
-        return grupoService.findJudokasDisponibles(
-                grupoSeleccionado.getId(),
-                params.nombre(),
-                params.sexo(),
-                params.grado()
-        ).stream().skip(query.getOffset()).limit(query.getLimit());
-    }
-
-    private int countJudokasDisponibles(Query<Judoka, Void> query) {
-        if (grupoSeleccionado == null) return 0;
-        FiltroJudokaLayout.SearchParams params = filtrosDisponibles.getSearchParams();
-        return grupoService.findJudokasDisponibles(
-                grupoSeleccionado.getId(),
-                params.nombre(),
-                params.sexo(),
-                params.grado()
-        ).size();
-    }
-
-    // Lazy Loading para Judokas Asignados
-    private Stream<Judoka> fetchJudokasAsignados(Query<Judoka, Void> query) {
-        if (grupoSeleccionado == null) return Stream.empty();
-        FiltroJudokaLayout.SearchParams params = filtrosAsignados.getSearchParams();
-        return grupoService.findJudokasEnGrupo(
-                grupoSeleccionado.getId(),
-                params.nombre(),
-                params.sexo(),
-                params.grado()
-        ).stream().skip(query.getOffset()).limit(query.getLimit());
-    }
-
-    private int countJudokasAsignados(Query<Judoka, Void> query) {
-        if (grupoSeleccionado == null) return 0;
-        FiltroJudokaLayout.SearchParams params = filtrosAsignados.getSearchParams();
-        return grupoService.findJudokasEnGrupo(
-                grupoSeleccionado.getId(),
-                params.nombre(),
-                params.sexo(),
-                params.grado()
-        ).size();
-    }
     @Override
     public void setParameter(BeforeEvent event, @OptionalParameter Long grupoId) {
         if (grupoId != null) {
-            // Asumiendo que tienes un método findById en tu servicio.
-            // Si devuelve Optional, usamos ifPresent. Si devuelve la entidad directo, ajústalo.
             grupoService.findById(grupoId).ifPresent(grupo -> {
                 this.grupoSeleccionado = grupo;
                 this.grupoCombo.setValue(grupo);
-                this.grupoCombo.setReadOnly(true); // Bloqueamos el combo para que el Sensei no se salga del contexto
-                actualizarAmbosGrids();
+                this.grupoCombo.setReadOnly(true);
+                actualizarAmbosGrids(); // Carga Inicial
             });
+        } else {
+            actualizarAmbosGrids(); // Carga la sala de espera si entra sin ID
         }
     }
 }

@@ -1,16 +1,15 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoSesion;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +24,7 @@ public class JudokaService {
     private final ReflexionRepository reflexionRepository;
 
     // --- DEPENDENCIAS ADICIONALES PARA INICIALIZACIÓN Y SEGURIDAD ---
-    private final PlanEntrenamientoRepository planRepository;
+    private final MicrocicloRepository planRepository;
     private final GrupoEntrenamientoRepository grupoRepository;
     private final PruebaEstandarRepository pruebaRepository;
     private final EjercicioPlanificadoRepository ejercicioPlanificadoRepository;
@@ -35,7 +34,7 @@ public class JudokaService {
                          JudokaRepository judokaRepository,
                          GamificationService gamificationService,
                          ReflexionRepository reflexionRepository,
-                         PlanEntrenamientoRepository planRepository,
+                         MicrocicloRepository planRepository,
                          GrupoEntrenamientoRepository grupoRepository,
                          PruebaEstandarRepository pruebaRepository,
                          EjercicioPlanificadoRepository ejercicioPlanificadoRepository,
@@ -162,26 +161,24 @@ public class JudokaService {
         grupoRepository.save(grupoPersonal);
 
         // 3. Crear Plan de Evaluación
-        PlanEntrenamiento plan = new PlanEntrenamiento();
-        plan.setNombre("Evaluación Inicial 2026");
+        Microciclo micro = new Microciclo();
+        micro.setNombre("Evaluación Inicial 2026");
 
-        // CORRECCIÓN: Usamos setSensei en lugar de setSenseiCreador
-        plan.setSensei(senseiResponsable);
+        micro.setSensei(senseiResponsable);
 
-        plan.setFechaAsignacion(LocalDate.now());
-        plan.setEstado(EstadoPlan.ACTIVO);
-        plan.setTipoSesion(TipoSesion.EVALUACION);
+        micro.setEstado(EstadoMicrociclo.ACTIVO);
+        micro.setTipoMicrociclo(TipoMicrociclo.CONTROL);
 
         // CORRECCIÓN: Usamos getGruposAsignados en lugar de getGrupos
-        plan.getGruposAsignados().add(grupoPersonal);
+        micro.getGruposAsignados().add(grupoPersonal);
 
-        plan = planRepository.save(plan);
+        micro = planRepository.save(micro);
 
         // 4. Agregar Pruebas
-        agregarPruebaAlPlan(plan, "ejercicio.abdominales_1min.nombre", 1);
-        agregarPruebaAlPlan(plan, "ejercicio.carrera_20m.nombre", 2);
-        agregarPruebaAlPlan(plan, "ejercicio.agilidad_4x4.nombre", 3);
-        agregarPruebaAlPlan(plan, "ejercicio.salto_horizontal_proesp.nombre", 4);
+        agregarPruebaAlPlan(micro, "ejercicio.abdominales_1min.nombre", 1);
+        agregarPruebaAlPlan(micro, "ejercicio.carrera_20m.nombre", 2);
+        agregarPruebaAlPlan(micro, "ejercicio.agilidad_4x4.nombre", 3);
+        agregarPruebaAlPlan(micro, "ejercicio.salto_horizontal_proesp.nombre", 4);
     }
 
     @Transactional(readOnly = true)
@@ -196,11 +193,11 @@ public class JudokaService {
                 .filter(j -> j.getAcudiente() != null && j.getAcudiente().equals(acudiente))
                 .collect(Collectors.toList());
     }
-    private void agregarPruebaAlPlan(PlanEntrenamiento plan, String keyPrueba, int orden) {
+    private void agregarPruebaAlPlan(Microciclo micro, String keyPrueba, int orden) {
         Optional<PruebaEstandar> pruebaOpt = pruebaRepository.findByNombreKey(keyPrueba);
         if (pruebaOpt.isPresent()) {
             EjercicioPlanificado ej = new EjercicioPlanificado();
-            ej.setPlanEntrenamiento(plan);
+            ej.setMicrociclo(micro);
             ej.setPruebaEstandar(pruebaOpt.get());
             ej.setOrden(orden);
             ejercicioPlanificadoRepository.save(ej);

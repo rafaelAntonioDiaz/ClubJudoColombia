@@ -1,9 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.DocumentoRequisito;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Rol;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
@@ -13,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
+import java.util.stream.Collectors;
 
 @Service
 public class AdmisionesService {
@@ -50,36 +47,72 @@ public class AdmisionesService {
     }
 
     /**
-     * FASE 1: El Sensei inicia el proceso (Invita al aspirante)
+     * FASE 1: Motor Unificado de Invitaciones.
+     * Genera el usuario de forma temprana, le asigna su rol y devuelve el Token
+     * para que la UI ensamble el mensaje de WhatsApp.
      */
     @Transactional
-    public void generarInvitacion(String nombre, String apellido, String email, String baseUrl) {
-        // 1. Crear el Usuario (Inactivo y sin clave aún)
-        Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
-        nuevoUsuario.setEmail(email);
-        nuevoUsuario.setUsername(email);
-        nuevoUsuario.setActivo(false);
-        usuarioRepository.saveAndFlush(nuevoUsuario);
-        // 2. Crear el Judoka (Estado PENDIENTE)
-        Judoka nuevoJudoka = new Judoka();
-        nuevoJudoka.setAcudiente(nuevoUsuario);
-        nuevoJudoka.setSensei(securityService.getAuthenticatedSensei().get());
-        nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
+    public String generarInvitacion(String nombre, String apellido,
+                                    String email, String celular,
+                                    String rolEsperado, String baseUrl) {
 
-        judokaRepository.saveAndFlush(nuevoJudoka);
-        // --- 4. EL DISPARADOR MÁGICO: Crear Plan de Evaluación Automático ---
-        // Justo después de guardar, le asignamos su carpeta de pruebas vacía.
-        judokaService.inicializarJudokaNuevo(nuevoJudoka);
-        // -------------------------------------------------------------------
+        // 1. Crear o recuperar el Usuario base (por si reenvían la invitación)
+        Usuario usuarioInvitado = usuarioRepository.findByUsername(email).orElse(new Usuario());
+        usuarioInvitado.setUsername(email); // El email es la llave maestra
+        usuarioInvitado.setEmail(email);
+        usuarioInvitado.setNombre(nombre);
+        usuarioInvitado.setApellido(apellido);
+        usuarioInvitado.setCelular(celular);
+        usuarioInvitado.setActivo(false); // Pendiente de Onboarding
 
-        // 3. Generar el Token (Válido por 48 horas)
-        TokenInvitacion token = new TokenInvitacion(nuevoJudoka, 48);
+        // Clave temporal encriptada e irrompible (usarán Magic Link para entrar)
+        usuarioInvitado.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+
+        // Asignación estricta del Rol
+        Rol rol = rolRepository.findByNombre(rolEsperado)
+                .orElseThrow(() -> new RuntimeException("Error Crítico: El rol " + rolEsperado + " no existe."));
+        usuarioInvitado.setRoles(new java.util.HashSet<>(java.util.Set.of(rol)));
+
+        usuarioRepository.saveAndFlush(usuarioInvitado);
+
+        // 2. Determinar quién invita y si requiere perfil deportivo
+        Sensei senseiActual = securityService.getAuthenticatedSensei().orElse(null);
+        Judoka judokaVinculado = null;
+
+        // Solo creamos entidad Judoka si es un aspirante a tatami
+        if (rolEsperado.equals("ROLE_JUDOKA")) {
+            Judoka nuevoJudoka = new Judoka();
+            nuevoJudoka.setAcudiente(usuarioInvitado);
+            nuevoJudoka.setCelular(celular);
+            if (senseiActual != null) {
+                nuevoJudoka.setSensei(senseiActual);
+            }
+            nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
+            judokaRepository.saveAndFlush(nuevoJudoka);
+
+            // Disparador mágico para el plan de evaluación
+            judokaService.inicializarJudokaNuevo(nuevoJudoka);
+            judokaVinculado = nuevoJudoka;
+        }
+
+        // 3. Generar el Token Unificado
+        TokenInvitacion token = new TokenInvitacion();
+        token.setUsuarioInvitado(usuarioInvitado);
+        token.setRolEsperado(rolEsperado);
+        token.setSensei(senseiActual); // Nullable si invita el MASTER
+        token.setJudoka(judokaVinculado); // Nullable si es Mecenas/Sensei
+        token.generarToken(48); // Válido por 48 horas
+
         tokenRepository.save(token);
 
-        // 4. Enviar el correo con el Magic Link
-        emailService.enviarInvitacionMagicLink(email, nombre, token.getToken(), baseUrl);
-    }
+        // 4. (Opcional) Respaldo por correo electrónico
+        if (email != null && !email.isEmpty()) {
+            emailService.enviarInvitacionMagicLink(email, nombre, token.getToken(), baseUrl);
+        }
 
+        // 5. Retornar el token para que la vista genere el texto de WhatsApp
+        return token.getToken();
+    }
     /**
      * Sube un documento (Waiver, Médico, etc)
      */
@@ -251,5 +284,53 @@ public class AdmisionesService {
         // Inicializamos fechas para que no entre en NullPointer en las vistas
         perfilDeportivo.setFechaVencimientoSuscripcion(java.time.LocalDate.now().plusDays(30)); // Regalo de bienvenida
     }
+    /**
+     * Validación de Onboarding.
+     * Lee el token, activa el usuario y quema la invitación.
+     */
+    @Transactional
+    public Usuario validarYActivarInvitacion(String tokenUuid) {
+        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
+                .orElseThrow(() -> new RuntimeException("Token inválido o no existe."));
 
+        if (!token.isValido()) {
+            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
+        }
+
+        Usuario usuario = token.getUsuarioInvitado();
+        usuario.setActivo(true);
+        usuarioRepository.save(usuario);
+        token.setUsado(true);
+        tokenRepository.save(token);
+        usuario.getRoles().size();
+        return usuario;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Judoka> obtenerJudokasParaValidacion() {
+        // 1. Buscamos solo los que nos interesan
+        List<Judoka> lista = judokaRepository.findAll().stream()
+                .filter(j -> j.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.EN_REVISION ||
+                        j.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.PENDIENTE)
+                .collect(java.util.stream.Collectors.toList());
+
+        for (Judoka j : lista) {
+            // Despertamos Sensei y su Usuario
+            if (j.getSensei() != null && j.getSensei().getUsuario() != null) {
+                j.getSensei().getUsuario().getUsername();
+                j.getSensei().getUsuario().getNombre();
+            }
+
+            try {
+                if (j.getUsuario() != null) {
+                    j.getUsuario().getNombre();
+                }
+            } catch (Exception ignored) { }
+
+            if (j.getDocumentos() != null) {
+                j.getDocumentos().size(); // Llamar a .size() obliga a Hibernate a traer los documentos
+            }
+        }
+        return lista;
+    }
 }

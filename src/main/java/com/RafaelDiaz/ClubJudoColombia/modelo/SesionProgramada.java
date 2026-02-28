@@ -29,7 +29,6 @@ import java.util.Set;
         attributeNodes = {
                 @NamedAttributeNode("grupo"),
                 @NamedAttributeNode("sensei"),
-                @NamedAttributeNode("asistencias")
         }
 )
 public class SesionProgramada implements Serializable {
@@ -62,8 +61,6 @@ public class SesionProgramada implements Serializable {
     @JoinColumn(name = "id_sensei", nullable = false)
     private Sensei sensei;
 
-    @OneToMany(mappedBy = "sesion", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Asistencia> asistencias = new HashSet<>();
 
     @Version
     @Column(name = "version", nullable = false)
@@ -103,8 +100,6 @@ public class SesionProgramada implements Serializable {
     public void setGrupo(GrupoEntrenamiento grupo) { this.grupo = grupo; }
     public Sensei getSensei() { return sensei; }
     public void setSensei(Sensei sensei) { this.sensei = sensei; }
-    public Set<Asistencia> getAsistencias() { return asistencias; }
-    public void setAsistencias(Set<Asistencia> asistencias) { this.asistencias = asistencias; }
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
     public Double getLatitud() { return latitud; }

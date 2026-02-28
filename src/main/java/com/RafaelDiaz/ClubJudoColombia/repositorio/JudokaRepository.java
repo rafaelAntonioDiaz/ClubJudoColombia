@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.repositorio;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
@@ -50,4 +51,6 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
             "LEFT JOIN FETCH s.usuario " +
             "WHERE j.acudiente = :acudiente")
     List<Judoka> findByAcudienteWithDetails(@Param("acudiente") Usuario acudiente);
+    // Añade esto en tu JudokaRepository
+    List<Judoka> findByGrupo(GrupoEntrenamiento grupo);
 }

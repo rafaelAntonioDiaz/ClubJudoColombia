@@ -49,7 +49,6 @@ public class ConfiguracionSistema {
     public ConfiguracionSistema() {
         this.nombreOrganizacion = "Mi Club de Judo";
         this.nivel = NivelOrganizacional.CLUB;
-        // Valores por defecto para evitar NullPointerException en cobros
         this.FIN_SAAS_CANON_FIJO = new BigDecimal("15000");
         this.COMISION_SENSEI_MENSUALIDAD = new BigDecimal("5000");
         this.FIN_SAAS_COMISION_CLUB = new BigDecimal("10000");
@@ -58,6 +57,7 @@ public class ConfiguracionSistema {
         this.FIN_DIA_VENCIMIENTO = new BigDecimal("5");
         this.FIN_SENSEI_MASTER_MENSUALIDAD = new BigDecimal("50000");
         this.FIN_ALQUILER_JUDOGI_ANUAL = new BigDecimal("70000");
+        this.FIN_MATRICULA_ANUAL = new BigDecimal("40000");
     }
 
     // Getters y Setters

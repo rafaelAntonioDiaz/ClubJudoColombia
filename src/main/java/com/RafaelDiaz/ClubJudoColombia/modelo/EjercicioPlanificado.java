@@ -22,12 +22,12 @@ public class EjercicioPlanificado implements Serializable {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_plan", nullable = false)
-    private PlanEntrenamiento planEntrenamiento;
+    @JoinColumn(name = "id_microciclo", nullable = false)
+    private Microciclo microciclo;
 
     /**
      * --- LÓGICA REFACTORIZADA ---
-     * Un plan puede ser una Prueba (evaluación)
+     * Un micro puede ser una Prueba (evaluación)
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_prueba_estandar")
@@ -43,8 +43,14 @@ public class EjercicioPlanificado implements Serializable {
     @Column(name = "notas_sensei")
     private String notasSensei;
 
-    @Column(name = "orden")
+    @Column(name = "orden_ejecucion")
     private Integer orden;
+
+    @Column(name = "nota_ajuste", length = 255)
+    private String notaAjuste;
+
+    @Column(name = "duracion_minutos")
+    private Integer duracionMinutos;
 
     // Días de la semana que se hace el ejercicio
     @ElementCollection(targetClass = DayOfWeek.class, fetch = FetchType.EAGER)
@@ -52,6 +58,7 @@ public class EjercicioPlanificado implements Serializable {
     @Column(name = "dia_semana",length = 20)
     @Enumerated(EnumType.STRING) // <--- ESTO ES CLAVE: Guarda "MONDAY", "TUESDAY", etc.
     private Set<DayOfWeek> diasAsignados = new HashSet<>();
+
     /**
      * Un EjercicioPlanificado (tipo Prueba) tendrá MUCHOS ResultadosPrueba.
      */
@@ -74,11 +81,26 @@ public class EjercicioPlanificado implements Serializable {
     )
     private List<EjecucionTarea> ejecucionesTarea = new ArrayList<>();
 
-    // Getters, Setters, etc...
+    public Integer getDuracionMinutos() {
+        return duracionMinutos;
+    }
+
+    public void setDuracionMinutos(Integer duracionMinutos) {
+        this.duracionMinutos = duracionMinutos;
+    }
+
+    public String getNotaAjuste() {
+        return notaAjuste;
+    }
+
+    public void setNotaAjuste(String notaAjuste) {
+        this.notaAjuste = notaAjuste;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public PlanEntrenamiento getPlanEntrenamiento() { return planEntrenamiento; }
-    public void setPlanEntrenamiento(PlanEntrenamiento planEntrenamiento) { this.planEntrenamiento = planEntrenamiento; }
+    public Microciclo getMicrociclo() { return microciclo; }
+    public void setMicrociclo(Microciclo microciclo) { this.microciclo = microciclo; }
     public PruebaEstandar getPruebaEstandar() { return pruebaEstandar; }
     public void setPruebaEstandar(PruebaEstandar pruebaEstandar) { this.pruebaEstandar = pruebaEstandar; }
     public TareaDiaria getTareaDiaria() { return tareaDiaria; }

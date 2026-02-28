@@ -109,7 +109,7 @@ CREATE TABLE judoka_grupos (
                                CONSTRAINT fk_jg_grupo FOREIGN KEY (id_grupo) REFERENCES grupos_entrenamiento(id_grupo) ON DELETE CASCADE
 );
 
--- 5. PLANES Y TAREAS
+-- 5. CICLOS DE ENTRENAMIENTO (MACROCICLO → MESOCICLO → MICROCICLO)
 CREATE TABLE tareas_diarias (
                                 id_tarea BIGINT AUTO_INCREMENT PRIMARY KEY,
                                 nombre VARCHAR(255) NOT NULL,
@@ -120,22 +120,48 @@ CREATE TABLE tareas_diarias (
                                 CONSTRAINT fk_tarea_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE SET NULL
 );
 
-CREATE TABLE planes_entrenamiento (
-                                      id_plan BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                      id_sensei BIGINT NOT NULL,
-                                      tipo_sesion ENUM('TECNICA', 'COMBATE', 'ACONDICIONAMIENTO', 'ENTRENAMIENTO', 'EVALUACION') NOT NULL DEFAULT 'ENTRENAMIENTO',
-                                      nombre_plan VARCHAR(200) NOT NULL,
-                                      fecha_asignacion DATE NOT NULL,
-                                      estado ENUM('ACTIVO', 'COMPLETADO', 'CANCELADO') NOT NULL,
-                                      CONSTRAINT fk_plan_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE CASCADE
+-- Macrociclo: Estructura superior de entrenamiento de largo plazo (3-4 meses típicamente)
+CREATE TABLE macrociclos (
+                             id_macrociclo BIGINT AUTO_INCREMENT PRIMARY KEY,
+                             id_sensei BIGINT NOT NULL,
+                             nombre VARCHAR(200) NOT NULL,
+                             descripcion TEXT NULL,
+                             fecha_inicio DATE NOT NULL,
+                             fecha_fin DATE NOT NULL,
+                             fecha_creacion DATE NOT NULL DEFAULT CURRENT_DATE,
+                             estado ENUM('BORRADOR', 'ACTIVO', 'COMPLETADO', 'CANCELADO') NOT NULL DEFAULT 'BORRADOR',
+                             CONSTRAINT fk_macrociclo_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE CASCADE,
+                             INDEX idx_macrociclo_sensei (id_sensei),
+                             INDEX idx_macrociclo_estado (estado)
 );
 
-CREATE TABLE plan_grupos (
-                             id_plan BIGINT NOT NULL,
-                             id_grupo BIGINT NOT NULL,
-                             PRIMARY KEY (id_plan, id_grupo),
-                             CONSTRAINT fk_pg_plan FOREIGN KEY (id_plan) REFERENCES planes_entrenamiento(id_plan) ON DELETE CASCADE,
-                             CONSTRAINT fk_pg_grupo FOREIGN KEY (id_grupo) REFERENCES grupos_entrenamiento(id_grupo) ON DELETE CASCADE
+-- Microciclo: Estructura de corto plazo (1-2 semanas) dentro de un Macrociclo
+CREATE TABLE microciclos (
+                             id_microciclo BIGINT AUTO_INCREMENT PRIMARY KEY,
+                             id_macrociclo BIGINT NOT NULL,
+                             id_sensei BIGINT NOT NULL,
+                             nombre VARCHAR(200) NOT NULL,
+                             fecha_asignacion DATE NOT NULL,
+                             fecha_inicio DATE NULL,
+                             fecha_fin DATE NULL,
+                             mesociclo_atc ENUM('NIVELACION', 'ADQUISICION', 'TRANSFERENCIA', 'COMPETENCIA', 'REFUERZO', 'RECUPERACION') NULL,
+                             tipo_microciclo ENUM('CORRIENTE', 'CHOQUE', 'AJUSTE', 'CONTROL') NULL,
+                             estado ENUM('BORRADOR', 'ACTIVO', 'COMPLETADO', 'CANCELADO') NOT NULL DEFAULT 'ACTIVO',
+                             tipo_sesion ENUM('ENTRENAMIENTO', 'RANDORI', 'SHIAI', 'TECNICA', 'ACONDICIONAMIENTO', 'PESAS', 'MONDO', 'EVALUACION', 'UCHIKOMI', 'NAGEKOMI', 'KAKARIGEIKO', 'YAKUSOKUGEIKO') NOT NULL DEFAULT 'ENTRENAMIENTO',
+                             CONSTRAINT fk_microciclo_macrociclo FOREIGN KEY (id_macrociclo) REFERENCES macrociclos(id_macrociclo) ON DELETE CASCADE,
+                             CONSTRAINT fk_microciclo_sensei FOREIGN KEY (id_sensei) REFERENCES senseis(id_sensei) ON DELETE CASCADE,
+                             INDEX idx_microciclo_macrociclo (id_macrociclo),
+                             INDEX idx_microciclo_sensei (id_sensei),
+                             INDEX idx_microciclo_estado (estado)
+);
+
+-- Asociación M2M: Microciclos asignados a Grupos de Entrenamiento
+CREATE TABLE microciclo_grupos (
+                                   id_microciclo BIGINT NOT NULL,
+                                   id_grupo BIGINT NOT NULL,
+                                   PRIMARY KEY (id_microciclo, id_grupo),
+                                   CONSTRAINT fk_mg_microciclo FOREIGN KEY (id_microciclo) REFERENCES microciclos(id_microciclo) ON DELETE CASCADE,
+                                   CONSTRAINT fk_mg_grupo FOREIGN KEY (id_grupo) REFERENCES grupos_entrenamiento(id_grupo) ON DELETE CASCADE
 );
 
 -- 6. CORE MÉTRICAS
@@ -179,12 +205,13 @@ CREATE TABLE normas_evaluacion (
 
 CREATE TABLE ejercicios_planificados (
                                          id_ejercicio_plan BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                         id_plan BIGINT NOT NULL,
+                                         id_microciclo BIGINT NOT NULL,
                                          id_prueba_estandar BIGINT NULL,
                                          id_tarea_diaria BIGINT NULL,
                                          notas_sensei VARCHAR(255) NULL,
                                          orden SMALLINT NOT NULL DEFAULT 0,
-                                         CONSTRAINT fk_ep_plan FOREIGN KEY (id_plan) REFERENCES planes_entrenamiento(id_plan) ON DELETE CASCADE,
+                                         nota_ajuste VARCHAR(255) NULL,
+                                         CONSTRAINT fk_ep_microciclo FOREIGN KEY (id_microciclo) REFERENCES microciclos(id_microciclo) ON DELETE CASCADE,
                                          CONSTRAINT fk_ep_prueba FOREIGN KEY (id_prueba_estandar) REFERENCES pruebas_estandar(id_ejercicio) ON DELETE CASCADE,
                                          CONSTRAINT fk_ep_tarea FOREIGN KEY (id_tarea_diaria) REFERENCES tareas_diarias(id_tarea) ON DELETE CASCADE
 );

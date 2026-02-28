@@ -7,6 +7,8 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.data.binder.Binder;
@@ -86,30 +88,32 @@ public abstract class BaseForm<T> extends FormLayout {
      * Se ejecuta en el UI thread.
      */
     private void handleSave() {
-        try {
-            // Verificar que hay un bean cargado
-            if (currentBean == null) {
-                logger.warn("Intento de guardar sin bean cargado en {}", getClass().getSimpleName());
-                return;
-            }
+        if (this.currentBean == null) {
+            Notification.show("Error interno: No hay un objeto activo para guardar.",
+                    3000, Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
 
-            // Validar y escribir los valores del formulario al bean
+        try {
             if (binder != null) {
                 binder.writeBean(currentBean);
             }
 
-            // Disparar evento de guardado
-            fireEvent(new SaveEvent<>(this, currentBean));
-            logger.debug("SaveEvent disparado para {}", currentBean.getClass().getSimpleName());
+            // 1. Capturamos el nombre ANTES de que la vista nos ponga el currentBean en null
+            String nombreClase = currentBean.getClass().getSimpleName();
 
-        } catch (ValidationException e) {
-            // Vaadin maneja automáticamente la visualización de errores
+            // 2. Disparamos el evento (aquí la vista guardará y limpiará el form)
+            fireEvent(new SaveEvent<>(this, currentBean));
+
+            // 3. Imprimimos el log usando nuestra variable segura, no el currentBean global
+            logger.debug("SaveEvent disparado con éxito para {}", nombreClase);
+
+        } catch (com.vaadin.flow.data.binder.ValidationException e) {
             logger.debug("Validación fallida en {}: {}", getClass().getSimpleName(), e.getMessage());
         } catch (Exception e) {
             logger.error("Error inesperado al guardar en {}", getClass().getSimpleName(), e);
         }
     }
-
     /**
      * Maneja el evento de cancelar: dispara CancelEvent.
      */

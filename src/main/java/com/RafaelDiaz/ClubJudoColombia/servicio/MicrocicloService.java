@@ -1,15 +1,14 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.EjercicioPlanificadoRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.GrupoEntrenamientoRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.PlanEntrenamientoRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.MicrocicloRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,18 +20,19 @@ import java.util.stream.Collectors;
  * que ahora se asignan a Grupos.
  */
 @Service
-public class PlanEntrenamientoService {
+public class MicrocicloService {
 
-    private final PlanEntrenamientoRepository planEntrenamientoRepository;
+    // Se eliminó la variable "repository" duplicada y nula. Todo usa "MicrocicloRepository".
+    private final MicrocicloRepository microcicloRepository;
     private final EjercicioPlanificadoRepository ejercicioPlanificadoRepository;
     private final GrupoEntrenamientoRepository grupoEntrenamientoRepository;
 
     @Autowired
-    public PlanEntrenamientoService(
-            PlanEntrenamientoRepository planEntrenamientoRepository,
+    public MicrocicloService(
+            MicrocicloRepository microcicloRepository,
             EjercicioPlanificadoRepository ejercicioPlanificadoRepository,
             GrupoEntrenamientoRepository grupoEntrenamientoRepository) {
-        this.planEntrenamientoRepository = planEntrenamientoRepository;
+        this.microcicloRepository = microcicloRepository;
         this.ejercicioPlanificadoRepository = ejercicioPlanificadoRepository;
         this.grupoEntrenamientoRepository = grupoEntrenamientoRepository;
     }
@@ -41,33 +41,32 @@ public class PlanEntrenamientoService {
      * Crea un nuevo Plan de Entrenamiento para uno o más grupos.
      */
     @Transactional
-    public PlanEntrenamiento crearPlanEntrenamiento(String nombre, Sensei sensei, Set<GrupoEntrenamiento> grupos) {
-        PlanEntrenamiento plan = new PlanEntrenamiento();
+    public Microciclo crearMicrociclo(String nombre, Sensei sensei, Set<GrupoEntrenamiento> grupos) {
+        Microciclo plan = new Microciclo();
         plan.setNombre(nombre);
         plan.setSensei(sensei);
         plan.setGruposAsignados(grupos);
-        plan.setFechaAsignacion(LocalDate.now());
-        plan.setEstado(EstadoPlan.ACTIVO);
-        return planEntrenamientoRepository.save(plan);
+        plan.setEstado(EstadoMicrociclo.ACTIVO);
+        return microcicloRepository.save(plan);
     }
 
     /**
      * Añade una Tarea (Prueba o Tarea Diaria) a un Plan.
      */
     @Transactional
-    public PlanEntrenamiento addEjercicioPlanificado(PlanEntrenamiento plan, EjercicioPlanificado ejercicioPlanificado) {
+    public Microciclo addEjercicioPlanificado(Microciclo plan, EjercicioPlanificado ejercicioPlanificado) {
         plan.addEjercicio(ejercicioPlanificado);
-        return planEntrenamientoRepository.save(plan);
+        return microcicloRepository.save(plan);
     }
 
     /**
      * Actualiza el estado de un Plan.
      */
     @Transactional
-    public Optional<PlanEntrenamiento> actualizarEstadoPlan(Long planId, EstadoPlan nuevoEstado) {
-        return planEntrenamientoRepository.findById(planId).map(plan -> {
-            plan.setEstado(nuevoEstado);
-            return planEntrenamientoRepository.save(plan);
+    public Optional<Microciclo> actualizarEstadoMicro(Long microId, EstadoMicrociclo nuevoEstado) {
+        return microcicloRepository.findById(microId).map(micro -> {
+            micro.setEstado(nuevoEstado);
+            return microcicloRepository.save(micro);
         });
     }
 
@@ -76,8 +75,8 @@ public class PlanEntrenamientoService {
      * para evitar errores en la Vista.
      */
     @Transactional(readOnly = true)
-    public Optional<PlanEntrenamiento> buscarPorId(Long planId) {
-        Optional<PlanEntrenamiento> planOpt = planEntrenamientoRepository.findById(planId);
+    public Optional<Microciclo> buscarPorId(Long planId) {
+        Optional<Microciclo> planOpt = microcicloRepository.findById(planId);
 
         planOpt.ifPresent(plan -> {
             // Nivel 1: Despertar la lista de EjerciciosPlanificados
@@ -102,24 +101,22 @@ public class PlanEntrenamientoService {
      * Útil para administración o inicialización de datos.
      */
     @Transactional(readOnly = true)
-    public List<PlanEntrenamiento> listarPlanes() {
-        return planEntrenamientoRepository.findAll();
+    public List<Microciclo> listarPlanes() {
+        return microcicloRepository.findAll();
     }
 
     /**
      * Busca todos los planes asignados a un Judoka (a través de sus grupos).
      */
     @Transactional(readOnly = true)
-    public List<PlanEntrenamiento> buscarPlanesPorJudoka(Judoka judoka) {
+    public List<Microciclo> buscarPlanesPorJudoka(Judoka judoka) {
         List<GrupoEntrenamiento> gruposDelJudoka = grupoEntrenamientoRepository.findAllByJudokasContains(judoka);
 
-        List<PlanEntrenamiento> planes = gruposDelJudoka.stream()
-                .flatMap(grupo -> planEntrenamientoRepository.findAllByGruposAsignadosContains(grupo).stream())
+        List<Microciclo> planes = gruposDelJudoka.stream()
+                .flatMap(grupo -> microcicloRepository.findAllByGruposAsignadosContains(grupo).stream())
                 .distinct()
                 .collect(Collectors.toList());
-
-        // Forzar la carga de las tareas (Pruebas/Tareas) para cada plan
-        for (PlanEntrenamiento plan : planes) {
+        for (Microciclo plan : planes) {
             List<EjercicioPlanificado> tareas = plan.getEjerciciosPlanificados();
             for (EjercicioPlanificado tarea : tareas) {
                 if (tarea.getPruebaEstandar() != null) {
@@ -138,11 +135,9 @@ public class PlanEntrenamientoService {
      * Busca todos los planes creados por un Sensei.
      */
     @Transactional(readOnly = true)
-    public List<PlanEntrenamiento> buscarPlanesPorSensei(Sensei sensei) {
-        List<PlanEntrenamiento> planes = planEntrenamientoRepository.findBySenseiOrderByFechaAsignacionDesc(sensei);
-
-        // Forzar la inicialización
-        for (PlanEntrenamiento plan : planes) {
+    public List<Microciclo> buscarPlanesPorSensei(Sensei sensei) {
+        List<Microciclo> planes = microcicloRepository.findBySenseiOrderByFechaInicioDesc(sensei);
+        for (Microciclo plan : planes) {
             List<EjercicioPlanificado> tareas = plan.getEjerciciosPlanificados();
             for (EjercicioPlanificado tarea : tareas) {
                 if (tarea.getPruebaEstandar() != null) {
@@ -157,13 +152,43 @@ public class PlanEntrenamientoService {
         return planes;
     }
 
+    @Transactional(readOnly = true)
+    public List<Microciclo> obtenerHistorialDelSensei(Sensei sensei) {
+        List<Microciclo> microciclos = microcicloRepository.findBySenseiOrderByFechaInicioDesc(sensei);
+
+        for (Microciclo micro : microciclos) {
+            // 1. Despertamos los grupos
+            micro.getGruposAsignados().size();
+
+            // 2. Despertamos el Macrociclo (si tiene uno asignado)
+            if (micro.getMacrociclo() != null) {
+                micro.getMacrociclo().getNombre();
+            }
+
+            // 3. Despertamos la lista de ejercicios
+            micro.getEjerciciosPlanificados().size();
+
+            // 4. EL FIX: Despertamos las Tareas y Pruebas ADENTRO de cada ejercicio
+            for (EjercicioPlanificado ej : micro.getEjerciciosPlanificados()) {
+                if (ej.getTareaDiaria() != null) {
+                    ej.getTareaDiaria().getNombre(); // Despierta la Tarea Diaria
+                }
+                if (ej.getPruebaEstandar() != null) {
+                    ej.getPruebaEstandar().getNombreKey(); // Despierta la Prueba Estándar
+                }
+            }
+        }
+
+        return microciclos;
+    }
+
     @Transactional
-    public PlanEntrenamiento guardarPlan(PlanEntrenamiento plan) {
-        return planEntrenamientoRepository.save(plan);
+    public Microciclo guardarPlan(Microciclo plan) {
+        return microcicloRepository.save(plan);
     }
 
     @Transactional
     public void eliminarPlan(Long planId) {
-        planEntrenamientoRepository.deleteById(planId);
+        microcicloRepository.deleteById(planId);
     }
 }

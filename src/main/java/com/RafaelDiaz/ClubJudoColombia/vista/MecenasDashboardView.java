@@ -53,7 +53,7 @@ public class MecenasDashboardView extends VerticalLayout {
 
     public MecenasDashboardView(SecurityService securityService,
                                 JudokaService judokaService,
-                                FinanzasService finanzasService) { // <--- Inyectamos Finanzas
+                                FinanzasService finanzasService) {
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.finanzasService = finanzasService;

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class FinanzasService {
@@ -346,7 +347,6 @@ public class FinanzasService {
                 .map(CuentaCobro::getValorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-    // ... dentro de FinanzasService ...
 
     /**
      * MÉTODO DE ADMISIÓN (Mesa de Control):
@@ -431,5 +431,66 @@ public class FinanzasService {
                 System.out.println("SUSPENDIDO Judoka: " + moroso.getNombreAcudiente() + " por deuda: " + deuda.getConcepto());
             }
         }
+    }
+    // =========================================================================
+    // 5. MOTOR DE ONBOARDING (APROBACIÓN DE INGRESOS)
+    // =========================================================================
+
+    /**
+     * Este método conecta la aprobación del Sensei/Master con el flujo financiero real.
+     * Genera la deuda inicial y la liquida automáticamente con el comprobante subido.
+     */
+    @Transactional
+    public void procesarPagoOnboarding(Judoka judoka, String urlComprobante) {
+        // 1. Generamos el cobro de bienvenida (Matrícula + Mensualidad)
+        generarCobroBienvenida(judoka);
+
+        // 2. Buscamos esos cobros (que acaban de nacer en estado PENDIENTE)
+        Usuario responsable = (judoka.getMecenas() != null) ? judoka.getMecenas().getUsuario() : judoka.getAcudiente();
+
+        List<CuentaCobro> pendientes = obtenerDeudasPendientes(responsable).stream()
+                .filter(c -> c.getJudokaBeneficiario().getId().equals(judoka.getId()))
+                .collect(Collectors.toList());
+
+        // 3. Los marcamos como pagados automáticamente.
+        // ¡Esto dispara el ingreso a Caja, las Comisiones y activa la Suscripción!
+        for (CuentaCobro cc : pendientes) {
+            pagarCuentaCobro(cc.getId(), MetodoPago.NEQUI, urlComprobante);
+        }
+
+        // 4. Actualizamos bandera vital
+        judoka.setMatriculaPagada(true);
+        judokaRepo.save(judoka);
+    }
+    /**
+     * El Acudiente/Judoka reporta que hizo el pago mensual subiendo su soporte.
+     * NO entra a caja todavía. Queda en espera de la auditoría del Master.
+     */
+    /**
+     * El Acudiente reporta el pago. Se crea el objeto Pago con la URL,
+     * pero queda en estado PENDIENTE esperando la auditoría del Master.
+     */
+    @Transactional
+    public void reportarPagoParaRevision(Long cuentaCobroId, MetodoPago metodoPago, String urlSoporte) {
+        CuentaCobro cuenta = cuentaCobroRepo.findById(cuentaCobroId)
+                .orElseThrow(() -> new RuntimeException("Cuenta de cobro no encontrada"));
+
+        // 1. Creamos el objeto Pago formal
+        Pago intentoPago = new Pago();
+        intentoPago.setUsuario(cuenta.getResponsablePago());
+        intentoPago.setCuentaCobro(cuenta);
+
+        // Asignamos el producto (Asumiendo que la cuenta de cobro tiene el producto o puedes buscar un producto genérico de "Mensualidad")
+
+        intentoPago.setMonto(cuenta.getValorTotal().doubleValue());
+        intentoPago.setFechaCreacion(LocalDateTime.now());
+        intentoPago.setMetodoPago(metodoPago);
+        intentoPago.setUrlComprobante(urlSoporte);
+        intentoPago.setEstado(EstadoPago.PENDIENTE); // El Master lo cambiará a EXITOSO
+
+        pagoRepo.save(intentoPago);
+
+        cuenta.setEstado(EstadoPago.EN_REVISION);
+        cuentaCobroRepo.save(cuenta);
     }
 }

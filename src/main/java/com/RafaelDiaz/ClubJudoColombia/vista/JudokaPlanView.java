@@ -1,7 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
-import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoPlan;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.EjecucionTareaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
@@ -39,27 +39,27 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 public class JudokaPlanView extends JudokaLayout {
 
     private final SecurityService securityService;
-    private final PlanEntrenamientoService planService;
+    private final MicrocicloService planService;
     private final EjecucionTareaService ejecucionService;
     private final EjecucionTareaRepository ejecucionRepository;
     private final JudokaRepository judokaRepository;
     private final TraduccionService traduccionService;
 
     // Componentes UI
-    private ComboBox<PlanEntrenamiento> planSelector;
+    private ComboBox<Microciclo> planSelector;
     private ProgressBar barraProgreso;
     private Span textoProgreso;
     private Div tareasContainer;
 
     // Estado
     private Judoka judokaActual;
-    private PlanEntrenamiento planSeleccionado;
+    private Microciclo planSeleccionado;
     private Double latitud;
     private Double longitud;
 
     @Autowired
     public JudokaPlanView(SecurityService securityService,
-                          PlanEntrenamientoService planService,
+                          MicrocicloService planService,
                           EjecucionTareaService ejecucionService,
                           EjecucionTareaRepository ejecucionRepository,
                           TraduccionService traduccionService,
@@ -96,7 +96,7 @@ public class JudokaPlanView extends JudokaLayout {
 
         // i18n: Usamos clave "lbl.selecciona.plan" (Selecciona tu Plan)
         planSelector = new ComboBox<>(traduccionService.get("lbl.selecciona.plan"));
-        planSelector.setItemLabelGenerator(PlanEntrenamiento::getNombre);
+        planSelector.setItemLabelGenerator(Microciclo::getNombre);
         planSelector.setWidthFull();
         planSelector.addValueChangeListener(e -> {
             this.planSeleccionado = e.getValue();
@@ -128,12 +128,12 @@ public class JudokaPlanView extends JudokaLayout {
     }
 
     private void cargarPlanes() {
-        List<PlanEntrenamiento> planes = planService.buscarPlanesPorJudoka(judokaActual);
+        List<Microciclo> planes = planService.buscarPlanesPorJudoka(judokaActual);
         planSelector.setItems(planes);
 
         // Seleccionar el primero activo por defecto
         planes.stream()
-                .filter(p -> p.getEstado() == EstadoPlan.ACTIVO)
+                .filter(p -> p.getEstado() == EstadoMicrociclo.ACTIVO)
                 .findFirst()
                 .ifPresent(planSelector::setValue);
     }
