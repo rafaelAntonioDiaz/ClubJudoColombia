@@ -148,7 +148,7 @@ public class JudokaLayout extends AppLayout {
         // 3. Comunidad (FILTRO: SOLO MAYORES DE 12 AÑOS) <--- CAMBIO CLAVE
         Optional<Judoka> judokaOpt = obtenerJudokaActual();
         if (judokaOpt.isPresent()) {
-            if (esMayorDe12(judokaOpt.get().getFechaNacimiento())) {
+            if (esMayorDe14(judokaOpt.get().getFechaNacimiento())) {
                 agregarTab(traduccionService.get("menu.comunidad"), VaadinIcon.USERS, ComunidadJudokaView.class);
             }
         }
@@ -190,9 +190,10 @@ public class JudokaLayout extends AppLayout {
         return securityService.getAuthenticatedJudoka();
     }
 
-    private boolean esMayorDe12(LocalDate fechaNacimiento) {
+
+    private boolean esMayorDe14(LocalDate fechaNacimiento) {
         if (fechaNacimiento == null) return false;
-        return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 12;
+        return Period.between(fechaNacimiento, LocalDate.now()).getYears() >= 14;
     }
 
     private RouterLink createLogoutLink() {

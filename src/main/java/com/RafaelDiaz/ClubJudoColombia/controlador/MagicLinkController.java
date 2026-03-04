@@ -22,7 +22,7 @@ import java.io.IOException;
 public class MagicLinkController {
 
     private final AdmisionesService admisionesService;
-    private final UserDetailsService userDetailsService; // ¡Reutilizamos tu servicio!
+    private final UserDetailsService userDetailsService;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     public MagicLinkController(AdmisionesService admisionesService, UserDetailsService userDetailsService) {
@@ -30,7 +30,7 @@ public class MagicLinkController {
         this.userDetailsService = userDetailsService;
     }
 
-    @GetMapping("/acceso-dojo/{token}")
+    @GetMapping("/invitacion/{token}")
     public void procesarMagicLink(@PathVariable String token, HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             // 1. Validar token en BD y activar la cuenta (o marcar token como usado)

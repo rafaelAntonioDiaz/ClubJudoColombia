@@ -3,9 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoAsistencia;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.MicrocicloService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionEjecutadaService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.TabataComponent;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.avatar.Avatar;
@@ -13,11 +11,15 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -35,29 +37,35 @@ public class SenseiTatamiView extends VerticalLayout {
 
     private final MicrocicloService microcicloService;
     private final SesionEjecutadaService sesionEjecutadaService;
+    private final TraduccionService traduccionService;
     private final Sensei senseiActual;
     private final JudokaRepository judokaRepository;
     private ComboBox<Microciclo> selectorPlan;
     private VerticalLayout contenedorEjercicios;
-
+    private final GrupoEntrenamientoService grupoService;
+    private ComboBox<GrupoEntrenamiento> selectorGrupo;
     // Cambiado a FlexLayout para envolver las tarjetas de asistencia
     private FlexLayout contenedorAsistencia;
 
     private List<Asistencia> asistenciasActuales = new ArrayList<>();
-
+    private final GamificationService gamificationService;
     private ProgressBar progresoClase;
     private Span labelProgreso;
     private int minutosTotalesPlan = 0;
     private int minutosCompletados = 0;
 
     public SenseiTatamiView(MicrocicloService microcicloService,
-                            SesionEjecutadaService sesionEjecutadaService,
+                            SesionEjecutadaService sesionEjecutadaService, TraduccionService traduccionService,
                             SecurityService securityService,
-                            JudokaRepository judokaRepository) {
+                            JudokaRepository judokaRepository,
+                            GrupoEntrenamientoService grupoService, GamificationService gamificationService) {
         this.microcicloService = microcicloService;
         this.sesionEjecutadaService = sesionEjecutadaService;
+        this.traduccionService = traduccionService;
         this.senseiActual = securityService.getAuthenticatedSensei().orElseThrow();
         this.judokaRepository = judokaRepository;
+        this.grupoService = grupoService;
+        this.gamificationService = gamificationService;
 
         addClassName("modo-tatami-view");
         setSizeFull();
@@ -117,32 +125,71 @@ public class SenseiTatamiView extends VerticalLayout {
     }
 
     private void configurarSelectorYAsistencia() {
-        selectorPlan = new ComboBox<>("Seleccionar Plan de Hoy");
+        // --- 1. SELECTOR DE GRUPO ---
+        selectorGrupo = new ComboBox<>("1. Seleccionar Grupo");
+        selectorGrupo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
+        // Usamos el método en GrupoService para traer los grupos del Sensei
+        selectorGrupo.setItems(grupoService.findAllBySenseiId(senseiActual.getId()));
+        selectorGrupo.setWidthFull();
+
+        // --- 2. SELECTOR DE MICROCICLO ---
+        selectorPlan = new ComboBox<>("2. Seleccionar Plan (Microciclo)");
         selectorPlan.setItemLabelGenerator(Microciclo::getNombre);
         selectorPlan.setItems(microcicloService.obtenerHistorialDelSensei(senseiActual));
         selectorPlan.setWidthFull();
+        selectorPlan.setEnabled(false); // Deshabilitado hasta que elija grupo
 
-        selectorPlan.addValueChangeListener(e -> {
-            if (e.getValue() != null) cargarDetallesDelPlan(e.getValue());
+        // --- CONTENEDOR DE SELECTORES ---
+        HorizontalLayout layoutSelectores = new HorizontalLayout(selectorGrupo, selectorPlan);
+        layoutSelectores.setWidthFull();
+
+        // --- EVENTOS (La Magia) ---
+        selectorGrupo.addValueChangeListener(e -> {
+            boolean grupoSeleccionado = e.getValue() != null;
+            selectorPlan.setEnabled(grupoSeleccionado);
+            if (grupoSeleccionado) {
+                // Si cambia el grupo, redibujamos la asistencia de inmediato
+                dibujarListaAsistencia(e.getValue());
+                // Si ya había un plan seleccionado, recargamos los ejercicios para limpiar progreso
+                if (selectorPlan.getValue() != null) {
+                    cargarDetallesDelPlan(selectorPlan.getValue());
+                }
+            } else {
+                contenedorAsistencia.removeAll();
+                contenedorEjercicios.removeAll();
+                asistenciasActuales.clear();
+            }
         });
 
-        // Usamos FlexLayout para que las tarjetas de los alumnos se acomoden como cuadricula
+        selectorPlan.addValueChangeListener(e -> {
+            if (e.getValue() != null && selectorGrupo.getValue() != null) {
+                cargarDetallesDelPlan(e.getValue());
+            }
+        });
+// --- BOTÓN TINDER (MODO RÁFAGA) ---
+        Button btnTomarLista = new Button("Pasar Lista (Modo Rápido)", new Icon(VaadinIcon.USERS));
+        btnTomarLista.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+        btnTomarLista.setWidthFull();
+        btnTomarLista.getStyle().set("margin-top", "10px");
+        btnTomarLista.addClickListener(e -> abrirTinderAsistencia()); // <-- Llamamos al nuevo método
+
+
+
+        // --- CONTENEDOR ASISTENCIA ---
         contenedorAsistencia = new FlexLayout();
         contenedorAsistencia.setFlexWrap(FlexLayout.FlexWrap.WRAP);
         contenedorAsistencia.getStyle().set("gap", "10px");
         contenedorAsistencia.getStyle().set("margin-top", "10px");
         contenedorAsistencia.getStyle().set("margin-bottom", "20px");
 
-        Span tituloAsistencia = new Span("Asistencia (Toque para marcar falta)");
+        Span tituloAsistencia = new Span("Resumen de Asistencia:");
         tituloAsistencia.getStyle().set("font-weight", "bold");
 
-        add(selectorPlan, tituloAsistencia, contenedorAsistencia);
+        add(layoutSelectores, btnTomarLista, tituloAsistencia, contenedorAsistencia);
     }
 
     private void cargarDetallesDelPlan(Microciclo plan) {
         contenedorEjercicios.removeAll();
-        asistenciasActuales.clear();
-
         minutosTotalesPlan = 0;
         minutosCompletados = 0;
         progresoClase.setValue(0);
@@ -197,8 +244,6 @@ public class SenseiTatamiView extends VerticalLayout {
 
             card.add(filaSuperior, dosis);
 
-            // --- INYECCIÓN DEL TABATA EN LA TARJETA ---
-            // Si el nombre de la tarea sugiere combate o técnica, añadimos botón rápido
             String nombreTareaStr = ej.getTareaDiaria().getNombre().toLowerCase();
             if (nombreTareaStr.contains("randori") || nombreTareaStr.contains("combate") || nombreTareaStr.contains("uchikomi")) {
                 Button btnLanzarTabataLocal = new Button("Iniciar Cronómetro", new Icon(VaadinIcon.PLAY));
@@ -210,10 +255,6 @@ public class SenseiTatamiView extends VerticalLayout {
             contenedorEjercicios.add(card);
         }
 
-        if (!plan.getGruposAsignados().isEmpty()) {
-            GrupoEntrenamiento grupo = plan.getGruposAsignados().iterator().next();
-            dibujarListaAsistencia(grupo);
-        }
     }
 
     private void actualizarBarraProgreso() {
@@ -226,7 +267,7 @@ public class SenseiTatamiView extends VerticalLayout {
 
     private void dibujarListaAsistencia(GrupoEntrenamiento grupo) {
         contenedorAsistencia.removeAll();
-        List<Judoka> listaJudokas = judokaRepository.findByGrupo(grupo);
+        List<Judoka> listaJudokas = judokaRepository.findByGrupoWithAcudiente(grupo);
 
         for (Judoka j : listaJudokas) {
             final Asistencia asist = new Asistencia(j, EstadoAsistencia.PRESENTE);
@@ -241,7 +282,18 @@ public class SenseiTatamiView extends VerticalLayout {
             cardJudoka.getStyle().set("width", "90px");
             cardJudoka.getStyle().set("cursor", "pointer"); // Indica que es clicable
             cardJudoka.getStyle().set("background-color", "white");
+            // --- BOTÓN DE PÁNICO (SOS) ---
+            Button btnSOS = new Button(new Icon(VaadinIcon.AMBULANCE));
+            btnSOS.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_ERROR);
+            btnSOS.setWidth("40px");
+            btnSOS.setHeight("40px");
+            btnSOS.getStyle().set("border-radius", "50%");
 
+            // 1. Lógica Servidor: Abrir diálogo
+            btnSOS.addClickListener(e -> mostrarDialogoSOS(j));
+
+            // 2. Lógica Cliente: Detener propagación del clic para no activar la tarjeta
+            btnSOS.getElement().executeJs("this.addEventListener('click', function(e) { e.stopPropagation(); });");
             // El Avatar (Foto o Iniciales)
             Avatar avatar = new Avatar(j.getNombre() + " " + j.getApellido());
             if (j.getUrlFotoPerfil() != null && !j.getUrlFotoPerfil().isEmpty()) {
@@ -258,7 +310,7 @@ public class SenseiTatamiView extends VerticalLayout {
             Icon iconEstado = new Icon(VaadinIcon.CHECK_CIRCLE);
             iconEstado.setColor("var(--lumo-success-color)");
 
-            cardJudoka.add(avatar, nombreCorto, iconEstado);
+            cardJudoka.add(btnSOS, avatar, nombreCorto, iconEstado);
 
             // Lógica del clic para cambiar estado
             cardJudoka.addClickListener(e -> {
@@ -282,6 +334,68 @@ public class SenseiTatamiView extends VerticalLayout {
             contenedorAsistencia.add(cardJudoka);
         }
     }
+    private void mostrarDialogoSOS(Judoka alumno) {
+        Dialog d = new Dialog();
+        d.setHeaderTitle(traduccionService.get("asistencia.dialog.sos.titulo"));
+
+        VerticalLayout layout = new VerticalLayout();
+
+        layout.add(new H4(alumno.getUsuario().getNombre() + " " + alumno.getUsuario().getApellido()));
+
+        // Datos de emergencia con labels traducidos
+        layout.add(crearFilaInfo(VaadinIcon.PHONE,
+                traduccionService.get("asistencia.dialog.sos.acudiente_movil"),
+                alumno.getTelefonoAcudiente()));
+        layout.add(crearFilaInfo(VaadinIcon.ENVELOPE,
+                traduccionService.get("asistencia.dialog.sos.email"),
+                alumno.getUsuario().getEmail()));
+        layout.add(crearFilaInfo(VaadinIcon.USER_HEART,
+                traduccionService.get("asistencia.dialog.sos.eps"),
+                alumno.getEps()));
+        layout.add(crearFilaInfo(VaadinIcon.FAMILY,
+                traduccionService.get("asistencia.dialog.sos.nombre_acudiente"),
+                alumno.getNombreAcudiente()));
+
+        Button btnLlamar = new Button(traduccionService.get("asistencia.dialog.sos.llamar_ahora"),
+                new Icon(VaadinIcon.PHONE));
+
+        btnLlamar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+        btnLlamar.setWidthFull();
+
+        // Enlace tel: para móviles
+        String telefonoLlamada = alumno.getTelefonoAcudiente() != null ? alumno.getTelefonoAcudiente() : alumno.getCelular();
+        if (telefonoLlamada != null && !telefonoLlamada.isEmpty()) {
+            Anchor link = new Anchor("tel:" + telefonoLlamada, btnLlamar);
+            link.setWidthFull();
+            layout.add(link);
+        } else {
+            btnLlamar.setEnabled(false);
+            btnLlamar.setText(traduccionService.get("asistencia.dialog.sos.sin_telefono"));
+            layout.add(btnLlamar);
+        }
+
+        Button cerrar = new Button(traduccionService.get("asistencia.boton.cerrar"), e -> d.close());
+
+        d.add(layout);
+        d.getFooter().add(cerrar);
+        d.open();
+    }
+    private HorizontalLayout crearFilaInfo(VaadinIcon icon, String label, String valor) {
+        HorizontalLayout h = new HorizontalLayout();
+        h.setAlignItems(FlexComponent.Alignment.CENTER);
+        Icon i = icon.create();
+        i.setColor("gray");
+        i.setSize("16px");
+
+        Span lbl = new Span(label + ": ");
+        lbl.getStyle().set("font-weight", "bold");
+
+        Span val = new Span(valor != null ? valor : "---");
+
+        h.add(i, lbl, val);
+        return h;
+    }
+
 
     private void abrirDialogoCierre() {
         com.vaadin.flow.component.dialog.Dialog dialog = new com.vaadin.flow.component.dialog.Dialog();
@@ -293,15 +407,30 @@ public class SenseiTatamiView extends VerticalLayout {
         notasR.setHeight("200px");
 
         Button btnGuardar = new Button("Guardar y Finalizar", e -> {
+            // Validaciones rápidas de seguridad
+            if(selectorGrupo.getValue() == null || selectorPlan.getValue() == null) {
+                Notification.show("Debes seleccionar un Grupo y un Plan antes de finalizar.");
+                return;
+            }
+
             SesionEjecutada sesion = new SesionEjecutada();
             sesion.setSensei(senseiActual);
             sesion.setMicrociclo(selectorPlan.getValue());
-            sesion.setGrupo(selectorPlan.getValue().getGruposAsignados().iterator().next());
+
+            sesion.setGrupo(selectorGrupo.getValue());
+
             sesion.setNotasRetroalimentacion(notasR.getValue());
 
             asistenciasActuales.forEach(sesion::addAsistencia);
 
             sesionEjecutadaService.guardarSesion(sesion);
+
+            // 🎮 GAMIFICATION: Verificar logros de asistencia para los presentes
+            asistenciasActuales.stream()
+                    .filter(a -> a.getEstado() == EstadoAsistencia.PRESENTE)
+                    .map(Asistencia::getJudoka)
+                    .forEach(judoka -> gamificationService.verificarLogrosAsistencia(judoka));
+
             Notification.show("Sesión guardada. ¡Buen trabajo, Sensei!");
             dialog.close();
             getUI().ifPresent(ui -> ui.navigate(SenseiDashboardView.class));
@@ -314,37 +443,181 @@ public class SenseiTatamiView extends VerticalLayout {
 
     private void abrirDialogoTabata() {
         com.vaadin.flow.component.dialog.Dialog tabataDialog = new com.vaadin.flow.component.dialog.Dialog();
-        tabataDialog.setHeaderTitle("Cronómetro de Combate");
+        tabataDialog.setHeaderTitle("Configurar Cronómetro");
 
-        Button btnRandori = new Button("Randori Oficial (4'x1')", e -> lanzarCronometro(tabataDialog, 240, 60, 5));
-        Button btnUchikomi = new Button("Uchikomi (30''x10'')", e -> lanzarCronometro(tabataDialog, 30, 10, 10));
+        // SECCIÓN 1: Botones Rápidos (Presets)
+        Span lblRapidos = new Span("Ajustes Rápidos:");
+        lblRapidos.getStyle().set("font-weight", "bold").set("font-size", "0.9rem");
 
-        VerticalLayout layout = new VerticalLayout(btnRandori, btnUchikomi);
-        tabataDialog.add(layout);
+        Button btnRandori = new Button("Randori Oficial (4' x 1')", e -> lanzarCronometro(tabataDialog, 240, 60, 5));
+        btnRandori.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        tabataDialog.getFooter().add(new Button("Cerrar", i -> tabataDialog.close()));
+        Button btnUchikomi = new Button("Uchikomi (30'' x 10'')", e -> lanzarCronometro(tabataDialog, 30, 10, 10));
+        btnUchikomi.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+
+        VerticalLayout layoutRapido = new VerticalLayout(lblRapidos, btnRandori, btnUchikomi);
+        layoutRapido.setPadding(false);
+
+        // SECCIÓN 2: Configuración Manual (Custom)
+        Span lblManual = new Span("Configuración Libre:");
+        lblManual.getStyle().set("font-weight", "bold").set("font-size", "0.9rem").set("margin-top", "15px");
+
+        com.vaadin.flow.component.textfield.IntegerField fieldTrabajo = new com.vaadin.flow.component.textfield.IntegerField("Trabajo (Segundos)");
+        fieldTrabajo.setValue(120); // 2 min por defecto
+        fieldTrabajo.setStepButtonsVisible(true);
+        fieldTrabajo.setMin(5);
+
+        com.vaadin.flow.component.textfield.IntegerField fieldDescanso = new com.vaadin.flow.component.textfield.IntegerField("Descanso (Segundos)");
+        fieldDescanso.setValue(30);
+        fieldDescanso.setStepButtonsVisible(true);
+        fieldDescanso.setMin(0);
+
+        com.vaadin.flow.component.textfield.IntegerField fieldSeries = new com.vaadin.flow.component.textfield.IntegerField("Series/Rounds");
+        fieldSeries.setValue(3);
+        fieldSeries.setStepButtonsVisible(true);
+        fieldSeries.setMin(1);
+
+        Button btnIniciarManual = new Button("Iniciar Personalizado", new Icon(VaadinIcon.PLAY));
+        btnIniciarManual.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_CONTRAST);
+        btnIniciarManual.setWidthFull();
+        btnIniciarManual.addClickListener(e -> {
+            lanzarCronometro(tabataDialog, fieldTrabajo.getValue(), fieldDescanso.getValue(), fieldSeries.getValue());
+        });
+
+        VerticalLayout layoutManual = new VerticalLayout(lblManual, fieldTrabajo, fieldDescanso, fieldSeries, btnIniciarManual);
+        layoutManual.setPadding(false);
+        layoutManual.getStyle().set("border-top", "1px solid var(--lumo-contrast-20pct)");
+        layoutManual.getStyle().set("padding-top", "15px");
+
+        VerticalLayout mainLayout = new VerticalLayout(layoutRapido, layoutManual);
+        tabataDialog.add(mainLayout);
+
+        tabataDialog.getFooter().add(new Button("Cancelar", i -> tabataDialog.close()));
         tabataDialog.open();
     }
 
     private void lanzarCronometro(com.vaadin.flow.component.dialog.Dialog padre, int t, int d, int s) {
-        padre.close();
+        padre.close(); // Cerramos el configurador
 
         com.vaadin.flow.component.dialog.Dialog pantallaCompleta = new com.vaadin.flow.component.dialog.Dialog();
-
         pantallaCompleta.setWidth("100vw");
         pantallaCompleta.setHeight("100vh");
         pantallaCompleta.getElement().getThemeList().add("no-padding");
-
-        TabataComponent tabata = new TabataComponent();
+        pantallaCompleta.setCloseOnOutsideClick(false);
+        pantallaCompleta.setCloseOnEsc(false);
+        TabataComponent tabata = new TabataComponent(() -> pantallaCompleta.close());
         pantallaCompleta.add(tabata);
-
-        pantallaCompleta.addOpenedChangeListener(event -> {
-            if (!event.isOpened()) {
-                getElement().executeJs("document.body.style.backgroundColor = '';");
-            }
-        });
 
         pantallaCompleta.open();
         tabata.iniciarTabata(t, d, s);
+    }
+    // =========================================================
+    // MODO TINDER: ASISTENCIA EN RÁFAGA
+    // =========================================================
+    private int indiceAsistenciaActual = 0;
+
+    private void abrirTinderAsistencia() {
+        if (asistenciasActuales.isEmpty()) {
+            Notification.show("No hay alumnos en este grupo para tomar lista.");
+            return;
+        }
+
+        indiceAsistenciaActual = 0; // Reiniciamos el contador
+
+        com.vaadin.flow.component.dialog.Dialog tinderDialog = new com.vaadin.flow.component.dialog.Dialog();
+        tinderDialog.setWidth("100vw");
+        tinderDialog.setHeight("100vh");
+        tinderDialog.getElement().getThemeList().add("no-padding");
+
+        VerticalLayout layoutPrincipal = new VerticalLayout();
+        layoutPrincipal.setSizeFull();
+        layoutPrincipal.setAlignItems(Alignment.CENTER);
+        layoutPrincipal.setJustifyContentMode(JustifyContentMode.CENTER);
+        layoutPrincipal.getStyle().set("background-color", "#f4f4f4");
+
+        tinderDialog.add(layoutPrincipal);
+        tinderDialog.open();
+
+        mostrarSiguienteTarjeta(tinderDialog, layoutPrincipal);
+    }
+
+    private void mostrarSiguienteTarjeta(com.vaadin.flow.component.dialog.Dialog dialog, VerticalLayout layoutPrincipal) {
+        layoutPrincipal.removeAll();
+
+        if (indiceAsistenciaActual >= asistenciasActuales.size()) {
+            dialog.close();
+            Notification.show("¡Lista terminada!");
+            // Refrescamos visualmente la cuadrícula pequeña de atrás
+            dibujarListaAsistencia(selectorGrupo.getValue());
+            return;
+        }
+
+        Asistencia asistencia = asistenciasActuales.get(indiceAsistenciaActual);
+        Judoka judoka = asistencia.getJudoka();
+
+        // 1. LA TARJETA GIGANTE
+        VerticalLayout card = new VerticalLayout();
+        card.setAlignItems(Alignment.CENTER);
+        card.setJustifyContentMode(JustifyContentMode.CENTER);
+        card.getStyle().set("background", "white");
+        card.getStyle().set("border-radius", "20px");
+        card.getStyle().set("box-shadow", "0 10px 20px rgba(0,0,0,0.1)");
+        card.getStyle().set("width", "85vw");
+        card.getStyle().set("height", "60vh");
+        card.getStyle().set("max-width", "400px");
+
+        // Animación de entrada suave
+        card.getStyle().set("animation", "fadein 0.3s");
+        layoutPrincipal.getElement().executeJs(
+                "const style = document.createElement('style');" +
+                        "style.innerHTML = '@keyframes fadein { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }';" +
+                        "document.head.appendChild(style);"
+        );
+
+        Avatar avatarGigante = new Avatar(judoka.getNombre() + " " + judoka.getApellido());
+        avatarGigante.getStyle().set("width", "150px").set("height", "150px");
+        if (judoka.getUrlFotoPerfil() != null && !judoka.getUrlFotoPerfil().isEmpty()) {
+            avatarGigante.setImage(judoka.getUrlFotoPerfil());
+        }
+
+        H2 nombreText = new H2(judoka.getNombre());
+        nombreText.getStyle().set("margin-bottom", "0");
+
+        Span apellidoText = new Span(judoka.getApellido());
+        apellidoText.getStyle().set("font-size", "1.2rem").set("color", "gray");
+
+        card.add(avatarGigante, nombreText, apellidoText);
+
+        // 2. LOS BOTONES DE ACCIÓN (Izquierda Rojo / Derecha Verde)
+        HorizontalLayout botonesLayout = new HorizontalLayout();
+        botonesLayout.setWidth("85vw");
+        botonesLayout.getStyle().set("max-width", "400px");
+        botonesLayout.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        botonesLayout.getStyle().set("margin-top", "30px");
+
+        Button btnFalto = new Button(new Icon(VaadinIcon.CLOSE));
+        btnFalto.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
+        btnFalto.getStyle().set("width", "80px").set("height", "80px").set("border-radius", "50%");
+
+        Button btnPresente = new Button(new Icon(VaadinIcon.CHECK));
+        btnPresente.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
+        btnPresente.getStyle().set("width", "80px").set("height", "80px").set("border-radius", "50%");
+
+        // Acciones al hacer clic
+        btnFalto.addClickListener(e -> {
+            asistencia.setEstado(EstadoAsistencia.AUSENTE);
+            indiceAsistenciaActual++;
+            mostrarSiguienteTarjeta(dialog, layoutPrincipal);
+        });
+
+        btnPresente.addClickListener(e -> {
+            asistencia.setEstado(EstadoAsistencia.PRESENTE);
+            indiceAsistenciaActual++;
+            mostrarSiguienteTarjeta(dialog, layoutPrincipal);
+        });
+
+        botonesLayout.add(btnFalto, btnPresente);
+
+        layoutPrincipal.add(card, botonesLayout);
     }
 }

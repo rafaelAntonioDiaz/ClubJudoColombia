@@ -52,5 +52,11 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
             "WHERE j.acudiente = :acudiente")
     List<Judoka> findByAcudienteWithDetails(@Param("acudiente") Usuario acudiente);
     // Añade esto en tu JudokaRepository
+    @Query("SELECT j FROM Judoka j LEFT JOIN FETCH j.acudiente LEFT JOIN FETCH j.sensei WHERE j.id = :id")
+    Optional<Judoka> findByIdWithDetails(@Param("id") Long id);
+    // Buscar por el username del acudiente (ahora el nombre correcto del campo)
+    Optional<Judoka> findByAcudiente_Username(String username);
+    @Query("SELECT j FROM Judoka j LEFT JOIN FETCH j.acudiente WHERE j.grupo = :grupo")
+    List<Judoka> findByGrupoWithAcudiente(@Param("grupo") GrupoEntrenamiento grupo);
     List<Judoka> findByGrupo(GrupoEntrenamiento grupo);
 }

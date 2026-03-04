@@ -18,9 +18,12 @@ import com.github.appreciated.apexcharts.config.Stroke;
 import com.github.appreciated.apexcharts.config.TitleSubtitle;
 import com.github.appreciated.apexcharts.config.XAxis;
 import com.github.appreciated.apexcharts.config.YAxis;
+import com.github.appreciated.apexcharts.config.builder.*;
 import com.github.appreciated.apexcharts.config.chart.Toolbar;
 import com.github.appreciated.apexcharts.config.chart.Type;
 import com.github.appreciated.apexcharts.config.chart.Zoom;
+import com.github.appreciated.apexcharts.config.chart.builder.ToolbarBuilder;
+import com.github.appreciated.apexcharts.config.chart.builder.ZoomBuilder;
 import com.github.appreciated.apexcharts.config.legend.Position;
 import com.github.appreciated.apexcharts.config.stroke.Curve;
 import com.github.appreciated.apexcharts.config.subtitle.Align;
@@ -43,6 +46,7 @@ import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +56,7 @@ import java.util.stream.Collectors;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("dashboard-judoka")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR","ROLE_ACUDIENTE"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR","ROLE_ACUDIENTE","ROLE_MASTER"})
 @PageTitle("Combat Profile | Club Judo Colombia")
 @CssImport("./styles/dashboard-judoka.css")
 public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObserver {
@@ -91,6 +95,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                                SabiduriaService sabiduriaService,
                                JudokaRepository judokaRepository) {
         super(securityService, accessChecker, traduccionService, judokaRepository);
+        System.out.println("🔧 JudokaDashboardView constructor iniciado");
         this.dashboardService = dashboardService;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
@@ -103,11 +108,24 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
 
         initJudoka();
         buildModernDashboard();
+        System.out.println("🔧 JudokaDashboardView constructor finalizado");
     }
 
     private void initJudoka() {
-        this.judokaActual = securityService.getAuthenticatedJudoka()
-                .orElseThrow(() -> new RuntimeException("Error: Judoka no autenticado."));
+        // 1. Prioridad: ¿Viene por Magic Link?
+        System.out.println("🔧 initJudoka() - Iniciando");
+        Long judokaId = (Long) VaadinSession.getCurrent().getAttribute("JUDOKA_ACTUAL_ID");
+        System.out.println("🔧 JUDOKA_ACTUAL_ID desde sesión: " + judokaId);
+        if (judokaId != null) {
+            this.judokaActual = judokaRepository.findByIdWithDetails(judokaId)
+                    .orElseThrow(() -> new RuntimeException("Judoka no encontrado con ID: " + judokaId));
+            System.out.println("🔧 Judoka obtenido por ID: " + judokaActual.getNombre());
+        } else {
+            // 2. Fallback: usuario autenticado normal (Acudiente/Sensei/Master)
+            this.judokaActual = securityService.getAuthenticatedJudoka()
+                    .orElseThrow(() -> new RuntimeException("Error: Judoka no autenticado."));
+            System.out.println("🔧 Judoka obtenido por securityService");
+        }
     }
 
     private void buildModernDashboard() {
@@ -188,22 +206,33 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         actualizarTextos();
         actualizarDatos();
     }
+
     private void actualizarDatos() {
         Double poder = dashboardService.getPoderDeCombate(judokaActual);
         Map<String, Double> radarData = dashboardService.getDatosRadar(judokaActual);
 
-        radarWidget.updateData(
-                poder,
-                radarData,
-                traduccionService.get("kpi.poder_combate"),
-                traduccionService.get("chart.radar.serie"),
-                traduccionService.get("chart.sin_datos")
-        );
+        if (poder == null || poder <= 0.0) {
+            int edad = judokaActual.getEdad();
+            String titulo = "¡Poder Inactivo! \uD83D\uDD12";
+            String subtitulo;
+            if (edad < 14) {
+                subtitulo = "No te preocupes, todo gran guerrero empieza así. Pídele a tu Sensei que te evalúe.";
+            } else {
+                subtitulo = "Completa tu Bloque Definitorio para despertar tu potencial.";
+            }
+            radarWidget.mostrarModoIncognito(titulo, subtitulo);
+        } else {
+            radarWidget.updateData(
+                    poder, radarData,
+                    traduccionService.get("kpi.poder_combate"),
+                    traduccionService.get("chart.radar.serie"),
+                    traduccionService.get("chart.sin_datos")
+            );
+        }
     }
 
     private void actualizarTextos() {
-        String nombre = (judokaActual != null && judokaActual.getUsuario() != null)
-                ? judokaActual.getUsuario().getNombre() : "Judoka";
+        String nombre = (judokaActual != null) ? judokaActual.getNombre() : "Judoka";
         tituloNombre.setText(traduccionService.get("dashboard.welcome", nombre));
         btnAgenda.setText(traduccionService.get("kpi.tareas_hoy"));
     }
@@ -236,48 +265,41 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
 
     private void mostrarGraficoDetalle(String codigoPrueba) {
         detailChartContainer.removeAll();
-
-        // 1. Buscamos en la BD usando el código TAL CUAL viene del botón
         Optional<PruebaEstandar> pruebaOpt = dashboardService.buscarPrueba(codigoPrueba);
 
         if (pruebaOpt.isPresent()) {
             PruebaEstandar prueba = pruebaOpt.get();
-
-            // 2. Definimos el título. Como el código YA ES la clave de traducción, lo usamos directo.
             String tituloCategoria = traduccionService.get(codigoPrueba);
-
-            // Fallback: Si no hay traducción, usamos el código
             if (tituloCategoria.equals(codigoPrueba)) {
-                try {
-                    // Intenta sacar el nombre si tu entidad tiene el getter, sino usa el código
-                    tituloCategoria = prueba.getNombreKey();
-                } catch (Exception e) {
-                    tituloCategoria = codigoPrueba.replace("ejercicio.", "").replace(".nombre", "").toUpperCase();
-                }
+                try { tituloCategoria = prueba.getNombreKey(); }
+                catch (Exception e) { tituloCategoria = codigoPrueba.toUpperCase(); }
             }
 
             List<Map<String, Object>> datos = dashboardService.getHistorialPrueba(judokaActual, prueba);
-
-            // 3. Obtenemos el Récord lógico (Elite)
-            Double recordValor = obtenerRecordSimulado(codigoPrueba);
 
             if (datos == null || datos.isEmpty()) {
                 detailChartContainer.add(crearEstadoVacio(tituloCategoria));
             } else {
                 String unidad = obtenerUnidadMedida(codigoPrueba);
-                ApexCharts chart = crearGraficoComparativo(datos, recordValor, tituloCategoria, unidad);
+
+                // FASE 2: Calculamos la meta dinámicamente desde el backend
+                Double metaAlcanzable = dashboardService.calcularMotivador(judokaActual, prueba);
+
+                // Pasamos la meta al creador del gráfico
+                ApexCharts chart = crearGraficoComparativo(datos, metaAlcanzable, tituloCategoria, unidad);
                 chart.setWidth("100%");
                 detailChartContainer.add(chart);
 
                 UI.getCurrent().getPage().executeJs("setTimeout(() => window.dispatchEvent(new Event('resize')), 200);");
             }
         } else {
-            // Feedback visual de error
             Span errorSpan = new Span("Prueba no encontrada en BD: " + codigoPrueba);
             errorSpan.getStyle().set("color", "red").set("font-weight", "bold");
             detailChartContainer.add(errorSpan);
         }
-    }    // Simulación del "Mejor de la Clase"
+    }
+
+    // Simulación del "Mejor de la Clase"
     private Double obtenerRecordSimulado(String clavePrueba) {
         // Valores de REFERENCIA ELITE (Difíciles de superar)
 
@@ -299,77 +321,47 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         return 100.0; // Valor por defecto
     }
 
-    private ApexCharts crearGraficoComparativo(List<Map<String, Object>> datos,
-                                               Double recordValor,
-                                               String titulo,
-                                               String unidadMedida) {
+    // FASE 2: Gráfico rediseñado para usar una línea de "Motivador" en lugar de un Récord Mundial
+// FASE 2: Gráfico rediseñado con el Motivador
+    private ApexCharts crearGraficoComparativo(List<Map<String, Object>> datosUsuario, Double valorMotivador, String titulo, String unidad) {
+        List<String> fechas = new java.util.ArrayList<>();
+        List<Double> valoresUsuario = new java.util.ArrayList<>();
+        List<Double> valoresMotivador = new java.util.ArrayList<>();
 
-        List<String> fechas = datos.stream().map(m -> (String) m.get("fecha")).distinct().collect(Collectors.toList());
-        String metricaPrincipal = datos.get(0).get("metrica").toString();
+        for (Map<String, Object> fila : datosUsuario) {
+            fechas.add(fila.get("fecha").toString());
+            valoresUsuario.add(((Number) fila.get("valor")).doubleValue());
+            valoresMotivador.add(valorMotivador != null ? valorMotivador : 0.0);
+        }
 
-        Double[] valoresUsuario = datos.stream()
-                .filter(m -> m.get("metrica").equals(metricaPrincipal))
-                .map(m -> Double.valueOf(m.get("valor").toString()))
-                .toArray(Double[]::new);
+        String tituloUsuario = traduccionService.get("chart.tu_progreso", "Tu Progreso");
+        String tituloMotivador = "Tu Motivador \uD83C\uDFAF";
 
-        Series<Double> serieUsuario = new Series<>(traduccionService.get("legend.mi_progreso"), valoresUsuario);
-
-        // Creamos la línea del "Mejor" (Benchmark) constante
-        Double[] valoresRecord = new Double[fechas.size()];
-        Arrays.fill(valoresRecord, recordValor);
-        Series<Double> serieRecord = new Series<>(traduccionService.get("legend.record_categoria"), valoresRecord);
-
-        // Configuración de Series
-        List<Series> seriesList = Arrays.asList(serieUsuario, serieRecord);
-
-        // Colores: Azul (Usuario) vs Oro (El Mejor)
-        List<String> colorsList = Arrays.asList("#1A73E8", "#FFD700");
-
-        // Configuración Gráfica
-        Toolbar toolbar = new Toolbar();
-        toolbar.setShow(false);
-        Zoom zoom = new Zoom();
-        zoom.setEnabled(false);
-
-        Chart chartConfig = new Chart();
-        chartConfig.setType(Type.LINE); // Línea vs Línea para ver la brecha
-        chartConfig.setHeight("300px");
-        chartConfig.setZoom(zoom);
-        chartConfig.setToolbar(toolbar);
-
-        Stroke stroke = new Stroke();
-        stroke.setCurve(Curve.SMOOTH);
-        stroke.setWidth(4.0);
-        // Fix previo aplicado: setColors recibe lista
-        stroke.setColors(colorsList);
-
-        Legend legend = new Legend();
-        legend.setShow(true);
-        legend.setPosition(Position.TOP);
-
-        XAxis xaxis = new XAxis();
-        xaxis.setCategories(fechas);
-
-        YAxis yaxis = new YAxis();
-        Title titleY = new Title();
-        titleY.setText(unidadMedida);
-        yaxis.setTitle(titleY);
+        // SOLUCIÓN ERROR 5: Usar la clase Title específica del eje Y
+        com.github.appreciated.apexcharts.config.yaxis.Title yTitle = new com.github.appreciated.apexcharts.config.yaxis.Title();
+        yTitle.setText(unidad);
 
         return ApexChartsBuilder.get()
-                .withChart(chartConfig)
-                .withColors(colorsList.toArray(new String[0]))
-                .withStroke(stroke)
-                .withLegend(legend)
-                .withSeries(seriesList.toArray(new Series[0]))
-                .withXaxis(xaxis)
-                .withYaxis(yaxis)
-                .withTitle(new TitleSubtitle() {{
-                    setText(traduccionService.get("chart.title.vs_mejor", titulo));
-                    setAlign(Align.LEFT);
-                }})
+                .withChart(ChartBuilder.get()
+                        .withType(Type.LINE)
+                        .withToolbar(ToolbarBuilder.get().withShow(false).build())
+                        .withZoom(ZoomBuilder.get().withEnabled(false).build())
+                        .build())
+                .withStroke(StrokeBuilder.get()
+                        .withCurve(com.github.appreciated.apexcharts.config.stroke.Curve.SMOOTH)
+                        .withWidth(3.0) // <--- SOLUCIÓN ERROR 4: Un solo número aplica el grosor a ambas líneas
+                        .withDashArray(Collections.singletonList(5.0))
+                        .build())
+                .withColors("#00E396", "#FFD700")
+                .withSeries(
+                        new com.github.appreciated.apexcharts.helper.Series<>(tituloUsuario, valoresUsuario.toArray(new Double[0])),
+                        new com.github.appreciated.apexcharts.helper.Series<>(tituloMotivador, valoresMotivador.toArray(new Double[0]))
+                )
+                .withXaxis(XAxisBuilder.get().withCategories(fechas).build())
+                .withYaxis(YAxisBuilder.get().withTitle(yTitle).build()) // <--- Aplicamos el YTitle corregido
+                .withLegend(LegendBuilder.get().withPosition(com.github.appreciated.apexcharts.config.legend.Position.TOP).build())
                 .build();
     }
-
     private void abrirDialogoTrofeos() {
         Dialog dialog = new Dialog();
         dialog.setWidth("800px");

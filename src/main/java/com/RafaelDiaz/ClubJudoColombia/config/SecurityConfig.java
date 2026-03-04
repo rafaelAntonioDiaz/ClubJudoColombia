@@ -45,33 +45,33 @@ public class SecurityConfig extends VaadinWebSecurity {
      * Al heredar de VaadinWebSecurity, ya no usamos un SecurityFilterChain Bean,
      * sino que sobrescribimos este método.
      */
+    @Override
     protected void configure(HttpSecurity http) throws Exception {
-        // --- 1. CONFIGURACIÓN MODERNA PARA H2 CONSOLE ---
-        // Deshabilitamos CSRF y permitimos iFrames usando la ruta nativa de H2
+        // 1. Configuraciones especiales para H2 console (deben ir antes de cualquier otra cosa)
         http.csrf(csrf -> csrf.ignoringRequestMatchers(PathRequest.toH2Console()));
         http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
-        // --- 2. RUTAS PÚBLICAS (Sin AntPathRequestMatcher) ---
-        http.authorizeHttpRequests(auth ->
-                auth.requestMatchers(PathRequest.toH2Console()).permitAll() // Permiso nativo H2
-                        .requestMatchers(
-                                "/registro/**",  // Permite /registro y /registro/{token}
-                                "/images/**",
-                                "/icons/**",
-                                "/acceso-dojo/**",
-                                "/manifest.webmanifest",
-                                "/sw.js",
-                                "/offline.html"
-                        ).permitAll()
+        // 2. Nuestras reglas personalizadas (deben ir antes de super.configure)
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers(PathRequest.toH2Console()).permitAll()
+                .requestMatchers(
+                        "/registro/**",
+                        "/images/**",
+                        "/icons/**",
+                        "/acceso-dojo/**",
+                        "/invitacion/**",
+                        "/manifest.webmanifest",
+                        "/sw.js",
+                        "/offline.html"
+                ).permitAll()
         );
 
-        // Llamamos a la configuración base de Vaadin
+        // 3. Configuración base de Vaadin (esto añade anyRequest().authenticated() y otras cosas)
         super.configure(http);
 
-        // Configuramos la vista de Login
+        // 4. Configurar la vista de login (después de super.configure)
         setLoginView(http, LoginView.class);
     }
-
     // --- 3. EXCEPCIÓN PARA EL ENRUTADOR DE VAADIN ---
     @Override
     public void configure(WebSecurity web) throws Exception {

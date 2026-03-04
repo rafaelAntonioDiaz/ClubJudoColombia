@@ -25,8 +25,7 @@ public class AccesoDojoService {
         judoka.setTokenAccesoDirecto(token);
         judoka.setFechaGeneracionToken(LocalDateTime.now());
         judokaRepository.save(judoka);
-        // Retornamos el path que espera el MagicLinkView (@Route("acceso-dojo"))
-        return "/acceso-dojo/" + token;
+        return token;
     }
 
     public Optional<Judoka> validarPase(String token) {

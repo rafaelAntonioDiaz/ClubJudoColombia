@@ -102,14 +102,15 @@ public class SenseiResultadosView extends VerticalLayout {
     private void configurarJudokaComboBox() {
         judokaComboBox = new ComboBox<>(traduccionService.get("resultados.selector.judoka"));
         Long miSenseiId = securityService.getSenseiIdActual();
-        judokaComboBox.setItems(judokaRepository.findBySenseiIdWithAcudiente(miSenseiId));
-        judokaComboBox.setItemLabelGenerator(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido());
-        judokaComboBox.setWidthFull();
-        // ----------------------------------------------------
 
+        // Cargar los judokas del sensei actual (incluyendo sus acudientes para otros fines)
+        judokaComboBox.setItems(judokaRepository.findBySenseiIdWithAcudiente(miSenseiId));
+
+        // ✅ Mostrar el nombre del judoka, NO del acudiente
         judokaComboBox.setItemLabelGenerator(judoka ->
-                judoka.getUsuario().getNombre() + " " + judoka.getUsuario().getApellido()
+                judoka.getNombre() + " " + judoka.getApellido()
         );
+
         judokaComboBox.setWidth("300px");
 
         judokaComboBox.addValueChangeListener(event -> {

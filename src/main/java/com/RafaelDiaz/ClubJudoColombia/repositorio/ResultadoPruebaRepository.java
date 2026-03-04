@@ -5,6 +5,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.PruebaEstandar;
 import com.RafaelDiaz.ClubJudoColombia.modelo.ResultadoPrueba;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -28,4 +29,15 @@ public interface ResultadoPruebaRepository extends JpaRepository<ResultadoPrueba
     long countByJudokaAndFechaRegistroBetween(Judoka judoka, LocalDateTime inicio, LocalDateTime fin);
 
     Optional<ResultadoPrueba> findTopByJudokaAndEjercicioPlanificado_PruebaEstandarOrderByFechaRegistroDesc(Judoka judoka, PruebaEstandar prueba);
+// =================================================================
+    // QUERIES PARA EL RÉCORD DEL DOJO (FALLBACK EXPERIMENTAL)
+    // =================================================================
+
+    // Busca el récord máximo (Para pruebas donde MÁS es MEJOR, ej. Saltos, Abdominales)
+    @Query("SELECT MAX(r.valor) FROM ResultadoPrueba r WHERE r.ejercicioPlanificado.pruebaEstandar = :prueba")
+    Double findRecordMaximoDojo(@Param("prueba") PruebaEstandar prueba);
+
+    // Busca el récord mínimo (Para pruebas donde MENOS es MEJOR, ej. Velocidad 20m)
+    @Query("SELECT MIN(r.valor) FROM ResultadoPrueba r WHERE r.ejercicioPlanificado.pruebaEstandar = :prueba")
+    Double findRecordMinimoDojo(@Param("prueba") PruebaEstandar prueba);
 }

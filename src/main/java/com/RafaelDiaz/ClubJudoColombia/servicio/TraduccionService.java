@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Traduccion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TraduccionRepository;
 import com.vaadin.flow.component.UI;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
@@ -126,5 +127,22 @@ public class TraduccionService {
             }
         }
         return texto;
+    }
+    // Añade este import arriba si no lo tienes:
+    // import org.springframework.transaction.annotation.Transactional;
+
+    /**
+     * --- NUEVO: MÉTODO DE ESCRITURA ---
+     * Guarda una traducción solo si no existe en la base de datos.
+     */
+    @Transactional
+    public void guardarTraduccionSiNoExiste(String idioma, String clave, String texto) {
+        if (traduccionRepository.findByClaveAndIdioma(clave, idioma).isEmpty()) {
+            Traduccion nuevaTraduccion = new Traduccion();
+            nuevaTraduccion.setIdioma(idioma);
+            nuevaTraduccion.setClave(clave);
+            nuevaTraduccion.setTexto(texto);
+            traduccionRepository.save(nuevaTraduccion);
+        }
     }
 }

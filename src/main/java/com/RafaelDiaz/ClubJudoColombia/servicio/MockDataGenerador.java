@@ -58,7 +58,7 @@ public class MockDataGenerador {
                 adminUser.setNombre("Rafael");
                 adminUser.setApellido("Master");
                 adminUser.setEmail("master@clubjudo.com");
-                adminUser.setPasswordHash(passwordEncoder.encode("1234"));
+                adminUser.setPasswordHash(passwordEncoder.encode("contraseña"));
                 adminUser.setRoles(Set.of(rolMaster, rolSensei));
                 adminUser = usuarioRepository.save(adminUser);
 

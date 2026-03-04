@@ -200,4 +200,9 @@ public class GrupoEntrenamientoService {
         grupo.getJudokas().clear();
         grupoRepository.delete(grupo);
     }
+    @Transactional(readOnly = true)
+    public List<GrupoEntrenamiento> findAllBySenseiId(Long senseiId) {
+        return grupoRepository.findBySenseiId(senseiId, PageRequest.of(0, Integer.MAX_VALUE)).getContent();
+    }
+
 }

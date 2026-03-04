@@ -99,7 +99,7 @@ public class SenseiLayout extends AppLayout {
         // --- 1. DASHBOARD & COMUNIDAD ---
         agregarTab(tabs, getTexto("menu.dashboard", "Dashboard"), VaadinIcon.DASHBOARD, SenseiDashboardView.class);
         agregarTab(tabs, getTexto("menu.comunidad", "Comunidad"), VaadinIcon.USERS, ComunidadSenseiView.class);
-
+        agregarTab(tabs, getTexto("menu.reglas_gamificacion","Premios"), VaadinIcon.RANDOM, ReglasGamificacionView.class);
         // --- 2. GESTIÓN DE PERSONAS ---
         agregarTab(tabs, getTexto("menu.invitar", "Invitar"), VaadinIcon.PAPERPLANE, GestorInvitacionesView.class);
         agregarTab(tabs, getTexto("menu.admisiones", "Admisiones"), VaadinIcon.CLIPBOARD_USER, ValidacionIngresoView.class);

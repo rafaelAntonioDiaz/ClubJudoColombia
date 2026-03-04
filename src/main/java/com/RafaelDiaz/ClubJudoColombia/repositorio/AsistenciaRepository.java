@@ -49,4 +49,5 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
             "WHERE a.judoka.id = :judokaId " +
             "ORDER BY s.fechaHoraEjecucion DESC")
     List<Asistencia> findHistorialByJudokaId(@Param("judokaId") Long judokaId);
+    long countByJudokaAndEstado(Judoka judoka, EstadoAsistencia estado);
 }

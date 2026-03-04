@@ -163,4 +163,43 @@ public class CombatRadarWidget extends VerticalLayout {
                 .withYaxis(yaxis)
                 .build();
     }
+    public void mostrarModoIncognito(String titulo, String subtitulo) {
+        // 1. Limpiamos cualquier gráfico o componente que haya actualmente en el Widget
+        this.removeAll();
+
+        // 2. Configuramos los títulos motivacionales
+        com.github.appreciated.apexcharts.config.TitleSubtitle titleObj = new com.github.appreciated.apexcharts.config.TitleSubtitle();
+        titleObj.setText(titulo);
+        titleObj.setAlign(com.github.appreciated.apexcharts.config.subtitle.Align.CENTER);
+
+        com.github.appreciated.apexcharts.config.TitleSubtitle subObj = new com.github.appreciated.apexcharts.config.TitleSubtitle();
+        subObj.setText(subtitulo);
+        subObj.setAlign(com.github.appreciated.apexcharts.config.subtitle.Align.CENTER);
+
+        // 3. Construimos un Radar nuevo, en ceros y de color gris
+        com.github.appreciated.apexcharts.ApexCharts radarIncognito = com.github.appreciated.apexcharts.ApexChartsBuilder.get()
+                .withChart(com.github.appreciated.apexcharts.config.builder.ChartBuilder.get()
+                        .withType(com.github.appreciated.apexcharts.config.chart.Type.RADAR)
+                        .withToolbar(com.github.appreciated.apexcharts.config.chart.builder.ToolbarBuilder.get().withShow(false).build())
+                        .build())
+                .withTitle(titleObj)
+                .withSubtitle(subObj)
+                .withSeries(new com.github.appreciated.apexcharts.helper.Series<>("Poder Oculto", 0.0, 0.0, 0.0, 0.0, 0.0))
+                // NOTA: Ajusta estas etiquetas a los nombres reales de tus 5 ejes si lo deseas
+                .withLabels("Definitorio", "Sustento", "Eficiencia", "Protección", "Técnico-Coordinativo")
+                .withColors("#9E9E9E") // Color Gris (Bloqueado)
+                .withYaxis(com.github.appreciated.apexcharts.config.builder.YAxisBuilder.get()
+                        .withShow(false)
+                        .withMin(0.0)
+                        .withMax(100.0)
+                        .build())
+                .build();
+
+        // 4. Ajustamos el tamaño (pon las medidas que uses normalmente en tu radar)
+        radarIncognito.setWidth("100%");
+        radarIncognito.setHeight("350px");
+
+        // 5. Lo añadimos a la vista
+        this.add(radarIncognito);
+    }
 }

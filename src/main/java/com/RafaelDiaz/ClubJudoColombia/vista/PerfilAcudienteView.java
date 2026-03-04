@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.modelo.CuentaCobro;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MetodoPago;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
@@ -218,33 +219,41 @@ public class PerfilAcudienteView extends VerticalLayout {
         return card;}
 
     // --- LÓGICA DE MAGIC LINK (OPTIMIZADA) ---
+// --- LÓGICA DE MAGIC LINK (CORREGIDA) ---
     private void generarMagicLink(Judoka judoka) {
-        if (judoka.getEstado().equals("INACTIVO")) {
+        // ✅ Comparación correcta con enum
+        if (judoka.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.INACTIVO) {
             Notification.show("Debes estar al día para generar el pase.", 3000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
             return;
         }
 
-        String link = accesoDojoService.generarNuevoPase(judoka);
+        // ✅ Solo una llamada al servicio
+        String token = accesoDojoService.generarNuevoPase(judoka);
 
+        // Construimos la URL absoluta
+        var request = com.vaadin.flow.server.VaadinServletRequest.getCurrent().getHttpServletRequest();
+        String urlBase = request.getRequestURL().toString().replace(request.getRequestURI(), "") + request.getContextPath();
+        String linkCompleto = urlBase + "/acceso-dojo/" + token;
+
+        // Resto del diálogo igual...
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle("Pase de Acceso: " + judoka.getNombre());
 
         VerticalLayout layout = new VerticalLayout();
         layout.add(new Paragraph("Comparte este enlace con tu hijo o escanea el QR al llegar al club."));
 
-        // Simulación visual de QR (en producción usarías una librería de generación de QR)
         Icon qrIcon = VaadinIcon.QRCODE.create();
         qrIcon.setSize("100px");
         qrIcon.getStyle().set("align-self", "center");
 
         TextArea linkField = new TextArea("Enlace de Acceso Directo");
-        linkField.setValue(link);
+        linkField.setValue(linkCompleto);
         linkField.setReadOnly(true);
         linkField.setWidthFull();
 
         Button btnCopiar = new Button("Copiar Enlace", VaadinIcon.COPY.create(), e -> {
-            // JS Call para copiar al portapapeles (requiere integración frontend avanzada, simulamos con notificación)
+            // Simulación de copia (puedes implementar copia real con JavaScript)
             Notification.show("Enlace copiado al portapapeles");
         });
 

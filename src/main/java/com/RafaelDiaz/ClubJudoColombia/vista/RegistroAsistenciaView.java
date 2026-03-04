@@ -41,7 +41,7 @@ import java.util.Set;
 public class RegistroAsistenciaView extends SenseiLayout {
 
     private final GrupoEntrenamientoService grupoService;
-    private final TraduccionService traduccionService; // NUEVO: Servicio de traducción
+    private final TraduccionService traduccionService;
 
     private ComboBox<GrupoEntrenamiento> grupoSelector;
     private final FlexLayout contenedorTarjetas;

@@ -27,24 +27,28 @@ public class ResultadoPruebaService {
     private final TraduccionService traduccionService;
     private final MicrocicloRepository microcicloRepository;
     private final EjecucionTareaRepository ejecucionTareaRepository;
-
+    private final GamificationService gamificationService;
     public ResultadoPruebaService(ResultadoPruebaRepository resultadoPruebaRepository,
                                   NormaEvaluacionRepository normaRepository,
                                   PruebaEstandarRepository pruebaEstandarRepository,
                                   TraduccionService traduccionService,
                                   MicrocicloRepository microcicloRepository,
-                                  EjecucionTareaRepository ejecucionTareaRepository) {
+                                  EjecucionTareaRepository ejecucionTareaRepository, GamificationService gamificationService) {
         this.resultadoPruebaRepository = resultadoPruebaRepository;
         this.normaRepository = normaRepository;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
         this.traduccionService = traduccionService;
         this.microcicloRepository = microcicloRepository;
         this.ejecucionTareaRepository = ejecucionTareaRepository;
+        this.gamificationService = gamificationService;
     }
 
     @Transactional
     public ResultadoPrueba registrarResultado(ResultadoPrueba resultado) {
-        return resultadoPruebaRepository.save(resultado);
+        ResultadoPrueba guardado = resultadoPruebaRepository.save(resultado);
+        // 🎮 GAMIFICATION: Verificar logros físicos
+        gamificationService.verificarLogrosFisicos(guardado.getJudoka(), guardado);
+        return guardado;
     }
 
     public Optional<ClasificacionRendimiento> getClasificacionParaResultado(ResultadoPrueba resultado) {
@@ -94,8 +98,7 @@ public class ResultadoPruebaService {
                 "ejercicio.sjft"
         );
 
-        System.out.println("--- CALCULANDO PODER DE COMBATE PARA: " + judoka.getUsuario().getUsername() + " ---");
-
+        System.out.println("--- CALCULANDO PODER DE COMBATE PARA JUDOKA ID: " + judoka.getId() + " ---");
         for (String clave : clavesPruebasClave) {
             // Buscamos la prueba (Intento doble: clave pura o con .nombre)
             PruebaEstandar prueba = pruebaEstandarRepository.findByNombreKey(clave)
