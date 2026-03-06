@@ -1,6 +1,9 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
+import com.RafaelDiaz.ClubJudoColombia.dto.BloqueConPruebasDTO;
+import com.RafaelDiaz.ClubJudoColombia.dto.PruebaResumenDTO;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.BloqueAgudelo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
@@ -28,12 +31,14 @@ public class ResultadoPruebaService {
     private final MicrocicloRepository microcicloRepository;
     private final EjecucionTareaRepository ejecucionTareaRepository;
     private final GamificationService gamificationService;
+    private final MapeoBloquesService mapeoBloquesService;
+
     public ResultadoPruebaService(ResultadoPruebaRepository resultadoPruebaRepository,
                                   NormaEvaluacionRepository normaRepository,
                                   PruebaEstandarRepository pruebaEstandarRepository,
                                   TraduccionService traduccionService,
                                   MicrocicloRepository microcicloRepository,
-                                  EjecucionTareaRepository ejecucionTareaRepository, GamificationService gamificationService) {
+                                  EjecucionTareaRepository ejecucionTareaRepository, GamificationService gamificationService, MapeoBloquesService mapeoBloquesService) {
         this.resultadoPruebaRepository = resultadoPruebaRepository;
         this.normaRepository = normaRepository;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
@@ -41,6 +46,7 @@ public class ResultadoPruebaService {
         this.microcicloRepository = microcicloRepository;
         this.ejecucionTareaRepository = ejecucionTareaRepository;
         this.gamificationService = gamificationService;
+        this.mapeoBloquesService = mapeoBloquesService;
     }
 
     @Transactional
@@ -87,70 +93,44 @@ public class ResultadoPruebaService {
     public Map<String, Double> getPoderDeCombateComponentes(Judoka judoka) {
         Map<String, Double> componentes = new LinkedHashMap<>();
 
-        // Claves LIMPIAS (sin .nombre) que coinciden con DataInitializer
-        List<String> clavesPruebasClave = List.of(
-                "ejercicio.salto_horizontal_proesp",
-                "ejercicio.lanzamiento_balon",
-                "ejercicio.abdominales_1min",
-                "ejercicio.carrera_6min",
-                "ejercicio.agilidad_4x4",
-                "ejercicio.carrera_20m",
-                "ejercicio.sjft"
-        );
+        Sensei sensei = judoka.getSensei();
+        // Obtener todas las pruebas (globales + del sensei) que tengan categoría
+        List<PruebaEstandar> todas = pruebaEstandarRepository.findGlobalesYDelSensei(sensei);
 
-        System.out.println("--- CALCULANDO PODER DE COMBATE PARA JUDOKA ID: " + judoka.getId() + " ---");
-        for (String clave : clavesPruebasClave) {
-            // Buscamos la prueba (Intento doble: clave pura o con .nombre)
-            PruebaEstandar prueba = pruebaEstandarRepository.findByNombreKey(clave)
-                    .or(() -> pruebaEstandarRepository.findByNombreKey(clave + ".nombre"))
-                    .orElse(null);
-
-            if (prueba == null) {
-                System.out.println("   [X] Prueba no encontrada: " + clave);
-                continue;
+        // Agrupar por bloque usando el servicio de mapeo
+        Map<BloqueAgudelo, List<PruebaEstandar>> pruebasPorBloque = new EnumMap<>(BloqueAgudelo.class);
+        for (PruebaEstandar p : todas) {
+            BloqueAgudelo bloque = mapeoBloquesService.getBloque(p.getCategoria());
+            if (bloque != null) {
+                pruebasPorBloque.computeIfAbsent(bloque, k -> new ArrayList<>()).add(p);
             }
+        }
 
-            String nombre = traduccionService.get(clave);
-            if (nombre.contains(" (")) nombre = nombre.substring(0, nombre.indexOf(" ("));
+        // Para cada bloque, calcular el promedio de puntos de los últimos resultados
+        for (BloqueAgudelo bloque : BloqueAgudelo.values()) {
+            List<PruebaEstandar> pruebas = pruebasPorBloque.getOrDefault(bloque, Collections.emptyList());
+            double sumaPuntos = 0.0;
+            int pruebasConDatos = 0;
 
-            double puntos = 1.0;
-
-            // Buscamos historial
-            List<ResultadoPrueba> historial = getHistorialDeResultados(judoka, prueba);
-            System.out.println("   [?] Prueba: " + clave + " | ID: " + prueba.getId() + " | Resultados encontrados: " + historial.size());
-
-            if (!historial.isEmpty()) {
-                ResultadoPrueba ultimoResultado = historial.get(historial.size() - 1);
-                System.out.println("       -> Último valor: " + ultimoResultado.getValor());
-
-                // Intentamos clasificar
-                Optional<ClasificacionRendimiento> clasOpt = getClasificacionParaResultado(ultimoResultado);
-
-                if (clasOpt.isPresent()) {
-                    ClasificacionRendimiento clas = clasOpt.get();
-                    System.out.println("       -> Clasificación: " + clas);
-                    puntos = switch (clas) {
-                        case EXCELENTE -> 5.0;
-                        case MUY_BIEN -> 4.0;
-                        case BUENO -> 3.0;
-                        case REGULAR, RAZONABLE -> 2.0; // Ajusté RAZONABLE que a veces se llama diferente
-                        default -> 1.0;
-                    };
-                } else {
-                    System.out.println("       -> [!] No se encontró norma de clasificación. Asignando 1.0 por defecto.");
-                    // --- PARCHE TEMPORAL PARA VER GRÁFICO ---
-                    // Si hay datos pero no hay normas cargadas en la BD,
-                    // el gráfico saldrá plano. Vamos a simular puntos basados en el valor
-                    // solo para que veas que el gráfico funciona.
-                    if (ultimoResultado.getValor() > 20) puntos = 4.0;
-                    else if (ultimoResultado.getValor() > 10) puntos = 3.0;
-                    else puntos = 2.0;
+            for (PruebaEstandar prueba : pruebas) {
+                List<ResultadoPrueba> historial = getHistorialDeResultados(judoka, prueba);
+                if (!historial.isEmpty()) {
+                    ResultadoPrueba ultimo = historial.get(historial.size() - 1);
+                    Optional<ClasificacionRendimiento> clasOpt = getClasificacionParaResultado(ultimo);
+                    double puntos = clasOpt.map(this::puntosDeClasificacion).orElse(1.0);
+                    sumaPuntos += puntos;
+                    pruebasConDatos++;
                 }
             }
-            componentes.put(nombre, puntos);
+
+            double valorBloque = (pruebasConDatos > 0) ? sumaPuntos / pruebasConDatos : 1.0;
+            String nombreBloque = traduccionService.get("bloque." + bloque.name().toLowerCase());
+            componentes.put(nombreBloque, valorBloque);
         }
+
         return componentes;
     }
+
     @Transactional(readOnly = true)
     public Double calcularPoderDeCombate(Judoka judoka) {
         Map<String, Double> componentes = getPoderDeCombateComponentes(judoka);
@@ -254,4 +234,101 @@ public class ResultadoPruebaService {
                 .orElse(Collections.emptyList());
     }
 
+    @Transactional(readOnly = true)
+    public List<BloqueConPruebasDTO> getPruebasPorBloque(Judoka judoka) {
+        Sensei sensei = judoka.getSensei();
+        // Obtener todas las pruebas (globales + del sensei)
+        List<PruebaEstandar> todas = pruebaEstandarRepository.findGlobalesYDelSensei(sensei);
+
+        // Agrupar por bloque
+        Map<BloqueAgudelo, List<PruebaEstandar>> porBloque = new EnumMap<>(BloqueAgudelo.class);
+        for (PruebaEstandar p : todas) {
+            BloqueAgudelo bloque = mapeoBloquesService.getBloque(p.getCategoria());
+            if (bloque != null) {
+                porBloque.computeIfAbsent(bloque, k -> new ArrayList<>()).add(p);
+            }
+        }
+
+        List<BloqueConPruebasDTO> resultado = new ArrayList<>();
+        for (Map.Entry<BloqueAgudelo, List<PruebaEstandar>> entry : porBloque.entrySet()) {
+            BloqueAgudelo bloque = entry.getKey();
+            List<PruebaEstandar> pruebas = entry.getValue();
+
+            List<PruebaResumenDTO> resumenes = new ArrayList<>();
+            for (PruebaEstandar p : pruebas) {
+                Optional<ResultadoPrueba> ultimo = resultadoPruebaRepository
+                        .findTopByJudokaAndEjercicioPlanificado_PruebaEstandarOrderByFechaRegistroDesc(judoka, p);
+                if (ultimo.isPresent()) {
+                    ResultadoPrueba r = ultimo.get();
+                    Optional<ClasificacionRendimiento> clasif = getClasificacionParaResultado(r);
+                    double puntos = clasif.map(this::puntosDeClasificacion).orElse(1.0);
+                    String clasificacionTexto = clasif.map(c -> traduccionService.get(c)).orElse("");
+                    PruebaResumenDTO dto = new PruebaResumenDTO(
+                            p.getId(),
+                            p.getNombreMostrar(traduccionService),
+                            r.getValor(),
+                            r.getFechaRegistro().toLocalDate(),
+                            clasificacionTexto,
+                            puntos
+                    );
+                    resumenes.add(dto);
+                }
+            }
+            // Ordenar por fecha descendente (más reciente primero)
+            resumenes.sort((a, b) -> b.getFechaUltimo().compareTo(a.getFechaUltimo()));
+
+            // Determinar prueba seleccionada por defecto: la más reciente (si hay)
+            Long seleccionada = resumenes.isEmpty() ? null : resumenes.get(0).getId();
+
+            resultado.add(new BloqueConPruebasDTO(
+                    bloque,
+                    traduccionService.get("bloque." + bloque.name().toLowerCase()),
+                    resumenes,
+                    seleccionada
+            ));
+        }
+        // Ordenar bloques según el orden natural del enum
+        resultado.sort(Comparator.comparing(b -> b.getBloque().ordinal()));
+        return resultado;
+    }
+    // Método para obtener los puntos del radar basado en las selecciones actuales
+    @Transactional(readOnly = true)
+    public Map<String, Double> getPuntosRadar(Judoka judoka, Map<BloqueAgudelo, Long> seleccion) {
+        Map<String, Double> resultado = new LinkedHashMap<>();
+        for (Map.Entry<BloqueAgudelo, Long> entry : seleccion.entrySet()) {
+            BloqueAgudelo bloque = entry.getKey();
+            Long pruebaId = entry.getValue();
+            if (pruebaId == null) {
+                resultado.put(traduccionService.get("bloque." + bloque.name().toLowerCase()), 1.0);
+                continue;
+            }
+            PruebaEstandar prueba = pruebaEstandarRepository.findById(pruebaId).orElse(null);
+            if (prueba == null) {
+                resultado.put(traduccionService.get("bloque." + bloque.name().toLowerCase()), 1.0);
+                continue;
+            }
+            List<ResultadoPrueba> historial = getHistorialDeResultados(judoka, prueba);
+            if (historial.isEmpty()) {
+                resultado.put(traduccionService.get("bloque." + bloque.name().toLowerCase()), 1.0);
+            } else {
+                ResultadoPrueba ultimo = historial.get(historial.size() - 1);
+                Optional<ClasificacionRendimiento> clasif = getClasificacionParaResultado(ultimo);
+                double puntos = clasif.map(this::puntosDeClasificacion).orElse(1.0);
+                resultado.put(traduccionService.get("bloque." + bloque.name().toLowerCase()), puntos);
+            }
+        }
+        return resultado;
+    }
+
+
+    // Método auxiliar
+    private double puntosDeClasificacion(ClasificacionRendimiento clas) {
+        return switch (clas) {
+            case EXCELENTE -> 5.0;
+            case MUY_BIEN -> 4.0;
+            case BUENO -> 3.0;
+            case REGULAR, RAZONABLE -> 2.0;
+            default -> 1.0;
+        };
+    }
 }

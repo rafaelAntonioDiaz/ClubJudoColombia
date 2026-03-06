@@ -4,6 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.*;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.IdiomaSelector;
 import com.RafaelDiaz.ClubJudoColombia.vista.sensei.GestorInvitacionesView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -83,7 +84,7 @@ public class SenseiLayout extends AppLayout {
         Avatar avatar = new Avatar(username);
         avatar.addClassNames(LumoUtility.Margin.Right.MEDIUM);
 
-        HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), logo, saludo, avatar);
+        HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), logo, saludo, new IdiomaSelector(), avatar);
         header.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
         header.expand(logo);
         header.setWidthFull();
@@ -108,7 +109,7 @@ public class SenseiLayout extends AppLayout {
 
         // --- 3. GESTIÓN TÉCNICA & EJECUCIÓN ---
         agregarTab(tabs, getTexto("menu.biblioteca", "Biblioteca"), VaadinIcon.BOOK, BibliotecaView.class);
-        agregarTab(tabs, getTexto("view.sensei.plan.titulo", "Microciclos"), VaadinIcon.CLIPBOARD_CHECK, SenseiMicrociclosView.class);
+        agregarTab(tabs, getTexto("view.sensei.microciclo.titulo", "Microciclos"), VaadinIcon.CLIPBOARD_CHECK, SenseiMicrociclosView.class);
         agregarTab(tabs, getTexto("view.sensei.macrociclo", "Macrociclo"), VaadinIcon.CLIPBOARD_CHECK, SenseiMacrocicloView.class);
 
         // >>> PARCHE AÑADIDO: MODO TATAMI Y BITÁCORA <<<
@@ -125,7 +126,7 @@ public class SenseiLayout extends AppLayout {
 
         // --- 5. MÓDULO FINANCIERO (Solo si es CLUB) ---
         if (configuracionService.esClub()) {
-            agregarTab(tabs, getTexto("finanzas.titulo", "Tesorería"), VaadinIcon.MONEY_EXCHANGE, TesoreriaView.class);
+            agregarTab(tabs, getTexto("finanzas.titulo", "Contabilidad"), VaadinIcon.MONEY_EXCHANGE, TesoreriaView.class);
         }
 
         // --- 6. INVENTARIO ---

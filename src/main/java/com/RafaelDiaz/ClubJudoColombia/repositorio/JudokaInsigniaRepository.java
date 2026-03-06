@@ -13,4 +13,6 @@ public interface JudokaInsigniaRepository extends JpaRepository<JudokaInsignia, 
     List<JudokaInsignia> findByJudoka(Judoka judoka);
 
     boolean existsByJudokaAndInsignia_Clave(Judoka judoka, String claveInsignia);
+
+    List<JudokaInsignia> findByJudokaOrderByFechaObtencionDesc(Judoka judoka);
 }

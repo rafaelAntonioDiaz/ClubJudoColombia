@@ -8,6 +8,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MetodoPago;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.avatar.AvatarVariant;
 import com.vaadin.flow.component.button.Button;
@@ -200,6 +201,12 @@ public class PerfilAcudienteView extends VerticalLayout {
         btnMagicLink.addClickListener(e -> generarMagicLink(hijo));
 
         Button btnDetalle = new Button("Progreso", VaadinIcon.LINE_CHART.create());
+        btnDetalle.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+        btnDetalle.addClassNames(LumoUtility.Margin.Left.AUTO);
+        btnDetalle.addClickListener(e -> {
+            // Navegación a PerfilJudokaView con el ID del judoka
+            UI.getCurrent().navigate(PerfilJudokaView.class, hijo.getId());
+        });
         btnDetalle.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
         btnDetalle.addClassNames(LumoUtility.Margin.Left.AUTO);
 

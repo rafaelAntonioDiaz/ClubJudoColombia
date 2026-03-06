@@ -41,7 +41,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Route(value = "gestion-planes", layout = SenseiLayout.class)
+@Route(value = "microciclos", layout = SenseiLayout.class)
 @RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
 public class SenseiMicrociclosView extends VerticalLayout {
 

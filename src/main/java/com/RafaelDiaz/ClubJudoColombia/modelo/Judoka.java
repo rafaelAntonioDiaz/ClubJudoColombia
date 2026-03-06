@@ -2,10 +2,10 @@ package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
+import com.vaadin.flow.router.RouteParam;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;

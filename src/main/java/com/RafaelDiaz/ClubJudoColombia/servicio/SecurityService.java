@@ -70,11 +70,20 @@ public class SecurityService {
 
     @Transactional(readOnly = true)
     public Optional<Judoka> getAuthenticatedJudoka() {
+        VaadinSession session = VaadinSession.getCurrent();
+        // 1. Prioridad: ¿Viene por Magic Link? (ID guardado en sesión)
+        Long judokaId = (Long) session.getAttribute("JUDOKA_ACTUAL_ID");
+        System.out.println("getAuthenticatedJudoka: session attribute = " + session.getAttribute("JUDOKA_ACTUAL_ID"));
+
+        if (judokaId != null) {
+            return judokaRepository.findByIdWithDetails(judokaId);
+        }
+
+        // 2. Fallback: usuario autenticado normal (Acudiente/Sensei/Master)
         return getAuthenticatedUserDetails().flatMap(userDetails -> {
             return usuarioRepository.findByUsername(userDetails.getUsername())
                     .flatMap(usuario -> {
-                        // Usamos el método armonizado
-                        List<Judoka> judokas = judokaRepository.findByAcudienteWithDetails(usuario);                        // Retornamos el primero para no romper las vistas actuales
+                        List<Judoka> judokas = judokaRepository.findByAcudienteWithDetails(usuario);
                         return judokas.stream().findFirst();
                     });
         });

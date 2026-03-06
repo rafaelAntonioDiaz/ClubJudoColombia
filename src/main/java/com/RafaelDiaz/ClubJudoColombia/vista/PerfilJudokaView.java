@@ -1,20 +1,38 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Reflexion;
+import com.RafaelDiaz.ClubJudoColombia.dto.DatosAntropometricosDTO;
+import com.RafaelDiaz.ClubJudoColombia.dto.DocumentoDTO;
+import com.RafaelDiaz.ClubJudoColombia.dto.ResultadoPruebaDTO;
+import com.RafaelDiaz.ClubJudoColombia.dto.TareaEjecutadaDTO;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.InsigniaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService; // <--- Nuevo
-import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.MetricaRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.util.BibliotecaSabiduria;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.MiDoWidget;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
 
+import com.github.appreciated.apexcharts.ApexCharts;
+import com.github.appreciated.apexcharts.ApexChartsBuilder;
+import com.github.appreciated.apexcharts.config.builder.ChartBuilder;
+import com.github.appreciated.apexcharts.config.builder.LegendBuilder;
+import com.github.appreciated.apexcharts.config.builder.XAxisBuilder;
+import com.github.appreciated.apexcharts.config.builder.YAxisBuilder;
+import com.github.appreciated.apexcharts.config.builder.*;
+import com.github.appreciated.apexcharts.config.chart.Type;
+import com.github.appreciated.apexcharts.config.legend.Position;
+import com.github.appreciated.apexcharts.helper.Series;
+import com.github.appreciated.apexcharts.config.chart.builder.ToolbarBuilder;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -24,70 +42,65 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.upload.Upload;
 
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.*;
+import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@Route("perfil-judoka")
+import static io.netty.util.concurrent.FastThreadLocal.removeAll;
+
+@Route(value = "perfil-judoka", layout = JudokaLayout.class)
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
 @PageTitle("Mi Santuario | Club Judo Colombia")
-public class PerfilJudokaView extends JudokaLayout {
+public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Long> {
 
     private final SecurityService securityService;
     private final JudokaService judokaService;
     private final TraduccionService traduccionService;
+    private final PerfilJudokaService perfilService;
     private final AlmacenamientoCloudService almacenamientoCloudService;
     private final JudokaRepository  judokaRepository;
-
+    private final InsigniaRepository insigniaRepository;
+    private final PruebaEstandarRepository pruebaEstandarRepository;
+    private final MetricaRepository metricaRepository;
     private Judoka judokaActual;
     private Image avatarImage;
     private Div avatarContainer;
+    private Long parametroId;
 
     @Autowired
     public PerfilJudokaView(SecurityService securityService,
                             AccessAnnotationChecker accessChecker,
                             JudokaService judokaService,
-                            TraduccionService traduccionService,
-                            AlmacenamientoCloudService almacenamientoCloudService, JudokaRepository judokaRepository) { // <--- Inyección
+                            TraduccionService traduccionService, PerfilJudokaService perfilService,
+                            AlmacenamientoCloudService almacenamientoCloudService,
+                            JudokaRepository judokaRepository,
+                            InsigniaRepository insigniaRepository,
+                            PruebaEstandarRepository pruebaEstandarRepository,
+                            MetricaRepository metricaRepository) {
         super(securityService, accessChecker, traduccionService, judokaRepository);
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.traduccionService = traduccionService;
+        this.perfilService = perfilService;
         this.almacenamientoCloudService = almacenamientoCloudService;
-
-        this.judokaActual = securityService.getAuthenticatedJudoka()
-                .orElseThrow(() -> new RuntimeException("Judoka no encontrado"));
         this.judokaRepository = judokaRepository;
+        this.insigniaRepository = insigniaRepository;
+        this.pruebaEstandarRepository = pruebaEstandarRepository;
+        this.metricaRepository = metricaRepository;
 
         addClassName("perfil-view");
-
-        VerticalLayout mainLayout = new VerticalLayout();
-        mainLayout.setMaxWidth("1000px");
-        mainLayout.setMargin(true);
-        mainLayout.setSpacing(true);
-        mainLayout.setAlignItems(FlexComponent.Alignment.CENTER);
-
-        mainLayout.add(crearSeccionSabiduria());
-
-        FlexLayout contentLayout = new FlexLayout();
-        contentLayout.setWidthFull();
-        contentLayout.setFlexWrap(FlexLayout.FlexWrap.WRAP);
-        contentLayout.setAlignItems(FlexComponent.Alignment.START);
-        contentLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
-        contentLayout.getStyle().set("gap", "30px");
-
-        contentLayout.add(crearTarjetaIdentidad(), crearBitacoraReflexion());
-
-        mainLayout.add(contentLayout);
-        setContent(mainLayout);
     }
 
     private Component crearSeccionSabiduria() {
@@ -126,8 +139,8 @@ public class PerfilJudokaView extends JudokaLayout {
         layout.setAlignItems(FlexComponent.Alignment.CENTER);
         layout.setPadding(true);
 
-        String nombre = judokaActual.getUsuario().getNombre();
-
+        // ✅ Usar los datos del judoka, no del usuario
+        String nombreCompleto = judokaActual.getNombre() + " " + judokaActual.getApellido();
         // 1. Contenedor de Avatar
         avatarContainer = new Div();
         avatarContainer.setWidth("120px");
@@ -157,10 +170,8 @@ public class PerfilJudokaView extends JudokaLayout {
 
         upload.setUploadHandler(event -> {
             try {
-                // El JudokaService ahora se encarga de subir a la nube
                 judokaService.actualizarFotoPerfil(judokaActual, event.getInputStream(), event.getFileName());
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    // Refrescamos la imagen que ahora vendrá de la nube
                     cargarImagenEnAvatar();
                     Notification.show(traduccionService.get("msg.foto.actualizada"), 2000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
@@ -177,7 +188,7 @@ public class PerfilJudokaView extends JudokaLayout {
         Div avatarWrapper = new Div(avatarContainer, upload);
         avatarWrapper.getStyle().set("display", "flex").set("flex-direction", "column").set("align-items", "center");
 
-        H2 nombreH2 = new H2(nombre + " " + judokaActual.getUsuario().getApellido());
+        H2 nombreH2 = new H2(nombreCompleto);
         nombreH2.getStyle().set("margin-bottom", "0").set("text-align", "center");
 
         Span cinturonBadge = new Span(traduccionService.get(judokaActual.getGrado()));
@@ -197,21 +208,19 @@ public class PerfilJudokaView extends JudokaLayout {
         return layout;
     }
 
-    // --- REFACTORIZACIÓN ESTRELLA ---
     private void cargarImagenEnAvatar() {
         avatarContainer.removeAll();
-        // Ahora esto devuelve la URL pública (ej: https://pub-xxx.r2.dev/judokas/1/foto.jpg)
         String urlFotoCloud = judokaActual.getUrlFotoPerfil();
 
         if (urlFotoCloud != null && !urlFotoCloud.isEmpty()) {
-            // Ya no hay streams locales. Vaadin carga la imagen directo de la URL.
             avatarImage = new Image(urlFotoCloud, traduccionService.get("alt.foto.perfil"));
             avatarImage.setWidth("100%");
             avatarImage.setHeight("100%");
             avatarImage.getStyle().set("object-fit", "cover");
             avatarContainer.add(avatarImage);
         } else {
-            Avatar placeholder = new Avatar(judokaActual.getUsuario().getNombre());
+            // ✅ Usar el nombre del judoka
+            Avatar placeholder = new Avatar(judokaActual.getNombre() + " " + judokaActual.getApellido());
             placeholder.setWidth("100%");
             placeholder.setHeight("100%");
             avatarContainer.add(placeholder);
@@ -349,5 +358,274 @@ public class PerfilJudokaView extends JudokaLayout {
             card.add(lock);
         }
         return card;
+    }
+    private Component crearPruebasTab() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setPadding(false);
+        layout.setSpacing(true);
+
+        // Filtros
+        HorizontalLayout filtros = new HorizontalLayout();
+        filtros.setWidthFull();
+        filtros.setAlignItems(FlexComponent.Alignment.END);
+
+        ComboBox<PruebaEstandar> comboPrueba = new ComboBox<>(traduccionService.get("perfil.filtro.prueba", "Prueba"));
+        comboPrueba.setItems(pruebaEstandarRepository.findGlobalesYDelSensei(judokaActual.getSensei()));
+        comboPrueba.setItemLabelGenerator(p -> p.getNombreMostrar(traduccionService));
+
+        DatePicker fechaDesde = new DatePicker(traduccionService.get("perfil.filtro.desde", "Desde"));
+        DatePicker fechaHasta = new DatePicker(traduccionService.get("perfil.filtro.hasta", "Hasta"));
+
+        Button btnFiltrar = new Button(traduccionService.get("perfil.filtrar", "Filtrar"), new Icon(VaadinIcon.SEARCH));
+        btnFiltrar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        filtros.add(comboPrueba, fechaDesde, fechaHasta, btnFiltrar);
+
+        // Grid de resultados
+        Grid<ResultadoPruebaDTO> grid = new Grid<>(ResultadoPruebaDTO.class, false);
+        grid.setEmptyStateComponent(new Span(traduccionService.get("perfil.sin_resultados", "No hay resultados registrados")));
+        grid.addColumn(ResultadoPruebaDTO::getFecha).setHeader(traduccionService.get("perfil.grid.fecha", "Fecha"));
+        grid.addColumn(ResultadoPruebaDTO::getPruebaNombre).setHeader(traduccionService.get("perfil.grid.prueba", "Prueba"));
+        grid.addColumn(ResultadoPruebaDTO::getMetricaNombre).setHeader(traduccionService.get("perfil.grid.metrica", "Métrica"));
+        grid.addColumn(ResultadoPruebaDTO::getValor).setHeader(traduccionService.get("perfil.grid.valor", "Valor"));
+        grid.addColumn(ResultadoPruebaDTO::getClasificacion).setHeader(traduccionService.get("perfil.grid.clasificacion", "Clasificación"));
+        grid.addColumn(ResultadoPruebaDTO::getPuntos).setHeader(traduccionService.get("perfil.grid.puntos", "Puntos"));
+        grid.setWidthFull();
+
+        // Cargar datos iniciales
+        cargarResultadosGrid(grid, null, null, null);
+
+        btnFiltrar.addClickListener(e -> {
+            Long pruebaId = comboPrueba.getValue() != null ? comboPrueba.getValue().getId() : null;
+            cargarResultadosGrid(grid, pruebaId, fechaDesde.getValue(), fechaHasta.getValue());
+        });
+
+        layout.add(filtros, grid);
+        return layout;
+    }
+
+    private void cargarResultadosGrid(Grid<ResultadoPruebaDTO> grid,
+                                      Long pruebaId, LocalDate desde, LocalDate hasta) {
+        List<ResultadoPruebaDTO> datos = perfilService.getResultadosPruebas(
+                judokaActual,
+                Optional.ofNullable(pruebaId),
+                Optional.ofNullable(desde),
+                Optional.ofNullable(hasta)
+        );
+        grid.setItems(datos);
+    }
+
+    private Component crearTareasTab() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setPadding(false);
+        layout.setSpacing(true);
+
+        Grid<TareaEjecutadaDTO> grid = new Grid<>(TareaEjecutadaDTO.class, false);
+        grid.setEmptyStateComponent(new Span(traduccionService.get("perfil.sin_tareas", "No hay tareas ejecutadas")));
+        grid.addColumn(TareaEjecutadaDTO::getFecha).setHeader(traduccionService.get("perfil.grid.fecha", "Fecha"));
+        grid.addColumn(TareaEjecutadaDTO::getTareaNombre).setHeader(traduccionService.get("perfil.grid.tarea", "Tarea"));
+        grid.addColumn(t -> t.isCompletada() ? "✅" : "❌").setHeader(traduccionService.get("perfil.grid.completada", "Completada"));
+        grid.setWidthFull();
+
+        List<TareaEjecutadaDTO> tareas = perfilService.getUltimasTareas(judokaActual, 20);
+        grid.setItems(tareas);
+
+        layout.add(grid);
+        return layout;
+    }
+
+    private Component crearInsigniasTab() {
+        // Usar MiDoWidget (ya inyectado insigniaRepository)
+        List<Insignia> todas = insigniaRepository.findAll();
+        List<JudokaInsignia> misLogros = perfilService.getInsignias(judokaActual);
+        MiDoWidget widget = new MiDoWidget(todas, misLogros, traduccionService);
+        widget.setWidthFull();
+        return widget;
+    }
+
+    private Component crearPalmaresTab() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setPadding(false);
+        layout.setSpacing(true);
+
+        Grid<ParticipacionCompetencia> grid = new Grid<>(ParticipacionCompetencia.class, false);
+        grid.setEmptyStateComponent(new Span(traduccionService.get("perfil.sin_palmares", "Sin participación en competiciones")));
+        grid.addColumn(ParticipacionCompetencia::getFecha).setHeader(traduccionService.get("perfil.grid.fecha", "Fecha"));
+        grid.addColumn(ParticipacionCompetencia::getNombreCampeonato).setHeader(traduccionService.get("perfil.grid.evento", "Evento"));
+        grid.addColumn(ParticipacionCompetencia::getSede).setHeader(traduccionService.get("perfil.grid.lugar", "Lugar"));
+        grid.addColumn(p -> traduccionService.get(p.getResultado())).setHeader(traduccionService.get("perfil.grid.resultado", "Resultado"));
+        grid.addColumn(ParticipacionCompetencia::getPuntosCalculados).setHeader(traduccionService.get("perfil.grid.puntos", "Puntos"));
+        grid.setWidthFull();
+
+        List<ParticipacionCompetencia> palmares = perfilService.getPalmares(judokaActual);
+        grid.setItems(palmares);
+        layout.add(grid);
+        return layout;
+    }
+
+    private Component crearDocumentosTab() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setPadding(false);
+        layout.setSpacing(true);
+
+        Grid<DocumentoDTO> grid = new Grid<>(DocumentoDTO.class, false);
+        grid.setEmptyStateComponent(new Span(traduccionService.get("perfil.sin_documentos", "No hay documentos subidos")));
+        grid.addColumn(DocumentoDTO::getTipo).setHeader(traduccionService.get("perfil.grid.tipo", "Tipo"));
+        grid.addColumn(DocumentoDTO::getNombreArchivo).setHeader(traduccionService.get("perfil.grid.archivo", "Archivo"));
+        grid.addComponentColumn(d -> {
+                Anchor link = new Anchor(d.getUrl(), traduccionService.get("perfil.ver", "Ver"));
+                link.setTarget("_blank");
+                return link;
+            }).setHeader(traduccionService.get("perfil.grid.accion", "Acción"));
+        grid.setWidthFull();
+
+        List<DocumentoDTO> docs = perfilService.getDocumentos(judokaActual);
+        grid.setItems(docs);
+        layout.add(grid);
+        return layout;
+    }
+
+    @Override
+    public void setParameter(BeforeEvent event, @OptionalParameter Long parameter) {
+        this.parametroId = parameter;
+
+        // Caso 1: Hay parámetro en la URL (ej: /perfil-judoka/2)
+        if (parametroId != null) {
+            Optional<Judoka> opt = judokaRepository.findByIdWithDetails(parametroId);
+            if (opt.isPresent()) {
+                Judoka j = opt.get();
+                // Verificar permisos (acudiente, sensei, master)
+                Usuario usuarioActual = securityService.getAuthenticatedUsuario().orElse(null);
+                if (usuarioActual == null) {
+                    event.rerouteTo("login");
+                    return;
+                }
+                boolean puedeVer = false;
+                if (securityService.isSensei()) {
+                    puedeVer = j.getSensei().getUsuario().equals(usuarioActual);
+                } else if (usuarioActual.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
+                    puedeVer = j.getAcudiente().equals(usuarioActual);
+                } else if (usuarioActual.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_MASTER"))) {
+                    puedeVer = true;
+                } else {
+                    puedeVer = j.getUsuario().equals(usuarioActual);
+                }
+                if (!puedeVer) {
+                    Notification.show("No tienes permiso para ver este perfil");
+                    event.rerouteTo("dashboard-judoka");
+                    return;
+                }
+                judokaActual = j;
+                construirVista();
+                return;
+            } else {
+                Notification.show("Judoka no encontrado");
+                event.rerouteTo("dashboard-judoka");
+                return;
+            }
+        }
+
+        // Caso 2: Sin parámetro, intentar con ID de sesión (magic link)
+        Long sessionId = (Long) VaadinSession.getCurrent().getAttribute("JUDOKA_ACTUAL_ID");
+        if (sessionId != null) {
+            Optional<Judoka> opt = judokaRepository.findByIdWithDetails(sessionId);
+            if (opt.isPresent()) {
+                judokaActual = opt.get();
+                construirVista();
+                return;
+            } else {
+                // ID inválido, limpiar y continuar
+                VaadinSession.getCurrent().setAttribute("JUDOKA_ACTUAL_ID", null);
+            }
+        }
+
+        // Caso 3: Usuario autenticado normal
+        judokaActual = securityService.getAuthenticatedJudoka()
+                .orElseThrow(() -> new RuntimeException("No hay judoka autenticado"));
+        construirVista();
+    }
+
+    private void construirVista() {
+        removeAll(); // Limpiar por si acaso
+
+        VerticalLayout mainLayout = new VerticalLayout();
+        mainLayout.setMaxWidth("1000px");
+        mainLayout.setMargin(true);
+        mainLayout.setSpacing(true);
+        mainLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+
+        mainLayout.add(crearSeccionSabiduria());
+
+        // Crear TabSheet
+        TabSheet tabSheet = new TabSheet();
+        tabSheet.setWidthFull();
+
+        // Pestaña Resumen (contenido actual)
+        VerticalLayout resumenLayout = new VerticalLayout();
+        resumenLayout.setSpacing(true);
+        resumenLayout.setPadding(false);
+
+        FlexLayout contentLayout = new FlexLayout();
+        contentLayout.setWidthFull();
+        contentLayout.setFlexWrap(FlexLayout.FlexWrap.WRAP);
+        contentLayout.setAlignItems(FlexComponent.Alignment.START);
+        contentLayout.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
+        contentLayout.getStyle().set("gap", "30px");
+
+        contentLayout.add(crearTarjetaIdentidad(), crearBitacoraReflexion());
+
+        // Sección de antropometría
+        Div antropometriaSection = new Div();
+        antropometriaSection.setWidthFull();
+        antropometriaSection.add(new H3(traduccionService.get("perfil.antropometria", "Antropometría histórica")));
+
+        List<DatosAntropometricosDTO> historial = perfilService.getHistorialAntropometrico(judokaActual);
+        if (historial.isEmpty()) {
+            antropometriaSection.add(new Span(traduccionService.get("perfil.sin_datos", "Sin datos antropométricos")));
+        } else {
+            ApexCharts chart = crearGraficoAntropometria(historial);
+            chart.setWidthFull();
+            chart.setHeight("300px");
+            antropometriaSection.add(chart);
+        }
+
+        resumenLayout.add(contentLayout, antropometriaSection);
+        tabSheet.add(traduccionService.get("perfil.tab.resumen", "Resumen"), resumenLayout);
+
+        // Añadir las demás pestañas (solo si hay datos o siempre)
+        tabSheet.add(traduccionService.get("perfil.tab.pruebas", "Pruebas"), crearPruebasTab());
+        tabSheet.add(traduccionService.get("perfil.tab.tareas", "Tareas"), crearTareasTab());
+        tabSheet.add(traduccionService.get("perfil.tab.insignias", "Insignias"), crearInsigniasTab());
+        tabSheet.add(traduccionService.get("perfil.tab.palmares", "Palmarés"), crearPalmaresTab());
+        tabSheet.add(traduccionService.get("perfil.tab.documentos", "Documentos"), crearDocumentosTab());
+
+        mainLayout.add(tabSheet);
+        setContent(mainLayout);
+    }
+    private ApexCharts crearGraficoAntropometria(List<DatosAntropometricosDTO> historial) {
+        List<String> fechas = historial.stream().map(d -> d.getFecha().toString()).collect(Collectors.toList());
+        List<Double> pesos = historial.stream().map(DatosAntropometricosDTO::getPeso).collect(Collectors.toList());
+        List<Double> estaturas = historial.stream().map(DatosAntropometricosDTO::getEstatura).collect(Collectors.toList());
+        List<Double> imcs = historial.stream().map(DatosAntropometricosDTO::getImc).collect(Collectors.toList());
+
+        // Crear título para el eje Y
+        com.github.appreciated.apexcharts.config.yaxis.Title yTitle = new com.github.appreciated.apexcharts.config.yaxis.Title();
+        yTitle.setText("Valores");
+
+        return ApexChartsBuilder.get()
+                .withChart(ChartBuilder.get()
+                        .withType(Type.LINE)
+                        .withHeight("300px")
+                        .withToolbar(ToolbarBuilder.get().withShow(true).build())
+                        .build())
+                .withSeries(
+                        new Series<>("Peso (kg)", pesos.toArray(new Double[0])),
+                        new Series<>("Estatura (cm)", estaturas.toArray(new Double[0])),
+                        new Series<>("IMC", imcs.toArray(new Double[0]))
+                )
+                .withXaxis(XAxisBuilder.get().withCategories(fechas.toArray(new String[0])).build())
+                .withYaxis(YAxisBuilder.get().withTitle(yTitle).build())
+                .withLegend(LegendBuilder.get().withPosition(Position.TOP).build())
+                .build();
     }
 }

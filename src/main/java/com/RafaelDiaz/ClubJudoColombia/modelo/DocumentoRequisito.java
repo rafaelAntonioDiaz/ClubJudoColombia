@@ -48,6 +48,7 @@ public class DocumentoRequisito {
         this.tipo = tipo;
         this.urlArchivo = urlArchivo;
         this.fechaCarga = LocalDateTime.now();
+
     }
 
     // Getters y Setters
@@ -65,4 +66,6 @@ public class DocumentoRequisito {
     public void setFechaCarga(LocalDateTime fechaCarga) { this.fechaCarga = fechaCarga; }
     public String getEventoAsociado() { return eventoAsociado; }
     public void setEventoAsociado(String eventoAsociado) { this.eventoAsociado = eventoAsociado; }
+
+
 }

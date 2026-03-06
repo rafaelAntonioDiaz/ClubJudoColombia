@@ -11,11 +11,17 @@ import java.util.List;
 
 @Repository
 public interface EjecucionTareaRepository extends JpaRepository<EjecucionTarea, Long> {
+
     List<EjecucionTarea> findAllByOrderByFechaRegistroDesc();
+
     long countByJudokaAndFechaRegistroBetween(Judoka judoka, LocalDateTime inicio, LocalDateTime fin);
+
     long countByJudokaAndEjercicioPlanificadoAndFechaRegistroBetween(
             Judoka judoka,
             EjercicioPlanificado ejercicio,
             LocalDateTime inicio,
             LocalDateTime fin);
+
+    List<EjecucionTarea> findTop10ByJudokaOrderByFechaRegistroDesc(Judoka judoka);
+
 }

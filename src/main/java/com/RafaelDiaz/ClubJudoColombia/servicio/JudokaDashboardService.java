@@ -1,6 +1,8 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
+import com.RafaelDiaz.ClubJudoColombia.dto.BloqueConPruebasDTO;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.BloqueAgudelo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.springframework.stereotype.Service;
 
@@ -173,5 +175,12 @@ public class JudokaDashboardService {
 
         // Si ya es "EXCELENTE", su motivador es mejorar un 2% su propia marca
         return esPruebaDeTiempo ? valorActual * 0.98 : valorActual * 1.02;
+    }
+    public List<BloqueConPruebasDTO> getPruebasPorBloque(Judoka judoka) {
+        return resultadoPruebaService.getPruebasPorBloque(judoka);
+    }
+
+    public Map<String, Double> getPuntosRadar(Judoka judoka, Map<BloqueAgudelo, Long> seleccion) {
+        return resultadoPruebaService.getPuntosRadar(judoka, seleccion);
     }
 }

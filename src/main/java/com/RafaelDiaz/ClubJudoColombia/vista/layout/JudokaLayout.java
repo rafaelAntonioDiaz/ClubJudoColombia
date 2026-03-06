@@ -7,6 +7,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.ComunidadJudokaView;
 import com.RafaelDiaz.ClubJudoColombia.vista.JudokaDashboardView;
 import com.RafaelDiaz.ClubJudoColombia.vista.JudokaPlanView;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.IdiomaSelector;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -88,7 +89,7 @@ public class JudokaLayout extends AppLayout {
 
         // Datos del Usuario
         String nombreCompleto = securityService.getAuthenticatedJudoka()
-                .map(j -> j.getUsuario().getNombre())
+                .map(j -> j.getNombre() + " " + j.getApellido())
                 .orElse("Judoka");
 
         // 2. SALUDO PERSONALIZADO (Corregido)
@@ -120,7 +121,7 @@ public class JudokaLayout extends AppLayout {
         subMenu.addItem(traduccionService.get("btn.cerrar.sesion"), e -> logout());
 
         // Agregamos el saludo al layout: [Toggle] [Título] .... [Saludo] [Avatar]
-        HorizontalLayout navbar = new HorizontalLayout(toggle, tituloApp, saludo, menuUsuario);
+        HorizontalLayout navbar = new HorizontalLayout(toggle, tituloApp, saludo, new IdiomaSelector(), menuUsuario);
         navbar.setWidthFull();
         navbar.setAlignItems(FlexComponent.Alignment.CENTER);
         navbar.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
@@ -143,7 +144,7 @@ public class JudokaLayout extends AppLayout {
         agregarTab(traduccionService.get("menu.dashboard"), VaadinIcon.DASHBOARD, JudokaDashboardView.class);
 
         // 2. Mis Planes (Siempre visible)
-        agregarTab(traduccionService.get("menu.mis.planes"), VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
+        agregarTab(traduccionService.get("menu.mis.microciclos"), VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
 
         // 3. Comunidad (FILTRO: SOLO MAYORES DE 12 AÑOS) <--- CAMBIO CLAVE
         Optional<Judoka> judokaOpt = obtenerJudokaActual();

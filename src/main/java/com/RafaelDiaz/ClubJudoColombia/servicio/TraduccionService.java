@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Traduccion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TraduccionRepository;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.server.VaadinSession;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -85,15 +86,20 @@ public class TraduccionService {
     }
 
     private String getIdiomaActual() {
+        // Prioridad: atributo de sesión
+        Locale sessionLocale = (Locale) VaadinSession.getCurrent().getAttribute("locale");
+        if (sessionLocale != null) {
+            return sessionLocale.getLanguage();
+        }
+        // Fallback: locale de UI
         if (UI.getCurrent() != null) {
             Locale locale = UI.getCurrent().getLocale();
-            if (locale != null && "en".equals(locale.getLanguage())) {
-                return "en";
-            }
+            String lang = locale.getLanguage();
+            if (lang.equals("en")) return "en";
+            if (lang.equals("pt")) return "pt";
         }
         return "es";
     }
-
     private String formatearClaveComoTexto(String clave) {
         if (clave == null) return "";
         String texto = clave.replace("enum.", "")
@@ -145,4 +151,5 @@ public class TraduccionService {
             traduccionRepository.save(nuevaTraduccion);
         }
     }
+
 }

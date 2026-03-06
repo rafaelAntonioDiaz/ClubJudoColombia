@@ -5,6 +5,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,4 +22,7 @@ public interface DocumentoRequisitoRepository extends JpaRepository<DocumentoReq
 
     @Override
     Optional<DocumentoRequisito> findById(Long id);
+
+    List<DocumentoRequisito> findByJudoka(Judoka judoka);
+
 }

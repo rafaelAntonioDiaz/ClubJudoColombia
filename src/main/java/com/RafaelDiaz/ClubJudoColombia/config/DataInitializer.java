@@ -12,20 +12,23 @@ public class DataInitializer implements CommandLineRunner {
 
     private final SeguridadInicializer seguridadInicializer;
     private final CatalogoInicializer catalogoInicializer;
+    private final TraduccionInicializer traduccionInicializer;
     private final NormaInicializer normaInicializer;
     private final InsigniaInicializer insigniaInicializer;
     private final DatosMuestraInicializer datosMuestraInicializer;
 
     public DataInitializer(SeguridadInicializer seguridadInicializer,
                            CatalogoInicializer catalogoInicializer,
-                           NormaInicializer normaInicializer,
+                           NormaInicializer normaInicializer, TraduccionInicializer traduccionInicializer,
                            InsigniaInicializer insigniaInicializer,
                            DatosMuestraInicializer datosMuestraInicializer) {
         this.seguridadInicializer = seguridadInicializer;
         this.catalogoInicializer = catalogoInicializer;
+        this.traduccionInicializer = traduccionInicializer;
         this.normaInicializer = normaInicializer;
         this.insigniaInicializer = insigniaInicializer;
         this.datosMuestraInicializer = datosMuestraInicializer;
+
     }
 
     @Override
@@ -39,6 +42,7 @@ public class DataInitializer implements CommandLineRunner {
         // 2. Catálogos (pruebas, métricas)
         catalogoInicializer.inicializar();
 
+        traduccionInicializer.inicializar();
         // 3. Normas de evaluación
         normaInicializer.inicializar();
 
