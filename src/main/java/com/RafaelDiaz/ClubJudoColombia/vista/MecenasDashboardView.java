@@ -10,6 +10,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.JudokaService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -268,14 +269,18 @@ public class MecenasDashboardView extends VerticalLayout {
 
         Span cinturon = new Span("Cinturón " + j.getGrado());
         cinturon.getElement().getThemeList().add("badge");
-
+        Button btnPerfil = new Button("Ver Perfil", VaadinIcon.USER.create());
+        btnPerfil.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
+        btnPerfil.addClickListener(e ->
+                UI.getCurrent().navigate(PerfilJudokaView.class, j.getId())
+        );
         // Estado financiero del atleta (Visual simple)
         boolean alDia = j.getFechaVencimientoSuscripcion() != null &&
                 j.getFechaVencimientoSuscripcion().isAfter(java.time.LocalDate.now());
         Span estado = new Span(alDia ? "Al día" : "Pago Pendiente");
         estado.getElement().getThemeList().add(alDia ? "badge success" : "badge error");
 
-        card.add(avatar, nombre, cinturon, estado);
+        card.add(avatar, nombre, cinturon, btnPerfil, estado);
         return card;
     }
 

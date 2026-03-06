@@ -1,5 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.KpiCard;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
@@ -9,10 +11,14 @@ import com.github.appreciated.apexcharts.config.builder.*;
 import com.github.appreciated.apexcharts.config.chart.Type;
 import com.github.appreciated.apexcharts.config.plotoptions.builder.BarBuilder;
 import com.github.appreciated.apexcharts.helper.Series;
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -37,12 +43,15 @@ public class SenseiDashboardView extends VerticalLayout {
     private final SenseiDashboardService dashboardService;
     private final TraduccionService traduccionService;
     private final SecurityService securityService;
+    private final JudokaRepository judokaRepository;
+
     public SenseiDashboardView(SenseiDashboardService dashboardService,
                                TraduccionService traduccionService,
-                               SecurityService securityService) {
+                               SecurityService securityService, JudokaRepository judokaRepository) {
         this.dashboardService = dashboardService;
         this.traduccionService = traduccionService;
         this.securityService = securityService;
+        this.judokaRepository = judokaRepository;
         addClassName("dashboard-view");
         setSizeFull();
         setPadding(true);
@@ -123,8 +132,10 @@ public class SenseiDashboardView extends VerticalLayout {
                 crearGraficoAsistenciaMensual()
         );
         chartsRow.setSizeFull();
+        crearGridJudokas();
 
         add(kpiRow, chartsRow);
+        add(crearGridJudokas());
     }
 
     private ApexCharts crearGraficoPoderDeCombate() {
@@ -184,5 +195,36 @@ public class SenseiDashboardView extends VerticalLayout {
         titulo.getStyle().set("margin-top", "0");
 
         return titulo;
+    }
+    private Component crearGridJudokas() {
+        Optional<Sensei> senseiOpt = securityService.getAuthenticatedSensei();
+        if (senseiOpt.isEmpty()) {
+            return new Span("No hay sensei autenticado");
+        }
+
+        List<Judoka> judokas = judokaRepository.findBySensei(senseiOpt.get());
+
+        Grid<Judoka> grid = new Grid<>(Judoka.class, false);
+        grid.addColumn(Judoka::getNombre).setHeader(traduccionService.get("grid.judoka.nombre", "Nombre"));
+        grid.addColumn(Judoka::getApellido).setHeader(traduccionService.get("grid.judoka.apellido", "Apellido"));
+        grid.addColumn(j -> traduccionService.get(j.getGrado())).setHeader(traduccionService.get("grid.judoka.grado", "Grado"));
+        grid.addComponentColumn(j -> {
+            Button btn = new Button(traduccionService.get("sensei.btn.ver_perfil", "Ver Perfil"),
+                    new Icon(VaadinIcon.USER));
+            btn.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
+            btn.addClickListener(e -> UI.getCurrent().navigate(PerfilJudokaView.class, j.getId()));
+            return btn;
+        }).setHeader(traduccionService.get("grid.judoka.accion", "Acción"));
+
+        grid.setItems(judokas);
+        grid.setWidthFull();
+        grid.setHeight("300px");
+
+        VerticalLayout layout = new VerticalLayout(
+                new H3(traduccionService.get("sensei.mis_deportistas", "Mis Deportistas")),
+                grid
+        );
+        layout.setPadding(false);
+        return layout;
     }
 }

@@ -61,7 +61,8 @@ import java.util.stream.Collectors;
 import static io.netty.util.concurrent.FastThreadLocal.removeAll;
 
 @Route(value = "perfil-judoka", layout = JudokaLayout.class)
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR",
+        "ROLE_ACUDIENTE", "ROLE_SENSEI", "ROLE_MASTER", "ROLE_MECENAS"})
 @PageTitle("Mi Santuario | Club Judo Colombia")
 public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Long> {
 
@@ -505,6 +506,10 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
                     puedeVer = j.getSensei().getUsuario().equals(usuarioActual);
                 } else if (usuarioActual.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
                     puedeVer = j.getAcudiente().equals(usuarioActual);
+                } else if (usuarioActual.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_MECENAS"))) {
+                    // El mecenas puede ver si este judoka tiene su perfil de mecenas asociado
+                    Mecenas perfilMecenas = usuarioActual.getPerfilMecenas();
+                    puedeVer = perfilMecenas != null && j.getMecenas() != null && j.getMecenas().equals(perfilMecenas);
                 } else if (usuarioActual.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_MASTER"))) {
                     puedeVer = true;
                 } else {
