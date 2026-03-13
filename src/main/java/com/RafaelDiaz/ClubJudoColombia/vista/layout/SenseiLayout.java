@@ -105,7 +105,7 @@ public class SenseiLayout extends AppLayout {
         agregarTab(tabs, getTexto("menu.invitar", "Invitar"), VaadinIcon.PAPERPLANE, GestorInvitacionesView.class);
         agregarTab(tabs, getTexto("menu.admisiones", "Admisiones"), VaadinIcon.CLIPBOARD_USER, ValidacionIngresoView.class);
         agregarTab(tabs, getTexto("grupos.titulo", "Grupos"), VaadinIcon.GROUP, SenseiGruposView.class);
-        agregarTab(tabs, getTexto("menu.asistencia", "Asistencia"), VaadinIcon.CHECK_SQUARE_O, RegistroAsistenciaView.class);
+        //agregarTab(tabs, getTexto("menu.asistencia", "Asistencia"), VaadinIcon.CHECK_SQUARE_O, RegistroAsistenciaView.class);
 
         // --- 3. GESTIÓN TÉCNICA & EJECUCIÓN ---
         agregarTab(tabs, getTexto("menu.biblioteca", "Biblioteca"), VaadinIcon.BOOK, BibliotecaView.class);
@@ -117,20 +117,20 @@ public class SenseiLayout extends AppLayout {
         agregarTab(tabs, getTexto("menu.historial", "Bitácora (Fase R)"), VaadinIcon.ARCHIVE, SenseiHistorialView.class);
         // >>> FIN DEL PARCHE <<<
 
-        agregarTab(tabs, getTexto("menu.resultados", "Resultados"), VaadinIcon.TROPHY, SenseiResultadosView.class);
-        agregarTab(tabs, getTexto("campeonatos.titulo", "Campeonatos"), VaadinIcon.TROPHY, SenseiCampeonatosView.class);
-        agregarTab(tabs, getTexto("campos.titulo", "Campos"), VaadinIcon.MEDAL, SenseiCamposView.class);
+        //agregarTab(tabs, getTexto("menu.resultados", "Resultados"), VaadinIcon.TROPHY, SenseiResultadosView.class);
+        //agregarTab(tabs, getTexto("campeonatos.titulo", "Campeonatos"), VaadinIcon.TROPHY, SenseiCampeonatosView.class);
+        //agregarTab(tabs, getTexto("campos.titulo", "Campos"), VaadinIcon.MEDAL, SenseiCamposView.class);
 
         // --- 4. MÓDULO GPS ---
         agregarTab(tabs, getTexto("agenda.titulo", "Agenda GPS"), VaadinIcon.MAP_MARKER, SenseiAgendaView.class);
 
         // --- 5. MÓDULO FINANCIERO (Solo si es CLUB) ---
         if (configuracionService.esClub()) {
-            agregarTab(tabs, getTexto("finanzas.titulo", "Contabilidad"), VaadinIcon.MONEY_EXCHANGE, TesoreriaView.class);
+            agregarTab(tabs, getTexto("finanzas.titulo", "Tesorería"), VaadinIcon.MONEY_EXCHANGE, TesoreriaView.class);
         }
 
         // --- 6. INVENTARIO ---
-        agregarTab(tabs, getTexto("inventario.titulo", "Tienda"), VaadinIcon.CART, InventarioView.class);
+        //agregarTab(tabs, getTexto("inventario.titulo", "Tienda"), VaadinIcon.CART, InventarioView.class);
 
         // --- 7. ADMINISTRACIÓN ---
         agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);

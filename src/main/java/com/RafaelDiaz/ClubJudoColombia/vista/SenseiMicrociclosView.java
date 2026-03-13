@@ -4,10 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MesocicloATC;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoMicrociclo;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.GrupoEntrenamientoRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.MacrocicloRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.PruebaEstandarRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.TareaDiariaRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import com.RafaelDiaz.ClubJudoColombia.servicio.MicrocicloService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
@@ -15,6 +12,7 @@ import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -39,6 +37,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Route(value = "microciclos", layout = SenseiLayout.class)
@@ -52,9 +51,10 @@ public class SenseiMicrociclosView extends VerticalLayout {
     private final PruebaEstandarRepository pruebaRepo;
     private final TareaDiariaRepository tareaRepo;
     private final MacrocicloRepository macrocicloRepo;
+    private final JudokaRepository judokaRepository;
+    private List<Judoka> judokasDeLosGrupos = new ArrayList<>();
     private ProgressBar barraProgresoGlobal;
     private Span labelTiempoTotal;
-    private List<EjercicioPlanificado> listaEjerciciosDelPlan = new ArrayList<>();
     // --- MÁQUINA DE ESTADOS ---
     private VerticalLayout layoutDashboard;
     private VerticalLayout layoutEditor;
@@ -68,6 +68,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
     private List<EjercicioPlanificado> ejerciciosDelPlan = new ArrayList<>();
 
     private TextField nombrePlanField;
+    private Span intensidadGlobalLabel;
     private MultiSelectComboBox<GrupoEntrenamiento> gruposCombo;
     private DatePicker fechaInicioPicker;
     private DatePicker fechaFinPicker;
@@ -84,7 +85,8 @@ public class SenseiMicrociclosView extends VerticalLayout {
                                  PruebaEstandarRepository pruebaRepo,
                                  TareaDiariaRepository tareaRepo,
                                  TraduccionService traduccionService,
-                                 SecurityService securityService, MacrocicloRepository macrocicloRepo) {
+                                 SecurityService securityService,
+                                 MacrocicloRepository macrocicloRepo, JudokaRepository judokaRepository) {
         this.planService = planService;
         this.grupoRepo = grupoRepo;
         this.pruebaRepo = pruebaRepo;
@@ -95,6 +97,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
         this.senseiActual = securityService.getAuthenticatedSensei()
                 .orElseThrow(() -> new RuntimeException("Error: Sensei no encontrado"));
         this.macrocicloRepo = macrocicloRepo;
+        this.judokaRepository = judokaRepository;
 
         setSizeFull();
         setPadding(false);
@@ -198,6 +201,10 @@ public class SenseiMicrociclosView extends VerticalLayout {
         duracionField.setMax(120);
         duracionField.setSuffixComponent(new Span("min"));
 
+        intensidadGlobalLabel = new Span("Intensidad global: -");
+        intensidadGlobalLabel.getStyle().set("font-weight", "bold");
+        intensidadGlobalLabel.getStyle().set("margin-bottom", "1em");
+
         faseAtcCombo = new ComboBox<>("Fase de Modelamiento (ATC)", MesocicloATC.values());
         faseAtcCombo.setItemLabelGenerator(MesocicloATC::getDescripcion);
 
@@ -208,7 +215,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
         macrocicloCombo.setClearButtonVisible(true);
 
         cabeceraPlan.add(macrocicloCombo, nombrePlanField, gruposCombo,
-                fechaInicioPicker, fechaFinPicker, duracionField,
+                fechaInicioPicker, fechaFinPicker, duracionField, intensidadGlobalLabel,
                 faseAtcCombo, tipoMicrocicloCombo);
         cabeceraPlan.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 4));
@@ -250,8 +257,8 @@ public class SenseiMicrociclosView extends VerticalLayout {
         panelDerecho.setPadding(false);
 
         gridPlan = new Grid<>(EjercicioPlanificado.class, false);
-        gridPlan.addThemeVariants(com.vaadin.flow.component.grid.GridVariant.LUMO_COMPACT);
 
+        gridPlan.addThemeVariants(com.vaadin.flow.component.grid.GridVariant.LUMO_COMPACT);
         // Columna de Orden (Subir/Bajar)
         gridPlan.addComponentColumn(ej -> {
             Button btnUp = new Button(new Icon(VaadinIcon.ARROW_UP));
@@ -272,7 +279,65 @@ public class SenseiMicrociclosView extends VerticalLayout {
                                 "[P] " + ej.getPruebaEstandar()
                                         .getNombreMostrar(traduccionService))
                 .setHeader("Ejercicio").setFlexGrow(1);
+// Columna de Intensidad
+        gridPlan.addComponentColumn(ej -> {
+            ComboBox<Integer> combo = new ComboBox<>();
+            combo.setItems(1, 2, 3, 4, 5);
+            combo.setValue(ej.getIntensidad());
+            combo.addValueChangeListener(event -> {
+                ej.setIntensidad(event.getValue());
+                actualizarIntensidadGlobal(intensidadGlobalLabel, ejerciciosDelPlan);
+            });
+            combo.setWidth("80px");
+            return combo;
+        }).setHeader("Intensidad (1-5)").setWidth("100px");
+// Columna "Para casa" (autónomo) - Checkbox
+        gridPlan.addComponentColumn(ej -> {
+            Checkbox check = new Checkbox();
+            check.setValue(!ej.isRequiereSupervision()); // true si es para casa
+            check.addValueChangeListener(event -> {
+                ej.setRequiereSupervision(!event.getValue());
+                // Refrescar la fila para que el combo de judokas se habilite/deshabilite
+                gridPlan.getDataProvider().refreshItem(ej);
+            });
+            return check;
+        }).setHeader("Para casa").setWidth("100px");
 
+// Columna "Asignado a" (judoka individual) - ComboBox
+        gridPlan.addComponentColumn(ej -> {
+            ComboBox<Judoka> combo = new ComboBox<>();
+            combo.setItems(judokasDeLosGrupos);
+            combo.setItemLabelGenerator(j -> j.getNombre() + " " + j.getApellido());
+
+            // Buscar el judoka correspondiente en la lista por ID
+            Judoka judokaAsignado = null;
+            if (ej.getJudokaAsignado() != null && ej.getJudokaAsignado().getId() != null) {
+                judokaAsignado = judokasDeLosGrupos.stream()
+                        .filter(j -> j.getId().equals(ej.getJudokaAsignado().getId()))
+                        .findFirst()
+                        .orElse(null);
+            }
+            combo.setValue(judokaAsignado);
+
+            combo.addValueChangeListener(event -> ej.setJudokaAsignado(event.getValue()));
+            combo.setEnabled(!ej.isRequiereSupervision());
+            return combo;
+        }).setHeader("Asignado a").setWidth("200px");
+
+// Columna de Duración (minutos)
+        gridPlan.addComponentColumn(ej -> {
+            NumberField field = new NumberField();
+            field.setValue(ej.getDuracionMinutos() != null ? ej.getDuracionMinutos().doubleValue() : null);
+            field.setStep(5);
+            field.setMin(0);
+            field.setMax(120);
+            field.addValueChangeListener(event -> {
+                ej.setDuracionMinutos(event.getValue() != null ? event.getValue().intValue() : null);
+                actualizarBarraProgresoTiempo();
+            });
+            field.setWidth("100px");
+            return field;
+        }).setHeader("Dur (min)").setWidth("100px");
         // Columna de Dosificación (¡Micro-ajustes en vivo!)
         gridPlan.addComponentColumn(ej -> {
             TextField campoDosis = new TextField();
@@ -291,6 +356,8 @@ public class SenseiMicrociclosView extends VerticalLayout {
                 ejerciciosDelPlan.remove(ej);
                 recalcularOrdenes();
                 gridPlan.getDataProvider().refreshAll();
+                actualizarIntensidadGlobal(intensidadGlobalLabel, ejerciciosDelPlan);
+                actualizarBarraProgresoTiempo();
             });
             return btnRemover;
         }).setAutoWidth(true).setFlexGrow(0);
@@ -314,18 +381,19 @@ public class SenseiMicrociclosView extends VerticalLayout {
         layoutEditor.add(cabeceraPlan, splitLayout);
     }
 
-    // --- LÓGICA DE EDICIÓN EN VIVO ---
-
     private void agregarEjercicioAlPlan(Object item, boolean esTarea) {
         EjercicioPlanificado nuevoEj = new EjercicioPlanificado();
         nuevoEj.setMicrociclo(planActual);
-
         if (esTarea) nuevoEj.setTareaDiaria((TareaDiaria) item);
         else nuevoEj.setPruebaEstandar((PruebaEstandar) item);
-
+        nuevoEj.setIntensidad(3); // valor por defecto
+        nuevoEj.setRequiereSupervision(true); // Por defecto, las tareas son supervisadas (clase)
+        nuevoEj.setJudokaAsignado(null);
         ejerciciosDelPlan.add(nuevoEj);
         recalcularOrdenes();
         gridPlan.setItems(ejerciciosDelPlan);
+        actualizarIntensidadGlobal(intensidadGlobalLabel, ejerciciosDelPlan);
+        actualizarBarraProgresoTiempo();
     }
 
     private void moverEjercicio(EjercicioPlanificado ej, int direccion) {
@@ -338,6 +406,8 @@ public class SenseiMicrociclosView extends VerticalLayout {
             recalcularOrdenes();
             gridPlan.getDataProvider().refreshAll();
         }
+        actualizarIntensidadGlobal(intensidadGlobalLabel, ejerciciosDelPlan);
+        actualizarBarraProgresoTiempo();
     }
 
     private void recalcularOrdenes() {
@@ -402,6 +472,14 @@ public class SenseiMicrociclosView extends VerticalLayout {
         } else {
             // Modo Edición
             planActual = plan;
+            if (planActual.getGruposAsignados() != null && !planActual.getGruposAsignados().isEmpty()) {
+                judokasDeLosGrupos = planActual.getGruposAsignados().stream()
+                        .flatMap(g -> judokaRepository.findByGrupo(g).stream())
+                        .distinct()
+                        .collect(Collectors.toList());
+            } else {
+                judokasDeLosGrupos = new ArrayList<>();
+            }
             nombrePlanField.setValue(plan.getNombre() != null ? plan.getNombre() : "");
             gruposCombo.setValue(plan.getGruposAsignados());
             fechaInicioPicker.setValue(plan.getFechaInicio());
@@ -415,28 +493,78 @@ public class SenseiMicrociclosView extends VerticalLayout {
             macrocicloCombo.setValue(plan.getMacrociclo()); // Carga el que ya tenía guardado
         }
         gridPlan.setItems(ejerciciosDelPlan);
+        actualizarIntensidadGlobal(intensidadGlobalLabel, ejerciciosDelPlan);
+        actualizarBarraProgresoTiempo();
+
     }
 
     private void actualizarBarraProgresoTiempo() {
-        // 1. Sumamos los minutos
-        int minutosTotales = listaEjerciciosDelPlan.stream()
+        // Usar ejerciciosDelPlan, no listaEjerciciosDelPlan
+        int minutosTotales = ejerciciosDelPlan.stream()
                 .mapToInt(ej -> ej.getDuracionMinutos() != null ? ej.getDuracionMinutos() : 0)
                 .sum();
 
-        // 2. Calculamos el porcentaje (asumiendo clase de 2 horas = 120 min)
-        double porcentaje = (double) minutosTotales / 120;
+        double porcentaje = (double) minutosTotales / 120; // Asumiendo 120 min máximo
 
-        // 3. Actualizamos la UI
-        barraProgresoGlobal.setValue(Math.min(porcentaje, 1.0)); // No pasar de 1.0 en la barra
+        barraProgresoGlobal.setValue(Math.min(porcentaje, 1.0));
         labelTiempoTotal.setText(String.format("Tiempo ocupado: %d / 120 min", minutosTotales));
 
-        // 4. Feedback visual de Agudelo: Si se pasa del tiempo, alertamos
         if (porcentaje > 1.0) {
             barraProgresoGlobal.getElement().setAttribute("theme", "error");
             labelTiempoTotal.getStyle().set("color", "var(--lumo-error-text-color)");
         } else {
             barraProgresoGlobal.getElement().removeAttribute("theme");
             labelTiempoTotal.getStyle().set("color", "var(--lumo-primary-text-color)");
+        }
+    }
+
+    private void actualizarIntensidadGlobal(Span label, List<EjercicioPlanificado> lista) {
+        if (lista.isEmpty()) {
+            label.getElement().setProperty("innerHTML", "Intensidad: —");
+            return;
+        }
+
+        double promedio = lista.stream()
+                .filter(e -> e.getIntensidad() != null)
+                .mapToInt(EjercicioPlanificado::getIntensidad)
+                .average()
+                .orElse(0);
+
+        int intensidadRedondeada = (int) Math.round(promedio);
+
+        StringBuilder html = new StringBuilder();
+        html.append("<span style='font-weight: 500; margin-right: 8px;'>Intensidad:</span>");
+
+        for (int i = 1; i <= 5; i++) {
+            html.append("<span style='display: inline-block; width: 28px; height: 28px; ");
+            html.append("border-radius: 50%; text-align: center; line-height: 28px; ");
+            html.append("margin-right: 4px; font-weight: bold; ");
+
+            if (i == intensidadRedondeada) {
+                String color = getColorPorIntensidad(i);
+                html.append(String.format("background-color: %s; color: white; border: 2px solid %s; ", color, color));
+            } else {
+                html.append("border: 2px solid #ccc; color: #999; background-color: transparent; ");
+            }
+
+            html.append("'>").append(i).append("</span>");
+        }
+
+        // Añadimos el promedio exacto como información adicional
+        html.append("<span style='margin-left: 8px; font-size: 0.9em; color: #666;' title='Promedio exacto'>");
+        html.append(String.format("(%.1f)", promedio));
+        html.append("</span>");
+
+        label.getElement().setProperty("innerHTML", html.toString());
+    }
+    private String getColorPorIntensidad(int intensidad) {
+        switch (intensidad) {
+            case 1: return "#4caf50"; // Verde
+            case 2: return "#8bc34a"; // Verde claro
+            case 3: return "#ffc107"; // Amarillo
+            case 4: return "#ff9800"; // Naranja
+            case 5: return "#f44336"; // Rojo
+            default: return "#9e9e9e"; // Gris
         }
     }
 }

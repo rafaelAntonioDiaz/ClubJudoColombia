@@ -36,11 +36,13 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
     private String publicUrl;
 
     public CloudflareR2AlmacenamientoService(S3Client s3Client) {
+
         this.s3Client = s3Client;
+        System.out.println(">>> CloudflareR2AlmacenamientoService: publicUrl = " + publicUrl);
     }
 
     @Override
-    public String subirArchivo(Long judokaId, String nombreOriginal, InputStream inputStream) { // <-- YA NO PEDIMOS EL TAMAÑO
+    public String subirArchivo(Long judokaId, String nombreOriginal, InputStream inputStream) {
         String uniqueFileName = UUID.randomUUID() + "_" + nombreOriginal;
         String rutaEnNube = "judokas/" + judokaId + "/" + uniqueFileName;
 
@@ -48,20 +50,20 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(rutaEnNube)
-                    .contentType("application/pdf")
+                    .contentType("image/jpeg") // o detecta el tipo real
                     .build();
 
-            // LA MAGIA MODERNA: Leemos el flujo en RAM y AWS obtiene el tamaño automáticamente
-            byte[] bytesDelArchivo = inputStream.readAllBytes();
+            byte[] bytes = inputStream.readAllBytes();
+            s3Client.putObject(request, RequestBody.fromBytes(bytes));
 
-            s3Client.putObject(request, RequestBody.fromBytes(bytesDelArchivo));
-
-            return uniqueFileName; // Devolvemos el nombre final
-
+            // ✅ Devuelve solo el nombre (¡esto es clave!)
+            return uniqueFileName;
         } catch (Exception e) {
-            throw new RuntimeException("Fallo al subir archivo a la nube", e);
+            throw new RuntimeException("Fallo al subir archivo", e);
         }
-    }    @Override
+    }
+
+    @Override
     public boolean eliminarArchivo(String urlArchivoEnLaNube) {
         if (urlArchivoEnLaNube == null || urlArchivoEnLaNube.isEmpty()) return false;
 
@@ -84,8 +86,12 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
             return false;
         }
     }
+
     @Override
     public String obtenerUrl(Long judokaId, String nombreArchivo) {
+        System.out.println(">>> obtenerUrl: publicUrl=" + publicUrl + ", judokaId=" + judokaId + ", nombre=" + nombreArchivo);
+        String url = publicUrl + "/judokas/" + judokaId + "/" + nombreArchivo;
+        System.out.println(">>> URL generada: " + url);
         return publicUrl + "/judokas/" + judokaId + "/" + nombreArchivo;
     }
 
@@ -119,7 +125,7 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
 
             // 3. Construimos la petición obligando al navegador a obedecer
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket("judo-assets")
+                    .bucket(bucketName)
                     .key(objectKey)
                     .responseContentType(tipoContenido) // <--- ¡Corrige el pantallazo negro!
                     .responseContentDisposition("inline") // <--- ¡Lo muestra en la pestaña sí o sí!

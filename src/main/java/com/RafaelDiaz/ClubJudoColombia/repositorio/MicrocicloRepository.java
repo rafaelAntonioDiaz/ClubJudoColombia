@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MicrocicloRepository extends JpaRepository<Microciclo, Long> {
@@ -30,4 +31,4 @@ public interface MicrocicloRepository extends JpaRepository<Microciclo, Long> {
             @Param("estados") List<EstadoMicrociclo> estados
     );
     List<Microciclo> findBySenseiOrderByFechaInicioDesc(Sensei sensei);
-}
+    Optional<Microciclo> findByNombreAndSensei(String nombre, Sensei sensei);}

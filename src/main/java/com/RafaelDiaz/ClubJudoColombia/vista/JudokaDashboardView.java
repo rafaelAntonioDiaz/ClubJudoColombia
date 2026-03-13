@@ -67,6 +67,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     private final TraduccionService traduccionService;
     private final SesionService sesionService;
     private final AsistenciaService asistenciaService;
+    private final CalendarioUnificadoService calendarioService;
     private final InsigniaRepository insigniaRepository;
     private final JudokaInsigniaRepository judokaInsigniaRepository;
     private final JudokaRepository judokaRepository;
@@ -93,13 +94,14 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
                                SecurityService securityService,
                                TraduccionService traduccionService,
                                SesionService sesionService,
-                               AccessAnnotationChecker accessChecker,
+                               AccessAnnotationChecker accessChecker, CalendarioUnificadoService calendarioService,
                                InsigniaRepository insigniaRepository,
                                JudokaInsigniaRepository judokaInsigniaRepository,
                                AsistenciaService asistenciaService,
                                SabiduriaService sabiduriaService,
                                JudokaRepository judokaRepository, PruebaEstandarRepository pruebaEstandarRepository) {
         super(securityService, accessChecker, traduccionService, judokaRepository);
+        this.calendarioService = calendarioService;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
         System.out.println("🔧 JudokaDashboardView constructor iniciado");
         this.dashboardService = dashboardService;
@@ -163,7 +165,8 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         btnAgenda = new Button(new Icon(VaadinIcon.CALENDAR_CLOCK));
         btnAgenda.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnAgenda.addClickListener(e ->
-                new AgendaDialog(dashboardService, sesionService, traduccionService, judokaActual).open());
+                new AgendaDialog(dashboardService, traduccionService,
+                        calendarioService,judokaActual).open());
 
         Button btnPalmares = new Button(new Icon(VaadinIcon.MEDAL));
         btnPalmares.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_LARGE);

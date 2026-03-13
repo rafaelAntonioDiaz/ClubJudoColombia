@@ -134,7 +134,8 @@ public class Judoka implements Serializable {
     @Column(name = "ruta_autorizacion_waiver")
     private String rutaAutorizacionWaiver;
 
-    @Column(name = "url_foto_perfil")
+    @Lob
+    @Column(name = "url_foto_perfil", columnDefinition = "TEXT")
     private String urlFotoPerfil;
 
     @Column(name = "nombre_atleta") // Puede ser nullable=false si ya limpiaste la BD

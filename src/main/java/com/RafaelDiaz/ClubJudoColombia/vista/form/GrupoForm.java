@@ -5,6 +5,8 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.textfield.IntegerField;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.timepicker.TimePicker;
@@ -24,6 +26,9 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
 
     // --- NUEVOS CAMPOS DE LOGÍSTICA ---
     private final TextField lugarPractica;
+    private final NumberField latitud;
+    private final NumberField longitud;
+    private final IntegerField radioPermitidoMetros;
     private final MultiSelectComboBox<DayOfWeek> diasSemana;
     private final TimePicker horaInicio;
     private final TimePicker horaFin;
@@ -38,6 +43,9 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
         this.diasSemana = new MultiSelectComboBox<>(traduccionService.get("grupos.form.dias"));
         this.horaInicio = new TimePicker(traduccionService.get("grupos.form.hora_inicio"));
         this.horaFin = new TimePicker(traduccionService.get("grupos.form.hora_fin"));
+        this.latitud = new NumberField(traduccionService.get("grupos.form.latitud"));
+        this.longitud = new NumberField(traduccionService.get("grupos.form.longitud"));
+        this.radioPermitidoMetros = new IntegerField(traduccionService.get("grupos.form.radio"));
 
         configureFields();
 
@@ -46,14 +54,30 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
         layoutHoras.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
 
         // Agregamos todos los campos al lienzo del BaseForm
-        add(nombre, descripcion, lugarPractica, diasSemana, layoutHoras);
+        FormLayout layoutGps = new FormLayout(latitud, longitud, radioPermitidoMetros);
+        layoutGps.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 3));
+
+        add(nombre, descripcion, lugarPractica, layoutGps, diasSemana, layoutHoras);
     }
 
     private void configureFields() {
         nombre.setRequiredIndicatorVisible(true);
         descripcion.setMaxLength(255);
         lugarPractica.setPlaceholder(traduccionService.get("grupos.form.lugar.placeholder"));
+        latitud.setStep(0.000001);
+        latitud.setPlaceholder("Ej: 4.7110");
+        latitud.setMin(-90);
+        latitud.setMax(90);
 
+        longitud.setStep(0.000001);
+        longitud.setPlaceholder("Ej: -74.0721");
+        longitud.setMin(-180);
+        longitud.setMax(180);
+
+        radioPermitidoMetros.setStepButtonsVisible(true);
+        radioPermitidoMetros.setMin(10);
+        radioPermitidoMetros.setMax(1000);
+        radioPermitidoMetros.setValue(100);
         // Configuración de los Días de la Semana
         diasSemana.setItems(DayOfWeek.values());
 
@@ -84,6 +108,17 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
 
         binder.forField(lugarPractica)
                 .bind(GrupoEntrenamiento::getLugarPractica, GrupoEntrenamiento::setLugarPractica);
+        binder.forField(latitud)
+                .withNullRepresentation(null)
+                .bind(GrupoEntrenamiento::getLatitud, GrupoEntrenamiento::setLatitud);
+
+        binder.forField(longitud)
+                .withNullRepresentation(null)
+                .bind(GrupoEntrenamiento::getLongitud, GrupoEntrenamiento::setLongitud);
+
+        binder.forField(radioPermitidoMetros)
+                .withNullRepresentation(100)
+                .bind(GrupoEntrenamiento::getRadioPermitidoMetros, GrupoEntrenamiento::setRadioPermitidoMetros);
 
         binder.forField(horaInicio)
                 .bind(GrupoEntrenamiento::getHoraInicio, GrupoEntrenamiento::setHoraInicio);

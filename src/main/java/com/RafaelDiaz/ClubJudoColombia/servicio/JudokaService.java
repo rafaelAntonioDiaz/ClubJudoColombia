@@ -103,13 +103,22 @@ public class JudokaService {
     @Transactional
     public void actualizarFotoPerfil(Judoka judoka, InputStream inputStream, String filename) {
         try {
-            String nombreFinalGuardado = almacenamientoCloudService.subirArchivo(
+            // 1. Sube y obtén solo el nombre
+            String nombreFinal = almacenamientoCloudService.subirArchivo(
                     judoka.getId(), filename, inputStream
             );
-            String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judoka.getId(), nombreFinalGuardado);
+            System.out.println(">>> nombreFinal: " + nombreFinal);
+
+            // 2. Obtén la URL completa desde el servicio
+            String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judoka.getId(), nombreFinal);
+            System.out.println(">>> URL completa: " + urlEnLaNube);
+
+            // 3. Guarda la URL en la entidad
             judoka.setUrlFotoPerfil(urlEnLaNube);
             judokaRepository.save(judoka);
+            System.out.println(">>> Foto actualizada en BD");
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("Error al guardar foto: " + e.getMessage());
         }
     }

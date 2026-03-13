@@ -1,53 +1,48 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.component;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.SesionProgramada;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService.EventoCalendario;
+import com.RafaelDiaz.ClubJudoColombia.dto.ItemCalendario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoItem;
+import com.RafaelDiaz.ClubJudoColombia.servicio.CalendarioUnificadoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
-import com.RafaelDiaz.ClubJudoColombia.util.FestivosColombia;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.UI; // Importante para obtener Locale del usuario
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @CssImport("./styles/calendar-judoka.css")
 public class JudokaCalendar extends Div {
 
-    private final SesionService sesionService;
     private final TraduccionService traduccionService;
-    private final Judoka judoka;
-
     private YearMonth currentMonth;
     private Div calendarGrid;
     private Span monthTitle;
+    private List<ItemCalendario> currentItems;
 
-    public JudokaCalendar(SesionService sesionService, TraduccionService traduccionService, Judoka judoka) {
-        this.sesionService = sesionService;
+    public JudokaCalendar(CalendarioUnificadoService calendarService, TraduccionService traduccionService) {
         this.traduccionService = traduccionService;
-        this.judoka = judoka;
         this.currentMonth = YearMonth.now();
+        this.currentItems = List.of();
 
         addClassName("judoka-calendar-container");
         buildHeader();
         buildCalendarGrid();
-        refresh();
+        render();
     }
 
     private void buildHeader() {
@@ -57,7 +52,7 @@ public class JudokaCalendar extends Div {
 
         Button prevBtn = new Button(new Icon(VaadinIcon.CHEVRON_LEFT), e -> {
             currentMonth = currentMonth.minusMonths(1);
-            refresh();
+            render();
         });
         prevBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
@@ -66,7 +61,7 @@ public class JudokaCalendar extends Div {
 
         Button nextBtn = new Button(new Icon(VaadinIcon.CHEVRON_RIGHT), e -> {
             currentMonth = currentMonth.plusMonths(1);
-            refresh();
+            render();
         });
         nextBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
@@ -80,24 +75,28 @@ public class JudokaCalendar extends Div {
         add(calendarGrid);
     }
 
-    public void refresh() {
+    /**
+     * Método público para actualizar el calendario con un nuevo mes y lista de items.
+     */
+    public void mostrarMes(YearMonth mes, List<ItemCalendario> items) {
+        this.currentMonth = mes;
+        this.currentItems = items != null ? items : List.of();
+        render();
+    }
+
+    private void render() {
         calendarGrid.removeAll();
 
-        // 1. OBTENER IDIOMA DEL USUARIO (Corregido para Java 21)
         Locale userLocale = UI.getCurrent().getLocale();
-
-        // --- CORRECCIÓN AQUÍ ---
-        // Si no hay locale (ej. background thread), usamos el de Colombia por defecto.
-        // En lugar de new Locale("es", "CO"), usamos Locale.of("es", "CO")
         if (userLocale == null) {
             userLocale = Locale.of("es", "CO");
         }
 
-        // Título del Mes
+        // Título del mes
         String mesNombre = currentMonth.getMonth().getDisplayName(TextStyle.FULL, userLocale);
         monthTitle.setText(mesNombre + " " + currentMonth.getYear());
 
-        // Cabeceras (L M X...)
+        // Cabeceras de días
         for (int i = 1; i <= 7; i++) {
             String nombreDia = DayOfWeek.of(i).getDisplayName(TextStyle.NARROW, userLocale);
             Span dayHeader = new Span(nombreDia);
@@ -105,93 +104,84 @@ public class JudokaCalendar extends Div {
             calendarGrid.add(dayHeader);
         }
 
-        // Lógica de días (Igual que antes)
+        // Agrupar items por día
+        Map<LocalDate, List<ItemCalendario>> itemsPorDia = currentItems.stream()
+                .collect(Collectors.groupingBy(item -> item.getInicio().toLocalDate()));
+
         LocalDate firstDay = currentMonth.atDay(1);
         int emptyCells = firstDay.getDayOfWeek().getValue() - 1;
         int daysInMonth = currentMonth.lengthOfMonth();
 
+        // Celdas vacías antes del día 1
         for (int i = 0; i < emptyCells; i++) {
             calendarGrid.add(new Div());
         }
 
-        List<EventoCalendario> eventos = sesionService.obtenerEventosMes(judoka, currentMonth);
-
+        // Celdas de los días del mes
         for (int day = 1; day <= daysInMonth; day++) {
             LocalDate date = currentMonth.atDay(day);
             Div dayCell = new Div();
             dayCell.addClassName("day-cell");
             dayCell.setText(String.valueOf(day));
 
-            // Festivos
-            Optional<String> claveFestivo = FestivosColombia.nombreFestivo(date);
-            if (claveFestivo.isPresent()) {
-                dayCell.addClassName("holiday");
-                String nombreFestivo = traduccionService.get(claveFestivo.get());
-                dayCell.setTitle(nombreFestivo);
-
-                Span holidayIcon = new Span("★");
-                holidayIcon.addClassName("holiday-indicator");
-                holidayIcon.setTitle(nombreFestivo);
-                dayCell.add(holidayIcon);
-            }
-
             if (date.equals(LocalDate.now())) {
                 dayCell.addClassName("today");
             }
 
-            // Eventos
-            List<EventoCalendario> eventosDia = eventos.stream()
-                    .filter(e -> e.sesion().getFechaHoraInicio().toLocalDate().equals(date))
-                    .toList();
-
-            if (!eventosDia.isEmpty()) {
-                Div dotsWrapper = new Div();
-                dotsWrapper.addClassName("events-wrapper");
-
-                for (EventoCalendario ev : eventosDia) {
+            if (itemsPorDia.containsKey(date)) {
+                Div indicators = new Div();
+                indicators.addClassName("day-indicators");
+                for (ItemCalendario item : itemsPorDia.get(date)) {
                     Span dot = new Span();
+                    dot.getStyle().set("background-color", "red");
+                    String tooltip = item.getTitulo();
+                    if (item.getTipo() == TipoItem.SESION_GRUPAL) {
+                        tooltip += " - " + item.getInicio().toLocalTime() + " a " + item.getFin().toLocalTime();
+                    }
+                    if (item.getJudokaNombre() != null) {
+                        tooltip += " - " + item.getJudokaNombre();
+                    }
+                    dot.setTitle(tooltip);
                     dot.addClassName("event-dot");
-                    dot.addClassName(ev.estado().name().toLowerCase());
-                    dot.addClickListener(e -> mostrarDetalleSesion(ev));
-                    dot.setTitle(ev.sesion().getNombre());
-                    dotsWrapper.add(dot);
+                    dot.addClassName(item.getTipo().name().toLowerCase());
+                    dot.addClassName(item.getEstado().toLowerCase().replace(" ", "-"));
+                    dot.setTitle(item.getTitulo() +
+                            (item.getJudokaNombre() != null ? " - " + item.getJudokaNombre() : ""));
+                    dot.addClickListener(e -> mostrarDetalleItem(item));
+                    dot.getStyle().set("background-color", "red");
+                    indicators.add(dot);
+                    System.out.println(">>> Día " + date + " agregado dot para: " + item.getTitulo());
                 }
-                dayCell.add(dotsWrapper);
+                dayCell.add(indicators);
             }
 
             calendarGrid.add(dayCell);
         }
     }
 
-    private void mostrarDetalleSesion(EventoCalendario evento) {
+    private void mostrarDetalleItem(ItemCalendario item) {
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle("Detalle de Sesión");
+        dialog.setHeaderTitle(item.getTitulo());
 
-        SesionProgramada s = evento.sesion();
-        VerticalLayout content = new VerticalLayout();
-        content.setPadding(false);
-
-        content.add(new H3(s.getNombre()));
-
-        String nombreSensei = (s.getSensei() != null && s.getSensei().getUsuario() != null)
-                ? s.getSensei().getUsuario().getNombre()
-                : "Sensei";
-        content.add(new Span("Sensei: " + nombreSensei));
-
-        content.add(new Span("Hora: " + s.getFechaHoraInicio().toLocalTime() + " - " + s.getFechaHoraFin().toLocalTime()));
-
-        String estadoTexto = switch (evento.estado()) {
-            case FUTURA -> "📅 Programada";
-            case ASISTIO -> "✅ Asististe";
-            case FALTO -> "❌ No asististe";
-        };
-        Span badge = new Span(estadoTexto);
-        badge.getElement().getThemeList().add("badge " + (evento.estado() == SesionService.EstadoSesion.ASISTIO ? "success" : "contrast"));
-        content.add(badge);
-
+        Div content = new Div();
+        content.add(new Span("Tipo: " + item.getTipo()));
+        content.add(new Span("Estado: " + item.getEstado()));
+        content.add(new Span("Grupo: " + (item.getGrupoNombre() != null ? item.getGrupoNombre() : "-")));
+        if (item.getJudokaNombre() != null) {
+            content.add(new Span("Judoka: " + item.getJudokaNombre()));
+        }
+        if (item.getLatitudEsperada() != null) {
+            content.add(new Span("Ubicación esperada: " + item.getLatitudEsperada() + ", " + item.getLongitudEsperada()));
+        }
+        if (item.getLatitudRegistrada() != null) {
+            content.add(new Span("Ubicación reportada: " + item.getLatitudRegistrada() + ", " + item.getLongitudRegistrada()));
+        }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        content.add(new Span("Inicio: " + item.getInicio().format(formatter)));
+        content.add(new Span("Fin: " + item.getFin().format(formatter)));
         Button cerrar = new Button("Cerrar", e -> dialog.close());
-        dialog.add(content);
         dialog.getFooter().add(cerrar);
+        dialog.add(content);
         dialog.open();
     }
 }

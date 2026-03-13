@@ -177,6 +177,8 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
                     Notification.show(traduccionService.get("msg.foto.actualizada"), 2000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     upload.clearFileList();
+                    // Recargar la página después de un pequeño retraso para asegurar que la notificación se vea
+                    ui.getPage().executeJs("setTimeout(function() { location.reload(); }, 1500);");
                 }));
             } catch (Exception e) {
                 getUI().ifPresent(ui -> ui.access(() ->
@@ -211,16 +213,17 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
 
     private void cargarImagenEnAvatar() {
         avatarContainer.removeAll();
-        String urlFotoCloud = judokaActual.getUrlFotoPerfil();
+        String nombreArchivo = judokaActual.getUrlFotoPerfil();
 
-        if (urlFotoCloud != null && !urlFotoCloud.isEmpty()) {
-            avatarImage = new Image(urlFotoCloud, traduccionService.get("alt.foto.perfil"));
+        if (nombreArchivo != null && !nombreArchivo.isEmpty()) {
+            // Generar URL firmada usando el servicio
+            String urlFirmada = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), nombreArchivo);
+            avatarImage = new Image(urlFirmada, traduccionService.get("alt.foto.perfil"));
             avatarImage.setWidth("100%");
             avatarImage.setHeight("100%");
             avatarImage.getStyle().set("object-fit", "cover");
             avatarContainer.add(avatarImage);
         } else {
-            // ✅ Usar el nombre del judoka
             Avatar placeholder = new Avatar(judokaActual.getNombre() + " " + judokaActual.getApellido());
             placeholder.setWidth("100%");
             placeholder.setHeight("100%");

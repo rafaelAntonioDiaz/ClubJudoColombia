@@ -4,6 +4,8 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ChatService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.MicrocicloService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,10 +28,12 @@ public class DatosMuestraInicializer {
     private final RolRepository rolRepo;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioService usuarioService;
+    private final SesionService sesionService;
     private final PruebaEstandarRepository pruebaRepo;
     private final MetricaRepository metricaRepo;
     private final ResultadoPruebaRepository resultadoRepo;
     private final EjercicioPlanificadoRepository ejercicioRepo;
+    private final MacrocicloRepository macrocicloRepository;
     private final MicrocicloRepository microcicloRepo;
     private final ChatService chatService;
     private final InsigniaRepository insigniaRepo;
@@ -36,6 +42,7 @@ public class DatosMuestraInicializer {
     private final TareaDiariaRepository tareaDiariaRepository;
     private final GrupoEntrenamientoRepository grupoRepository;
     private final EjecucionTareaRepository ejecucionTareaRepository;
+    private final MicrocicloService microcicloService;
 
     public DatosMuestraInicializer(UsuarioRepository usuarioRepo,
                                    SenseiRepository senseiRepo,
@@ -43,25 +50,33 @@ public class DatosMuestraInicializer {
                                    RolRepository rolRepo,
                                    PasswordEncoder passwordEncoder,
                                    UsuarioService usuarioService,
+                                   SesionService sesionService,
                                    PruebaEstandarRepository pruebaRepo,
                                    MetricaRepository metricaRepo,
                                    ResultadoPruebaRepository resultadoRepo,
                                    EjercicioPlanificadoRepository ejercicioRepo,
+                                   MacrocicloRepository macrocicloRepository,
                                    MicrocicloRepository microcicloRepo,
                                    ChatService chatService,
                                    InsigniaRepository insigniaRepo,
                                    JudokaInsigniaRepository judokaInsigniaRepo,
-                                   PalmaresRepository palmaresRepo, TareaDiariaRepository tareaDiariaRepository, GrupoEntrenamientoRepository grupoRepository, EjecucionTareaRepository ejecucionTareaRepository) {
+                                   PalmaresRepository palmaresRepo,
+                                   TareaDiariaRepository tareaDiariaRepository,
+                                   GrupoEntrenamientoRepository grupoRepository,
+                                   EjecucionTareaRepository ejecucionTareaRepository,
+                                   MicrocicloService microcicloService) {
         this.usuarioRepo = usuarioRepo;
         this.senseiRepo = senseiRepo;
         this.judokaRepo = judokaRepo;
         this.rolRepo = rolRepo;
         this.passwordEncoder = passwordEncoder;
         this.usuarioService = usuarioService;
+        this.sesionService = sesionService;
         this.pruebaRepo = pruebaRepo;
         this.metricaRepo = metricaRepo;
         this.resultadoRepo = resultadoRepo;
         this.ejercicioRepo = ejercicioRepo;
+        this.macrocicloRepository = macrocicloRepository;
         this.microcicloRepo = microcicloRepo;
         this.chatService = chatService;
         this.insigniaRepo = insigniaRepo;
@@ -70,6 +85,7 @@ public class DatosMuestraInicializer {
         this.tareaDiariaRepository = tareaDiariaRepository;
         this.grupoRepository = grupoRepository;
         this.ejecucionTareaRepository = ejecucionTareaRepository;
+        this.microcicloService = microcicloService;
     }
 
     @Transactional
@@ -99,7 +115,7 @@ public class DatosMuestraInicializer {
         // 5. Crear microciclos (plan de acondicionamiento y plan de evaluación) y asignarlos al grupo
         Microciclo planAcond = crearPlanAcondicionamiento(kiuzo, grupoDemo);
         Microciclo planEval = crearPlanEvaluacion(kiuzo, grupoDemo);
-
+        crearMicrociclosParaSensei(kiuzo);
         // 6. Generar resultados de pruebas históricos (varias fechas)
         generarResultadosFisicosConHistorial(maria, "EXPERTO");
         generarResultadosFisicosConHistorial(julian, "NOVATO");
@@ -109,8 +125,7 @@ public class DatosMuestraInicializer {
         generarEjecucionesTareas(julian, planAcond);
 
         // 8. Registrar antropometría (peso, estatura, etc.) como resultados de prueba
-        registrarAntropometria(maria, 57.0, 160.0, 68.0, 165.0);
-        registrarAntropometria(julian, 34.0, 138.0, 60.0, 135.0);
+        generarAntropometriaHistorica(maria, julian);
 
         // 9. Cargar insignias ganadas
         cargarInsigniasGanadas(maria, julian, kiuzo);
@@ -120,7 +135,30 @@ public class DatosMuestraInicializer {
 
         // 11. Inicializar chat
         inicializarChat(kiuzo, maria, julian);
+
+        // 12. Crear macrociclos y microciclos con fechas
+        crearMacrociclosConMicros(kiuzo, grupoDemo, maria, julian);
+
+        // 13. Crear sesiones programadas con GPS
+        crearSesionesGPS(kiuzo, grupoDemo);
+
+
+        // 15. Generar más ejecuciones de tareas en diferentes meses
+        generarEjecucionesTareasHistoricas(maria, julian);
+
+        // 16. Generar resultados de pruebas en más fechas
+        generarResultadosPruebasAdicionales(maria, julian);
+
+        // 17. Crear sesiones en meses anteriores y futuros
+        crearSesionesAdicionales(kiuzo, grupoDemo);
+
+        System.out.println(">>> Datos de muestra cargados exitosamente.");
     }
+
+    // ------------------------------------------------------------------------
+    // Métodos existentes (se mantienen igual)
+    // ------------------------------------------------------------------------
+
     private GrupoEntrenamiento crearGrupoUnificado(Sensei sensei, List<Judoka> judokas) {
         GrupoEntrenamiento grupo = new GrupoEntrenamiento();
         grupo.setNombre("Grupo de Demostración");
@@ -128,7 +166,6 @@ public class DatosMuestraInicializer {
         grupo.setSensei(sensei);
         grupo = grupoRepository.save(grupo);
 
-        // Asignar el grupo a cada judoka y guardarlos
         for (Judoka j : judokas) {
             j.setGrupo(grupo);
             judokaRepo.save(j);
@@ -142,29 +179,50 @@ public class DatosMuestraInicializer {
         plan.setSensei(sensei);
         plan.setEstado(EstadoMicrociclo.ACTIVO);
         plan.setTipoMicrociclo(TipoMicrociclo.AJUSTE);
+        plan.setFechaInicio(LocalDate.now().minusWeeks(1));
+        plan.setFechaFin(LocalDate.now().plusWeeks(3));
         plan.getGruposAsignados().add(grupo);
         plan = microcicloRepo.save(plan);
 
-        // Asignar todas las tareas de la biblioteca
         List<TareaDiaria> tareas = tareaDiariaRepository.findAll();
         int orden = 1;
-        for (TareaDiaria t : tareas) {
+        for (int i = 0; i < tareas.size(); i++) {
+            TareaDiaria t = tareas.get(i);
             EjercicioPlanificado ej = new EjercicioPlanificado();
             ej.setMicrociclo(plan);
             ej.setTareaDiaria(t);
             ej.setOrden(orden++);
             ej.setNotasSensei("Enfocar en técnica");
             ej.getDiasAsignados().addAll(List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY));
+            ej.setDuracionMinutos(15 + i * 5);
+
+            // Alternar entre supervisado y autónomo
+            if (i % 2 == 0) {
+                ej.setRequiereSupervision(true); // tarea de clase
+                ej.setJudokaAsignado(null);
+            } else {
+                ej.setRequiereSupervision(false); // tarea para casa
+                if (i == 1) {
+                    ej.setJudokaAsignado(judokaRepo.findByAcudiente_Username("maria.lopez").orElse(null));
+                } else if (i == 3) {
+                    ej.setJudokaAsignado(judokaRepo.findByAcudiente_Username("julian.bohorquez").orElse(null));
+                } else {
+                    ej.setJudokaAsignado(null); // grupal para casa
+                }
+            }
             plan.addEjercicio(ej);
         }
         return microcicloRepo.save(plan);
     }
+
     private Microciclo crearPlanEvaluacion(Sensei sensei, GrupoEntrenamiento grupo) {
         Microciclo plan = new Microciclo();
         plan.setNombre("Evaluación Trimestral");
         plan.setSensei(sensei);
         plan.setEstado(EstadoMicrociclo.ACTIVO);
         plan.setTipoMicrociclo(TipoMicrociclo.CONTROL);
+        plan.setFechaInicio(LocalDate.now().withDayOfMonth(1));
+        plan.setFechaFin(LocalDate.now().withDayOfMonth(1).plusWeeks(1));
         plan.getGruposAsignados().add(grupo);
         plan = microcicloRepo.save(plan);
 
@@ -177,16 +235,14 @@ public class DatosMuestraInicializer {
             ej.setOrden(orden++);
             ej.setNotasSensei("Registrar resultado");
             ej.getDiasAsignados().add(DayOfWeek.SATURDAY);
+            ej.setRequiereSupervision(true); // las pruebas siempre son supervisadas
+            ej.setJudokaAsignado(null);
             plan.addEjercicio(ej);
         }
         return microcicloRepo.save(plan);
     }
-    // ------------------------------------------------------------------------
-    // Métodos idempotentes de creación
-    // ------------------------------------------------------------------------
 
     private Sensei crearSensei(String username, String nombre, String apellido, String pass, GradoCinturon grado) {
-        // Buscar usuario existente
         Usuario u = usuarioRepo.findByUsername(username).orElse(null);
         if (u == null) {
             u = new Usuario(username, passwordEncoder.encode(pass), nombre, apellido);
@@ -199,7 +255,6 @@ public class DatosMuestraInicializer {
             u = usuarioService.saveUsuario(u, pass);
         }
 
-        // Buscar sensei existente asociado al usuario
         Optional<Sensei> senseiOpt = senseiRepo.findByUsuario(u);
         if (senseiOpt.isPresent()) {
             return senseiOpt.get();
@@ -214,7 +269,6 @@ public class DatosMuestraInicializer {
 
     private Judoka crearMaria(Sensei sensei) {
         String username = "maria.lopez";
-        // Buscar usuario existente
         Usuario u = usuarioRepo.findByUsername(username).orElse(null);
         if (u == null) {
             u = new Usuario(username, passwordEncoder.encode("1234"), "María", "López");
@@ -227,8 +281,8 @@ public class DatosMuestraInicializer {
             u = usuarioService.saveUsuario(u, "1234");
         }
 
-        // Buscar judoka existente asociado al usuario
-        Optional<Judoka> judokaOpt = judokaRepo.findByAcudiente_Username(username);        if (judokaOpt.isPresent()) {
+        Optional<Judoka> judokaOpt = judokaRepo.findByAcudiente_Username(username);
+        if (judokaOpt.isPresent()) {
             return judokaOpt.get();
         }
 
@@ -284,13 +338,8 @@ public class DatosMuestraInicializer {
         return judokaRepo.save(j);
     }
 
-    // ------------------------------------------------------------------------
-    // Métodos auxiliares para datos relacionados (antropometría, resultados, etc.)
-    // ------------------------------------------------------------------------
-
-    private void registrarAntropometria(Judoka judoka, double peso, double estatura, double cintura, double envergadura) {
-        // Verificar si ya tiene estos registros para evitar duplicados masivos
-        // (simplificamos: no verificamos, pero podríamos hacerlo)
+    private void registrarAntropometria(Judoka judoka, double peso, double estatura,
+                                        double cintura, double envergadura, LocalDateTime fecha) {
         PruebaEstandar prueba = pruebaRepo.findByNombreKey("ejercicio.medicion_antropo.nombre").orElseThrow();
         Metrica mPeso = metricaRepo.findByNombreKey("metrica.masa_corporal.nombre").orElseThrow();
         Metrica mEstatura = metricaRepo.findByNombreKey("metrica.estatura.nombre").orElseThrow();
@@ -298,14 +347,11 @@ public class DatosMuestraInicializer {
         Metrica mEnvergadura = metricaRepo.findByNombreKey("metrica.envergadura.nombre").orElseThrow();
 
         EjercicioPlanificado dummy = obtenerEjercicioDummy(prueba);
-        LocalDateTime ahora = LocalDateTime.now();
-
-        resultadoRepo.save(crearResultado(judoka, dummy, mPeso, peso, ahora));
-        resultadoRepo.save(crearResultado(judoka, dummy, mEstatura, estatura, ahora));
-        resultadoRepo.save(crearResultado(judoka, dummy, mCintura, cintura, ahora));
-        resultadoRepo.save(crearResultado(judoka, dummy, mEnvergadura, envergadura, ahora));
+        resultadoRepo.save(crearResultado(judoka, dummy, mPeso, peso, fecha));
+        resultadoRepo.save(crearResultado(judoka, dummy, mEstatura, estatura, fecha));
+        resultadoRepo.save(crearResultado(judoka, dummy, mCintura, cintura, fecha));
+        resultadoRepo.save(crearResultado(judoka, dummy, mEnvergadura, envergadura, fecha));
     }
-
     private ResultadoPrueba crearResultado(Judoka j, EjercicioPlanificado ej, Metrica m, double valor, LocalDateTime fecha) {
         ResultadoPrueba r = new ResultadoPrueba();
         r.setJudoka(j);
@@ -318,10 +364,8 @@ public class DatosMuestraInicializer {
     }
 
     private EjercicioPlanificado obtenerEjercicioDummy(PruebaEstandar prueba) {
-        // Buscar si ya existe un ejercicio con esa prueba
         return ejercicioRepo.findByPruebaEstandar(prueba).stream().findFirst()
                 .orElseGet(() -> {
-                    // Crear un microciclo dummy si es necesario
                     Microciclo dummy = microcicloRepo.findAll().stream().findFirst()
                             .orElseGet(() -> {
                                 Microciclo m = new Microciclo();
@@ -374,6 +418,7 @@ public class DatosMuestraInicializer {
             }
         }
     }
+
     private void generarEjecucionesTareas(Judoka judoka, Microciclo plan) {
         List<EjercicioPlanificado> ejercicios = plan.getEjerciciosPlanificados().stream()
                 .filter(ej -> ej.getTareaDiaria() != null)
@@ -382,10 +427,10 @@ public class DatosMuestraInicializer {
 
         Random rand = new Random();
         LocalDateTime hoy = LocalDateTime.now().withHour(18).withMinute(0);
-        for (int i = 0; i < 10; i++) { // últimos 10 días
+        for (int i = 0; i < 10; i++) {
             LocalDateTime fecha = hoy.minusDays(i);
             for (EjercicioPlanificado ej : ejercicios) {
-                if (rand.nextDouble() > 0.3) { // 70% de completar
+                if (rand.nextDouble() > 0.3) {
                     EjecucionTarea ejec = new EjecucionTarea();
                     ejec.setJudoka(judoka);
                     ejec.setEjercicioPlanificado(ej);
@@ -398,14 +443,12 @@ public class DatosMuestraInicializer {
     }
 
     private void cargarInsigniasGanadas(Judoka maria, Judoka julian, Sensei sensei) {
-        // María: varias insignias
         asignarLogro(maria, "SHIN_CONSTANCIA", sensei, 60);
         asignarLogro(maria, "SHIN_COMPROMISO", sensei, 30);
         asignarLogro(maria, "GI_CINTURON", sensei, 90);
         asignarLogro(maria, "TAI_HERCULES", sensei, 15);
         asignarLogro(maria, "COMP_ORO", sensei, 45);
 
-        // Julián: solo las básicas
         asignarLogro(julian, "SHIN_INICIO", sensei, 2);
         asignarLogro(julian, "TAI_VELOCIDAD", sensei, 1);
     }
@@ -448,8 +491,8 @@ public class DatosMuestraInicializer {
             }
         }
     }
+
     private void crearBibliotecaTareas(Sensei sensei) {
-        // Verificar si ya existen tareas para este sensei (opcional)
         if (tareaDiariaRepository.count() > 0) return;
 
         System.out.println(">>> Creando biblioteca de tareas para Sensei " + sensei.getUsuario().getNombre());
@@ -466,12 +509,22 @@ public class DatosMuestraInicializer {
         );
         tareaDiariaRepository.saveAll(tareas);
     }
+
+    private void crearMacrociclosParaSensei(Sensei sensei) {
+        Macrociclo macro = new Macrociclo();
+        macro.setNombre("Preparación Juegos Nacionales 2026");
+        macro.setObjetivoPrincipal("Alcanzar el pico de forma en agosto");
+        macro.setFechaInicio(LocalDate.now().minusMonths(2));
+        macro.setFechaFin(LocalDate.now().plusMonths(6));
+        macro.setSensei(sensei);
+        macro = macrocicloRepository.save(macro);
+    }
+
     private void crearMicrociclosParaSensei(Sensei sensei) {
         if (microcicloRepo.count() > 0) return;
 
         System.out.println(">>> Creando microciclos para Sensei " + sensei.getUsuario().getNombre());
 
-        // Buscar un grupo existente (opcional)
         GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores")
                 .orElseGet(() -> {
                     GrupoEntrenamiento g = new GrupoEntrenamiento();
@@ -481,16 +534,16 @@ public class DatosMuestraInicializer {
                     return grupoRepository.save(g);
                 });
 
-        // Microciclo de acondicionamiento
         Microciclo planAcond = new Microciclo();
         planAcond.setNombre("Base de pretemporada");
         planAcond.setSensei(sensei);
+        planAcond.setFechaInicio(LocalDate.now().minusWeeks(1));
+        planAcond.setFechaFin(LocalDate.now().plusWeeks(3));
         planAcond.setEstado(EstadoMicrociclo.ACTIVO);
         planAcond.setTipoMicrociclo(TipoMicrociclo.AJUSTE);
         planAcond.getGruposAsignados().add(grupo);
         planAcond = microcicloRepo.save(planAcond);
 
-        // Asignar ejercicios (tareas diarias)
         List<TareaDiaria> tareas = tareaDiariaRepository.findAll();
         int orden = 1;
         for (TareaDiaria t : tareas) {
@@ -504,7 +557,6 @@ public class DatosMuestraInicializer {
         }
         microcicloRepo.save(planAcond);
 
-        // Microciclo de evaluación (con pruebas)
         Microciclo planEval = new Microciclo();
         planEval.setNombre("Evaluación trimestral");
         planEval.setSensei(sensei);
@@ -513,7 +565,6 @@ public class DatosMuestraInicializer {
         planEval.getGruposAsignados().add(grupo);
         planEval = microcicloRepo.save(planEval);
 
-        // Agregar pruebas (SJFT, salto, etc.)
         List<PruebaEstandar> pruebas = pruebaRepo.findAll();
         orden = 1;
         for (PruebaEstandar p : pruebas) {
@@ -526,5 +577,298 @@ public class DatosMuestraInicializer {
             planEval.addEjercicio(ej);
         }
         microcicloRepo.save(planEval);
+    }
+
+    private void crearMacrociclosConMicros(Sensei sensei, GrupoEntrenamiento grupo, Judoka maria, Judoka julian) {
+        LocalDate hoy = LocalDate.now();
+        YearMonth mesActual = YearMonth.from(hoy);
+        LocalDate inicioMes = mesActual.atDay(1);
+        LocalDate finMes = mesActual.atEndOfMonth();
+
+        // Macrociclo que cubre todo el año
+        Macrociclo macro = new Macrociclo();
+        macro.setNombre("Preparación Juegos Nacionales 2026");
+        macro.setObjetivoPrincipal("Alcanzar el pico de forma en agosto");
+        macro.setFechaInicio(inicioMes.minusMonths(2));
+        macro.setFechaFin(finMes.plusMonths(6));
+        macro.setSensei(sensei);
+        macro = macrocicloRepository.save(macro);
+
+        // Microciclo 1: primera semana del mes
+        crearMicrocicloConTareas(sensei, grupo, macro, maria, julian, "Adquisición Fuerza",
+                inicioMes, inicioMes.plusDays(6),
+                TipoMicrociclo.CORRIENTE, MesocicloATC.ADQUISICION,
+                List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY));
+
+        // Microciclo 2: segunda semana
+        crearMicrocicloConTareas(sensei, grupo, macro, maria, julian, "Adquisición Resistencia",
+                inicioMes.plusDays(7), inicioMes.plusDays(13),
+                TipoMicrociclo.CORRIENTE, MesocicloATC.ADQUISICION,
+                List.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY));
+
+        // Microciclo 3: tercera semana (con tareas autónomas)
+        crearMicrocicloConTareas(sensei, grupo, macro, maria, julian, "Transferencia Técnica",
+                inicioMes.plusDays(14), inicioMes.plusDays(20),
+                TipoMicrociclo.CHOQUE, MesocicloATC.TRANSFERENCIA,
+                List.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY));
+
+        // Microciclo 4: cuarta semana
+        crearMicrocicloConTareas(sensei, grupo, macro, maria, julian, "Pre-Competitivo",
+                inicioMes.plusDays(21), finMes,
+                TipoMicrociclo.AJUSTE, MesocicloATC.COMPETENCIA,
+                List.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY));
+    }
+    private void crearSesionesGPS(Sensei sensei, GrupoEntrenamiento grupo) {
+        LocalDate hoy = LocalDate.now();
+        // Sesión para hoy (si es un día de entrenamiento)
+        SesionProgramada sesion1 = new SesionProgramada();
+        sesion1.setNombre("Entrenamiento Técnico - Parque Norte");
+        sesion1.setGrupo(grupo);
+        sesion1.setSensei(sensei);
+        sesion1.setFechaHoraInicio(hoy.atTime(16, 0));
+        sesion1.setFechaHoraFin(hoy.atTime(17, 30));
+        sesion1.setTipoSesion(TipoSesion.TECNICA);
+        sesion1.setLatitud(6.2716);
+        sesion1.setLongitud(-75.5634);
+        sesion1.setRadioPermitidoMetros(100);
+        sesionService.guardar(sesion1);
+
+        // Sesión para pasado mañana
+        SesionProgramada sesion2 = new SesionProgramada();
+        sesion2.setNombre("Entrenamiento Físico - Estadio");
+        sesion2.setGrupo(grupo);
+        sesion2.setSensei(sensei);
+        sesion2.setFechaHoraInicio(hoy.plusDays(2).atTime(6, 0));
+        sesion2.setFechaHoraFin(hoy.plusDays(2).atTime(7, 30));
+        sesion2.setTipoSesion(TipoSesion.ACONDICIONAMIENTO);
+        sesion2.setLatitud(6.2545);
+        sesion2.setLongitud(-75.5916);
+        sesion2.setRadioPermitidoMetros(150);
+        sesionService.guardar(sesion2);
+
+        // Sesión para la próxima semana
+        SesionProgramada sesion3 = new SesionProgramada();
+        sesion3.setNombre("Randori - Dojo Central");
+        sesion3.setGrupo(grupo);
+        sesion3.setSensei(sensei);
+        sesion3.setFechaHoraInicio(hoy.plusWeeks(1)
+                .with(TemporalAdjusters.nextOrSame(DayOfWeek.WEDNESDAY))
+                .atTime(18, 0));
+        sesion3.setFechaHoraFin(hoy.plusWeeks(1)
+                .with(TemporalAdjusters.nextOrSame(DayOfWeek.WEDNESDAY))
+                .atTime(19, 30));
+        sesion3.setTipoSesion(TipoSesion.RANDORI);
+        sesion3.setLatitud(6.2442);
+        sesion3.setLongitud(-75.5812);
+        sesion3.setRadioPermitidoMetros(100);
+        sesionService.guardar(sesion3);
+    }
+    // ------------------------------------------------------------------------
+    // NUEVOS MÉTODOS PARA DATOS ADICIONALES
+    // ------------------------------------------------------------------------
+
+
+    private void crearMicrocicloConTareas(Sensei sensei, GrupoEntrenamiento grupo, Macrociclo macro,
+                                          Judoka maria, Judoka julian,
+                                          String nombre, LocalDate inicio, LocalDate fin,
+                                          TipoMicrociclo tipo, MesocicloATC meso,
+                                          List<DayOfWeek> diasTarea) {
+        if (inicio == null || fin == null) {
+            throw new IllegalArgumentException("Las fechas de microciclo no pueden ser nulas");
+        }
+        Optional<Microciclo> existente = microcicloRepo.findByNombreAndSensei(nombre, sensei);
+        Microciclo micro;
+        if (existente.isPresent()) {
+            micro = existente.get();
+            micro.setFechaInicio(inicio);
+            micro.setFechaFin(fin);
+            micro.setMacrociclo(macro);
+            micro.setTipoMicrociclo(tipo);
+            micro.setMesocicloATC(meso);
+            micro.getGruposAsignados().clear();
+            micro.getGruposAsignados().add(grupo);
+            micro = microcicloRepo.save(micro);
+        } else {
+            micro = new Microciclo();
+            micro.setNombre(nombre);
+            micro.setSensei(sensei);
+            micro.setEstado(EstadoMicrociclo.ACTIVO);
+            micro.setFechaInicio(inicio);
+            micro.setFechaFin(fin);
+            micro.setTipoMicrociclo(tipo);
+            micro.setMesocicloATC(meso);
+            micro.getGruposAsignados().add(grupo);
+            micro.setMacrociclo(macro);
+            micro = microcicloRepo.save(micro);
+        }
+
+        List<TareaDiaria> tareas = tareaDiariaRepository.findAll();
+        int maxTareas = Math.min(tareas.size(), 8);
+        int orden = 1;
+        for (int i = 0; i < maxTareas; i++) {
+            TareaDiaria t = tareas.get(i);
+            EjercicioPlanificado ej = new EjercicioPlanificado();
+            ej.setMicrociclo(micro);
+            ej.setTareaDiaria(t);
+            ej.setOrden(orden++);
+            ej.setNotasSensei("Realizar con buena técnica");
+            ej.getDiasAsignados().addAll(diasTarea);
+            ej.setDuracionMinutos(15 + i * 5);
+
+            // Diferenciar supervisión y asignación individual
+            if (i % 3 == 0) {
+                ej.setRequiereSupervision(false); // tarea para casa
+                if (i == 0) {
+                    ej.setJudokaAsignado(maria); // solo para María
+                } else if (i == 3) {
+                    ej.setJudokaAsignado(julian); // solo para Julián
+                } else {
+                    ej.setJudokaAsignado(null); // tarea grupal para casa
+                }
+            } else {
+                ej.setRequiereSupervision(true); // tarea supervisada
+                ej.setJudokaAsignado(null);
+            }
+
+            micro.addEjercicio(ej);
+        }
+        microcicloRepo.save(micro);
+    }
+
+    private void generarEjecucionesTareasHistoricas(Judoka maria, Judoka julian) {
+        Random rand = new Random();
+        LocalDate hoy = LocalDate.now();
+        for (int i = 0; i < 60; i++) {
+            LocalDate fecha = hoy.minusDays(i);
+            List<Microciclo> planesMaria = microcicloService.buscarPlanesPorJudoka(maria);
+            List<Microciclo> planesJulian = microcicloService.buscarPlanesPorJudoka(julian);
+
+            generarEjecucionesParaJudokaEnFecha(maria, planesMaria, fecha, rand, 0.8);
+            generarEjecucionesParaJudokaEnFecha(julian, planesJulian, fecha, rand, 0.6);
+        }
+    }
+
+    private void generarEjecucionesParaJudokaEnFecha(Judoka judoka, List<Microciclo> planes, LocalDate fecha, Random rand, double prob) {
+        for (Microciclo plan : planes) {
+            if (plan.getFechaInicio().isAfter(fecha) || plan.getFechaFin().isBefore(fecha)) continue;
+            for (EjercicioPlanificado ej : plan.getEjerciciosPlanificados()) {
+                if (ej.getTareaDiaria() == null) continue;
+                if (!ej.getDiasAsignados().contains(fecha.getDayOfWeek())) continue;
+
+                boolean yaExiste = ejecucionTareaRepository.existsByJudokaAndEjercicioPlanificadoAndFechaRegistroBetween(
+                        judoka, ej, fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay());
+                if (!yaExiste && rand.nextDouble() < prob) {
+                    EjecucionTarea ejec = new EjecucionTarea();
+                    ejec.setJudoka(judoka);
+                    ejec.setEjercicioPlanificado(ej);
+                    ejec.setCompletado(true);
+                    ejec.setFechaRegistro(fecha.atTime(18, 0).plusMinutes(rand.nextInt(60)));
+                    ejec.setLatitud(6.2442 + (rand.nextDouble() - 0.5) * 0.1);
+                    ejec.setLongitud(-75.5812 + (rand.nextDouble() - 0.5) * 0.1);
+                    ejecucionTareaRepository.save(ejec);
+                }
+            }
+        }
+    }
+
+    private void generarResultadosPruebasAdicionales(Judoka maria, Judoka julian) {
+        List<PruebaEstandar> pruebas = pruebaRepo.findAll();
+        LocalDate hoy = LocalDate.now();
+        for (int i = 0; i < 12; i++) {
+            LocalDate fecha = hoy.minusDays(i * 14);
+            for (PruebaEstandar prueba : pruebas) {
+                Metrica metrica = prueba.getMetricas().stream().findFirst().orElse(null);
+                if (metrica == null) continue;
+                generarResultadoParaJudoka(maria, prueba, metrica, fecha, 0.9, 1.1);
+                generarResultadoParaJudoka(julian, prueba, metrica, fecha, 0.7, 0.9);
+            }
+        }
+    }
+
+    private void generarResultadoParaJudoka(Judoka judoka, PruebaEstandar prueba, Metrica metrica, LocalDate fecha, double minFactor, double maxFactor) {
+        double valorBase = obtenerValorBaseParaPrueba(prueba.getNombreKey(), judoka);
+        double variacion = (Math.random() * (maxFactor - minFactor) + minFactor);
+        double valor = valorBase * variacion;
+
+        EjercicioPlanificado dummy = obtenerEjercicioDummy(prueba);
+        ResultadoPrueba resultado = new ResultadoPrueba();
+        resultado.setJudoka(judoka);
+        resultado.setEjercicioPlanificado(dummy);
+        resultado.setMetrica(metrica);
+        resultado.setValor(valor);
+        resultado.setFechaRegistro(fecha.atTime(12, 0));
+        resultado.setNumeroIntento(1);
+        resultadoRepo.save(resultado);
+    }
+
+    private double obtenerValorBaseParaPrueba(String nombreKey, Judoka judoka) {
+        Map<String, Double> valoresMaria = Map.of(
+                "ejercicio.salto_horizontal_proesp.nombre", 210.0,
+                "ejercicio.lanzamiento_balon.nombre", 450.0,
+                "ejercicio.abdominales_1min.nombre", 45.0,
+                "ejercicio.carrera_6min.nombre", 1400.0,
+                "ejercicio.agilidad_4x4.nombre", 5.4,
+                "ejercicio.carrera_20m.nombre", 3.1,
+                "ejercicio.sjft.nombre", 10.5
+        );
+        Map<String, Double> valoresJulian = Map.of(
+                "ejercicio.salto_horizontal_proesp.nombre", 120.0,
+                "ejercicio.lanzamiento_balon.nombre", 200.0,
+                "ejercicio.abdominales_1min.nombre", 20.0,
+                "ejercicio.carrera_6min.nombre", 800.0,
+                "ejercicio.agilidad_4x4.nombre", 7.5,
+                "ejercicio.carrera_20m.nombre", 4.5,
+                "ejercicio.sjft.nombre", 18.0
+        );
+        if (judoka.getNombre().equals("María")) {
+            return valoresMaria.getOrDefault(nombreKey, 100.0);
+        } else {
+            return valoresJulian.getOrDefault(nombreKey, 50.0);
+        }
+    }
+
+    private void crearSesionesAdicionales(Sensei sensei, GrupoEntrenamiento grupo) {
+        LocalDate hoy = LocalDate.now();
+        for (int i = -3; i <= 3; i++) {
+            LocalDate fechaBase = hoy.plusMonths(i).withDayOfMonth(15);
+            for (int w = 0; w < 4; w++) {
+                LocalDate fecha = fechaBase.plusWeeks(w);
+                if (fecha.getMonth() != fechaBase.getMonth()) continue;
+                SesionProgramada sesion = new SesionProgramada();
+                sesion.setNombre("Entrenamiento " + (i < 0 ? "Histórico" : "Planificado") + " - Semana " + (w+1));
+                sesion.setGrupo(grupo);
+                sesion.setSensei(sensei);
+                sesion.setFechaHoraInicio(fecha.atTime(16, 0));
+                sesion.setFechaHoraFin(fecha.atTime(17, 30));
+                sesion.setTipoSesion(TipoSesion.TECNICA);
+                sesion.setLatitud(6.2442 + (Math.random() - 0.5) * 0.1);
+                sesion.setLongitud(-75.5812 + (Math.random() - 0.5) * 0.1);
+                sesion.setRadioPermitidoMetros(100);
+                sesionService.guardar(sesion);
+            }
+        }
+    }
+    private void generarAntropometriaHistorica(Judoka maria, Judoka julian) {
+        LocalDateTime hoy = LocalDateTime.now();
+        // Generar mediciones cada mes durante los últimos 6 meses
+        for (int i = 0; i < 6; i++) {
+            LocalDateTime fecha = hoy.minusMonths(i).withDayOfMonth(15).withHour(10).withMinute(0);
+
+            // Valores para María (crecimiento progresivo)
+            double pesoMaria = 55.0 + i * 0.4; // de 55.0 a 57.0 kg
+            double estaturaMaria = 158.0 + i * 0.4; // de 158 a 160 cm
+            double cinturaMaria = 66.0 + i * 0.3;
+            double envergaduraMaria = 162.0 + i * 0.5;
+
+            registrarAntropometria(maria, pesoMaria, estaturaMaria, cinturaMaria, envergaduraMaria, fecha);
+
+            // Valores para Julián (crecimiento más rápido por ser niño)
+            double pesoJulian = 32.0 + i * 0.5; // de 32 a 34 kg
+            double estaturaJulian = 135.0 + i * 0.6; // de 135 a 138 cm
+            double cinturaJulian = 58.0 + i * 0.4;
+            double envergaduraJulian = 132.0 + i * 0.6;
+
+            registrarAntropometria(julian, pesoJulian, estaturaJulian, cinturaJulian, envergaduraJulian, fecha);
+        }
     }
 }

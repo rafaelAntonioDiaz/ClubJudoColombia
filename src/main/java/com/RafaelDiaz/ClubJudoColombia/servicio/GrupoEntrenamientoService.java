@@ -2,12 +2,14 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka; // <-- IMPORTANTE
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.GrupoEntrenamientoRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.MicrocicloRepository;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -203,6 +205,18 @@ public class GrupoEntrenamientoService {
     @Transactional(readOnly = true)
     public List<GrupoEntrenamiento> findAllBySenseiId(Long senseiId) {
         return grupoRepository.findBySenseiId(senseiId, PageRequest.of(0, Integer.MAX_VALUE)).getContent();
+    }
+    @Transactional(readOnly = true)
+    public List<GrupoEntrenamiento> findBySensei(Sensei sensei) {
+        return grupoRepository.findBySenseiId(sensei.getId(), PageRequest.of(0, Integer.MAX_VALUE)).getContent();
+    }
+
+    @Transactional(readOnly = true)
+    public GrupoEntrenamiento obtenerGrupoConJudokas(Long grupoId) {
+        GrupoEntrenamiento grupo = grupoRepository.findById(grupoId)
+                .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
+        Hibernate.initialize(grupo.getJudokas()); // Forzar carga de la colección LAZY
+        return grupo;
     }
 
 }

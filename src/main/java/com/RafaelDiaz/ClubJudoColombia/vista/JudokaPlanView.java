@@ -34,7 +34,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("mis-planes")
 @RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR", "ROLE_ACUDIENTE"})
-@PageTitle("Mis Tareas | Club Judo Colombia")
+@PageTitle("Microciclos | Club Judo Colombia")
 @CssImport("./styles/plan-judoka.css")
 public class JudokaPlanView extends JudokaLayout {
 
@@ -141,16 +141,17 @@ public class JudokaPlanView extends JudokaLayout {
     private void cargarTareasDelPlan() {
         tareasContainer.removeAll();
         barraProgreso.setValue(0);
-        // i18n: Reset con texto traducido
         textoProgreso.setText(traduccionService.get("lbl.progreso.cero"));
 
         if (planSeleccionado == null) return;
 
-        // Filtramos tareas del día actual
         DayOfWeek hoy = LocalDate.now().getDayOfWeek();
 
         List<EjercicioPlanificado> tareasHoy = planSeleccionado.getEjerciciosPlanificados().stream()
-                .filter(ep -> ep.getTareaDiaria() != null && ep.getDiasAsignados().contains(hoy))
+                .filter(ep -> ep.getTareaDiaria() != null
+                        && ep.getDiasAsignados().contains(hoy)
+                        && !ep.isRequiereSupervision() // Solo autónomas
+                        && (ep.getJudokaAsignado() == null || ep.getJudokaAsignado().equals(judokaActual))) // Individuales o grupales
                 .collect(Collectors.toList());
 
         if (tareasHoy.isEmpty()) {
@@ -162,11 +163,8 @@ public class JudokaPlanView extends JudokaLayout {
         int tareasCompletadas = 0;
 
         for (EjercicioPlanificado tarea : tareasHoy) {
-            // Verificar si ya se hizo hoy
             boolean completada = verificarSiCompletadaHoy(tarea);
             if (completada) tareasCompletadas++;
-
-            // Crear y añadir la tarjeta
             tareasContainer.add(crearTarjetaTarea(tarea, completada));
         }
 

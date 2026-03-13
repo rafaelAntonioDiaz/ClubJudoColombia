@@ -6,7 +6,6 @@
     margin-bottom: 20px;
 }
 
-/* Cabecera (Mes y Botones) */
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -21,14 +20,12 @@
     text-transform: capitalize;
 }
 
-/* Grid de Días */
 .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 días */
+    grid-template-columns: repeat(7, 1fr);
     gap: 8px;
 }
 
-/* Nombres de días (L M M J V S D) */
 .day-name {
     text-align: center;
     font-weight: 700;
@@ -37,9 +34,8 @@
     padding-bottom: 5px;
 }
 
-/* Celda de Día */
 .day-cell {
-    aspect-ratio: 1 / 1; /* Cuadrado perfecto */
+    aspect-ratio: 1 / 1;
     border-radius: 12px;
     background-color: var(--judo-gris-fondo);
     display: flex;
@@ -63,47 +59,54 @@
     background-color: #eceff1;
 }
 
-/* Puntos de Eventos */
-.event-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-top: 4px;
-    cursor: pointer;
-}
-
-.event-dot.futura { background-color: var(--judo-coral); }
-.event-dot.asistio { background-color: var(--judo-success); }
-.event-dot.falto { background-color: var(--judo-gris-texto); opacity: 0.5; }
-
-/* Contenedor de puntos (si hay varios eventos en un día) */
-.events-wrapper {
+.day-indicators {
     display: flex;
     gap: 3px;
     flex-wrap: wrap;
     justify-content: center;
     margin-top: 4px;
 }
-/* ... estilos anteriores ... */
 
-/* Días Festivos */
-.day-cell.holiday {
-    background-color: #FFFDE7; /* Amarillo muy pálido (Crema) */
-    color: var(--judo-navy);
+/* --- PUNTOS DE EVENTOS --- */
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-block;
 }
 
-/* Indicador de Festivo (Estrellita o Icono) */
+/* Colores por tipo */
+
+.event-dot.tarea_individual { background-color: #FB8C00; } /* naranja */
+
+.event-dot.prueba { background-color: #8E24AA; } /* morado */
+
+.event-dot.sesion_grupal { background-color: #1E88E5; } /* azul */
+
+/* Colores por estado (pueden combinar) */
+.event-dot.pendiente { opacity: 0.8; }
+
+.event-dot.completada { background-color: #43A047; } /* verde (sobrescribe) */
+
+.event-dot.programada { background-color: #FDD835; } /* amarillo */
+
+.event-dot.en_curso { background-color: #E53935; } /* rojo */
+
+.event-dot.pasada { opacity: 0.5; }
+
+/* Días festivos */
+.day-cell.holiday {
+    background-color: #FFFDE7;
+}
 .holiday-indicator {
     position: absolute;
     top: 2px;
     right: 4px;
     font-size: 0.7rem;
-    color: #FBC02D; /* Oro */
-    cursor: help;
+    color: #FBC02D;
+}
+.day-cell.today.holiday {
+    background-color: #FFF3E0;
 }
 
-/* Ajuste para que el "Hoy" siga destacando sobre el festivo */
-.day-cell.today.holiday {
-    background-color: #FFF3E0; /* Mezcla entre rojo de hoy y amarillo festivo */
-    border-color: var(--judo-coral);
-}

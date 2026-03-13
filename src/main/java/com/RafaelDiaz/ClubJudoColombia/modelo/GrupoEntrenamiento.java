@@ -32,6 +32,14 @@ public class GrupoEntrenamiento implements Serializable {
     @Column(name = "lugar_practica", length = 150)
     private String lugarPractica;
 
+    @Column(name = "latitud")
+    private Double latitud;
+
+    @Column(name = "longitud")
+    private Double longitud;
+
+    @Column(name = "radio_permitido_metros")
+    private Integer radioPermitidoMetros = 100;
     @Column(name = "hora_inicio")
     private LocalTime horaInicio;
 
@@ -61,14 +69,6 @@ public class GrupoEntrenamiento implements Serializable {
             inverseJoinColumns = @JoinColumn(name = "id_judoka")
     )
     private Set<Judoka> judokas = new HashSet<>();
-
-    public Set<DayOfWeek> getDiasSemana() {
-        return diasSemana;
-    }
-
-    public void setDiasSemana(Set<DayOfWeek> diasSemana) {
-        this.diasSemana = diasSemana;
-    }
 
 
     @ManyToMany(mappedBy = "gruposAsignados", fetch = FetchType.LAZY)
@@ -114,6 +114,47 @@ public class GrupoEntrenamiento implements Serializable {
     public void setJudokas(Set<Judoka> judokas) { this.judokas = judokas; }
    public Sensei getSensei() { return sensei; }
     public void setSensei(Sensei sensei) { this.sensei = sensei; }
+
+    public Set<DayOfWeek> getDiasSemana() {
+        return diasSemana;
+    }
+
+    public void setDiasSemana(Set<DayOfWeek> diasSemana) {
+        this.diasSemana = diasSemana;
+    }
+
+    public Double getLatitud() {
+        return latitud;
+    }
+
+    public void setLatitud(Double latitud) {
+        this.latitud = latitud;
+    }
+
+    public Double getLongitud() {
+        return longitud;
+    }
+
+    public void setLongitud(Double longitud) {
+        this.longitud = longitud;
+    }
+
+    public Integer getRadioPermitidoMetros() {
+        return radioPermitidoMetros;
+    }
+
+    public void setRadioPermitidoMetros(Integer radioPermitidoMetros) {
+        this.radioPermitidoMetros = radioPermitidoMetros;
+    }
+
+    public Set<Microciclo> getMicrociclosAsignados() {
+        return microciclosAsignados;
+    }
+
+    public void setMicrociclosAsignados(Set<Microciclo> microciclosAsignados) {
+        this.microciclosAsignados = microciclosAsignados;
+    }
+
     // --- hashCode y equals ---
     @Override
     public int hashCode() {

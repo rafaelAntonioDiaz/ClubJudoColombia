@@ -1,19 +1,21 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
+import com.RafaelDiaz.ClubJudoColombia.dto.ItemCalendario;
 import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
+import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.SesionProgramada;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoItem;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoSesion;
-import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService; // <--- INYECCIÓN
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
+import com.RafaelDiaz.ClubJudoColombia.vista.component.JudokaCalendar;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -31,7 +33,9 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.format.DateTimeFormatter;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 
 @Route(value = "agenda", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_SENSEI")
@@ -40,85 +44,144 @@ public class SenseiAgendaView extends VerticalLayout {
 
     private final SesionService sesionService;
     private final GrupoEntrenamientoService grupoService;
+    private final JudokaService judokaService;
     private final SecurityService securityService;
-    private final TraduccionService traduccionService; // <--- I18n
+    private final TraduccionService traduccionService;
+    public final CalendarioUnificadoService calendarioService;
 
-    private Grid<SesionProgramada> gridSesiones;
+    private ComboBox<GrupoEntrenamiento> grupoSelector;
+    private ComboBox<Judoka> judokaSelector;
+    private Checkbox mostrarTareasIndividuales;
+    private JudokaCalendar calendario;
+    private YearMonth currentMonth = YearMonth.now();
+
+    private Sensei senseiActual;
 
     @Autowired
     public SenseiAgendaView(SesionService sesionService,
                             GrupoEntrenamientoService grupoService,
+                            JudokaService judokaService,
                             SecurityService securityService,
-                            TraduccionService traduccionService) {
+                            TraduccionService traduccionService,
+                            CalendarioUnificadoService calendarioService) {
         this.sesionService = sesionService;
         this.grupoService = grupoService;
+        this.judokaService = judokaService;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
+        this.calendarioService = calendarioService;
 
         setSizeFull();
         setPadding(true);
         setSpacing(true);
 
+        senseiActual = securityService.getAuthenticatedSensei()
+                .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));
+
+        buildHeader();
+        buildFiltros();
+        buildCalendario();
+        actualizarVista();
+    }
+
+    private void buildHeader() {
         HorizontalLayout header = new HorizontalLayout();
         header.setWidthFull();
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
 
         H2 titulo = new H2(traduccionService.get("agenda.titulo"));
-        Button btnNueva = new Button(traduccionService.get("agenda.btn.nueva"), new Icon(VaadinIcon.PLUS));
-        btnNueva.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        btnNueva.addClickListener(e -> abrirDialogoSesion(new SesionProgramada()));
+        Button btnNuevaSesion = new Button(traduccionService.get("agenda.btn.nueva"), new Icon(VaadinIcon.PLUS));
+        btnNuevaSesion.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        btnNuevaSesion.addClickListener(e -> abrirDialogoSesion(new SesionProgramada()));
 
-        header.add(titulo, btnNueva);
-
-        gridSesiones = new Grid<>(SesionProgramada.class, false);
-        gridSesiones.setSizeFull();
-        configureGrid();
-        actualizarGrid();
-
-        add(header, gridSesiones);
+        header.add(titulo, btnNuevaSesion);
+        add(header);
     }
 
-    private void configureGrid() {
-        gridSesiones.addColumn(SesionProgramada::getNombre)
-                .setHeader(traduccionService.get("agenda.grid.sesion")).setAutoWidth(true);
+    private void buildFiltros() {
+        HorizontalLayout filtros = new HorizontalLayout();
+        filtros.setWidthFull();
+        filtros.setAlignItems(FlexComponent.Alignment.END);
+        filtros.setSpacing(true);
 
-        gridSesiones.addColumn(s -> s.getGrupo() != null ? s.getGrupo().getNombre() : "-")
-                .setHeader(traduccionService.get("generic.grupo")).setAutoWidth(true);
-
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM HH:mm");
-        gridSesiones.addColumn(s -> s.getFechaHoraInicio().format(fmt) + " - " + s.getFechaHoraFin().format(DateTimeFormatter.ofPattern("HH:mm")))
-                .setHeader(traduccionService.get("generic.horario")).setAutoWidth(true);
-
-        gridSesiones.addComponentColumn(s -> {
-            if (s.getLatitud() != null && s.getLongitud() != null) {
-                Icon gpsIcon = VaadinIcon.MAP_MARKER.create();
-                gpsIcon.setColor("green");
-                gpsIcon.setTooltipText(traduccionService.get("agenda.tooltip.gps_activo") + ": " + s.getLatitud() + ", " + s.getLongitud());
-                return gpsIcon;
+        grupoSelector = new ComboBox<>(traduccionService.get("generic.grupo"));
+        grupoSelector.setItems(grupoService.findBySensei(senseiActual));
+        grupoSelector.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
+        grupoSelector.setClearButtonVisible(true);
+        grupoSelector.addValueChangeListener(e -> {
+            if (e.getValue() != null) {
+                // Cargar el grupo completo con judokas dentro de una transacción
+                GrupoEntrenamiento grupoCompleto = grupoService.obtenerGrupoConJudokas(e.getValue().getId());
+                judokaSelector.setItems(grupoCompleto.getJudokas());
             } else {
-                Icon gpsIcon = VaadinIcon.MAP_MARKER.create();
-                gpsIcon.setColor("gray");
-                gpsIcon.setTooltipText(traduccionService.get("agenda.tooltip.sin_gps"));
-                return gpsIcon;
+                judokaSelector.setItems(List.of());
             }
-        }).setHeader("GPS");
-
-        gridSesiones.addComponentColumn(s -> {
-            Button edit = new Button(new Icon(VaadinIcon.EDIT));
-            edit.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
-            edit.addClickListener(e -> abrirDialogoSesion(s));
-            return edit;
+            judokaSelector.clear();
+            actualizarVista();
         });
+
+        judokaSelector = new ComboBox<>(traduccionService.get("generic.judoka"));
+        judokaSelector.setItemLabelGenerator(j -> j.getNombre() + " " + j.getApellido());
+        judokaSelector.setClearButtonVisible(true);
+        judokaSelector.addValueChangeListener(e -> actualizarVista());
+
+        mostrarTareasIndividuales = new Checkbox(traduccionService.get("agenda.mostrar.tareas"));
+        mostrarTareasIndividuales.setValue(true);
+        mostrarTareasIndividuales.addValueChangeListener(e -> actualizarVista());
+
+        filtros.add(grupoSelector, judokaSelector, mostrarTareasIndividuales);
+        add(filtros);
     }
 
-    private void actualizarGrid() {
-        gridSesiones.setItems(sesionService.findAll());
+    private void buildCalendario() {
+        calendario = new JudokaCalendar(calendarioService, traduccionService);
+        calendario.setWidthFull();
+
+        HorizontalLayout nav = new HorizontalLayout();
+        Button prev = new Button(new Icon(VaadinIcon.CHEVRON_LEFT), e -> {
+            currentMonth = currentMonth.minusMonths(1);
+            actualizarVista();
+        });
+        Button next = new Button(new Icon(VaadinIcon.CHEVRON_RIGHT), e -> {
+            currentMonth = currentMonth.plusMonths(1);
+            actualizarVista();
+        });
+        nav.add(prev, next);
+        add(nav, calendario);
     }
 
+    private void actualizarVista() {
+        List<ItemCalendario> items = new ArrayList<>();
+
+        if (judokaSelector.getValue() != null) {
+            // Usar el ID del judoka
+            items = calendarioService.obtenerItemsPorJudokaYMes(judokaSelector.getValue().getId(), currentMonth);
+        } else if (grupoSelector.getValue() != null) {
+            GrupoEntrenamiento grupo = grupoSelector.getValue();
+            if (mostrarTareasIndividuales.getValue()) {
+                // Cargar grupo completo con judokas para evitar LazyInitializationException
+                GrupoEntrenamiento grupoCompleto = grupoService.obtenerGrupoConJudokas(grupo.getId());
+                items.addAll(calendarioService.obtenerItemsPorGrupoYMes(grupoCompleto, currentMonth)); // sesiones
+                for (Judoka j : grupoCompleto.getJudokas()) {
+                    items.addAll(calendarioService.obtenerItemsPorJudokaYMes(j.getId(), currentMonth).stream()
+                            .filter(item -> item.getTipo() == TipoItem.TAREA_INDIVIDUAL)
+                            .toList());
+                }
+            } else {
+                items = calendarioService.obtenerItemsPorGrupoYMes(grupo, currentMonth);
+            }
+        } else {
+            items = calendarioService.obtenerItemsPorSenseiYMes(senseiActual, currentMonth);
+        }
+
+        calendario.mostrarMes(currentMonth, items);
+    }
     private void abrirDialogoSesion(SesionProgramada sesion) {
         Dialog dialog = new Dialog();
-        dialog.setHeaderTitle(sesion.getId() == null ? traduccionService.get("agenda.dialog.programar") : traduccionService.get("agenda.dialog.editar"));
+        dialog.setHeaderTitle(sesion.getId() == null ?
+                traduccionService.get("agenda.dialog.programar") :
+                traduccionService.get("agenda.dialog.editar"));
 
         VerticalLayout form = new VerticalLayout();
 
@@ -127,7 +190,7 @@ public class SenseiAgendaView extends VerticalLayout {
         nombre.setWidthFull();
 
         ComboBox<GrupoEntrenamiento> grupoSelect = new ComboBox<>(traduccionService.get("generic.grupo"));
-        grupoSelect.setItems(grupoService.findAll(0, 100, ""));
+        grupoSelect.setItems(grupoService.findBySensei(senseiActual));
         grupoSelect.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
         if (sesion.getGrupo() != null) grupoSelect.setValue(sesion.getGrupo());
         grupoSelect.setWidthFull();
@@ -135,8 +198,7 @@ public class SenseiAgendaView extends VerticalLayout {
         Select<TipoSesion> tipoSelect = new Select<>();
         tipoSelect.setLabel(traduccionService.get("generic.tipo"));
         tipoSelect.setItems(TipoSesion.values());
-        if (sesion.getTipoSesion() != null) tipoSelect.setValue(sesion.getTipoSesion());
-        else tipoSelect.setValue(TipoSesion.TECNICA);
+        tipoSelect.setValue(sesion.getTipoSesion() != null ? sesion.getTipoSesion() : TipoSesion.TECNICA);
         tipoSelect.setWidthFull();
 
         DateTimePicker inicio = new DateTimePicker(traduccionService.get("generic.inicio"));
@@ -147,29 +209,87 @@ public class SenseiAgendaView extends VerticalLayout {
         if (sesion.getFechaHoraFin() != null) fin.setValue(sesion.getFechaHoraFin());
         fin.setWidthFull();
 
-        H2 tituloGps = new H2(traduccionService.get("agenda.section.gps"));
-        tituloGps.getStyle().set("font-size", "1rem").set("margin-top", "1em");
+        // --- NUEVO: Checkbox para usar ubicación del grupo ---
+        Checkbox usarUbicacionGrupo = new Checkbox("Usar ubicación del grupo");
+        usarUbicacionGrupo.setValue(true);
+        usarUbicacionGrupo.setVisible(false); // Se muestra solo si el grupo seleccionado tiene ubicación
 
         NumberField lat = new NumberField(traduccionService.get("agenda.field.latitud"));
-        if (sesion.getLatitud() != null) lat.setValue(sesion.getLatitud());
+        lat.setStep(0.000001);
         lat.setPlaceholder("Ej: 4.7110");
+        lat.setMin(-90);
+        lat.setMax(90);
 
         NumberField lon = new NumberField(traduccionService.get("agenda.field.longitud"));
-        if (sesion.getLongitud() != null) lon.setValue(sesion.getLongitud());
+        lon.setStep(0.000001);
         lon.setPlaceholder("Ej: -74.0721");
-
-        HorizontalLayout gpsRow = new HorizontalLayout(lat, lon);
-        gpsRow.setWidthFull();
+        lon.setMin(-180);
+        lon.setMax(180);
 
         IntegerField radio = new IntegerField(traduccionService.get("agenda.field.radio"));
-        radio.setValue(sesion.getRadioPermitidoMetros() != null ? sesion.getRadioPermitidoMetros() : 100);
         radio.setStepButtonsVisible(true);
         radio.setMin(10);
         radio.setMax(1000);
 
+        // Si la sesión ya tiene valores, precargarlos y desactivar el checkbox
+        if (sesion.getLatitud() != null) {
+            lat.setValue(sesion.getLatitud());
+            lon.setValue(sesion.getLongitud());
+            radio.setValue(sesion.getRadioPermitidoMetros() != null ? sesion.getRadioPermitidoMetros() : 100);
+            usarUbicacionGrupo.setVisible(false);
+            usarUbicacionGrupo.setValue(false);
+            lat.setEnabled(true);
+            lon.setEnabled(true);
+            radio.setEnabled(true);
+        }
+
+        // Cuando cambia el grupo, actualizar campos GPS si el grupo tiene ubicación
+        grupoSelect.addValueChangeListener(e -> {
+            GrupoEntrenamiento grupo = e.getValue();
+            if (grupo != null && grupo.getLatitud() != null && grupo.getLongitud() != null) {
+                usarUbicacionGrupo.setVisible(true);
+                if (usarUbicacionGrupo.getValue()) {
+                    lat.setValue(grupo.getLatitud());
+                    lon.setValue(grupo.getLongitud());
+                    radio.setValue(grupo.getRadioPermitidoMetros() != null ?
+                            grupo.getRadioPermitidoMetros() : 100);
+                    lat.setEnabled(false);
+                    lon.setEnabled(false);
+                    radio.setEnabled(false);
+                }
+            } else {
+                usarUbicacionGrupo.setVisible(false);
+            }
+        });
+
+        usarUbicacionGrupo.addValueChangeListener(e -> {
+            GrupoEntrenamiento grupo = grupoSelect.getValue();
+            if (grupo != null && grupo.getLatitud() != null && grupo.getLongitud() != null && e.getValue()) {
+                lat.setValue(grupo.getLatitud());
+                lon.setValue(grupo.getLongitud());
+                radio.setValue(grupo.getRadioPermitidoMetros() != null ?
+                        grupo.getRadioPermitidoMetros() : 100);
+                lat.setEnabled(false);
+                lon.setEnabled(false);
+                radio.setEnabled(false);
+            } else {
+                // Habilitar edición manual
+                lat.setEnabled(true);
+                lon.setEnabled(true);
+                radio.setEnabled(true);
+            }
+        });
+
+        H2 tituloGps = new H2(traduccionService.get("agenda.section.gps"));
+        tituloGps.getStyle().set("font-size", "1rem").set("margin-top", "1em");
+
+        HorizontalLayout gpsRow = new HorizontalLayout(lat, lon);
+        gpsRow.setWidthFull();
+
         Button btnGuardar = new Button(traduccionService.get("btn.guardar"), e -> {
             if (grupoSelect.getValue() == null || inicio.getValue() == null || fin.getValue() == null) {
-                Notification.show(traduccionService.get("error.campos_obligatorios")).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                Notification.show(traduccionService.get("error.campos_obligatorios"))
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
 
@@ -181,19 +301,18 @@ public class SenseiAgendaView extends VerticalLayout {
             sesion.setLatitud(lat.getValue());
             sesion.setLongitud(lon.getValue());
             sesion.setRadioPermitidoMetros(radio.getValue());
-
-            securityService.getAuthenticatedSensei().ifPresent(sesion::setSensei);
+            sesion.setSensei(senseiActual);
 
             sesionService.guardar(sesion);
-
-            actualizarGrid();
+            actualizarVista();
             dialog.close();
-            Notification.show(traduccionService.get("msg.success.saved")).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            Notification.show(traduccionService.get("msg.success.saved"))
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         });
         btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnGuardar.setWidthFull();
 
-        form.add(nombre, grupoSelect, tipoSelect, inicio, fin, tituloGps, gpsRow, radio, btnGuardar);
+        form.add(nombre, grupoSelect, tipoSelect, inicio, fin, usarUbicacionGrupo, tituloGps, gpsRow, radio, btnGuardar);
         dialog.add(form);
         dialog.open();
     }

@@ -83,19 +83,19 @@ public class JudokaLayout extends AppLayout {
         DrawerToggle toggle = new DrawerToggle();
         toggle.getElement().setAttribute("aria-label", "Menú");
 
-        // 1. Título App (Ahora sí encontrará la clave 'app.nombre')
+        // 1. Título App
         H2 tituloApp = new H2(traduccionService.get("app.nombre"));
         tituloApp.addClassName("app-title");
 
-        // Datos del Usuario
-        String nombreCompleto = securityService.getAuthenticatedJudoka()
-                .map(j -> j.getNombre() + " " + j.getApellido())
+        // Obtener judoka actual
+        Optional<Judoka> judokaOpt = obtenerJudokaActual();
+        String nombreCompleto = judokaOpt.map(j -> j.getNombre() + " " + j.getApellido())
                 .orElse("Judoka");
+        System.out.println(">>> URL recuperada: " + judokaOpt.map(Judoka::getUrlFotoPerfil).orElse("null"));
+        String urlFoto = judokaOpt.map(Judoka::getUrlFotoPerfil).orElse(null);
 
-        // 2. SALUDO PERSONALIZADO (Corregido)
-        // Usamos el método sobrecargado que añadimos al servicio
-        Span saludo = new Span(traduccionService.
-                get("dashboard.welcome", nombreCompleto));
+        // 2. Saludo personalizado
+        Span saludo = new Span(traduccionService.get("dashboard.welcome", nombreCompleto));
         saludo.addClassName("layout-welcome-text");
         saludo.getStyle()
                 .set("font-size", "0.9rem")
@@ -103,33 +103,34 @@ public class JudokaLayout extends AppLayout {
                 .set("font-weight", "500")
                 .set("color", "var(--lumo-secondary-text-color)");
 
-        // Avatar
+        // 3. Avatar con foto (si existe)
         Avatar avatar = new Avatar();
         avatar.setName(nombreCompleto);
+        if (urlFoto != null && !urlFoto.isEmpty()) {
+            avatar.setImage(urlFoto);
+        } else {
+            avatar.setName(nombreCompleto); // iniciales
+        }
         avatar.setColorIndex(nombreCompleto.hashCode() % 10);
         avatar.addClassName("judoka-avatar");
 
+        // 4. Menú de usuario (desplegable)
         MenuBar menuUsuario = new MenuBar();
         menuUsuario.addClassName("user-menu");
         var menuItem = menuUsuario.addItem(avatar);
         var subMenu = menuItem.getSubMenu();
 
         subMenu.addItem(traduccionService.get("menu.mi.perfil"),
-                e -> getUI().ifPresent(
-                        ui -> ui.navigate("perfil-judoka")));
+                e -> getUI().ifPresent(ui -> ui.navigate("perfil-judoka")));
 
         subMenu.addItem(traduccionService.get("btn.cerrar.sesion"), e -> logout());
 
-        // Agregamos el saludo al layout: [Toggle] [Título] .... [Saludo] [Avatar]
+        // 5. Barra de navegación
         HorizontalLayout navbar = new HorizontalLayout(toggle, tituloApp, saludo, new IdiomaSelector(), menuUsuario);
         navbar.setWidthFull();
         navbar.setAlignItems(FlexComponent.Alignment.CENTER);
         navbar.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
-
-        // Empujamos el título para que ocupe el espacio y mande el resto a la derecha
-        // Pero ojo: si expandimos tituloApp, 'saludo' se irá a la derecha junto con el avatar
         navbar.expand(tituloApp);
-
         navbar.addClassName("judoka-navbar");
 
         addToNavbar(navbar);

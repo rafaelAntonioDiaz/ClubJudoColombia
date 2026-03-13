@@ -105,6 +105,21 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
             return count;
         })).setHeader(traduccionService.get("grupos.grid.miembros")).setAutoWidth(true);
 
+        gruposGrid.addComponentColumn(grupo -> {
+            if (grupo.getLatitud() != null && grupo.getLongitud() != null) {
+                Icon gpsIcon = VaadinIcon.MAP_MARKER.create();
+                gpsIcon.setColor("green");
+                gpsIcon.setTooltipText("GPS: " + grupo.getLatitud() + ", " + grupo.getLongitud() +
+                        " (radio " + grupo.getRadioPermitidoMetros() + "m)");
+                return gpsIcon;
+            } else {
+                Icon gpsIcon = VaadinIcon.MAP_MARKER.create();
+                gpsIcon.setColor("gray");
+                gpsIcon.setTooltipText("Sin ubicación configurada");
+                return gpsIcon;
+            }
+        }).setHeader("GPS").setAutoWidth(true);
+
         gruposGrid.addComponentColumn(this::crearAccionesColumna)
                 .setHeader(traduccionService.get("generic.acciones"))
                 .setAutoWidth(true).setFlexGrow(0);

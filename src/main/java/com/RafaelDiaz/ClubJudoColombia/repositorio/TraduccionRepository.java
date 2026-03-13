@@ -17,4 +17,5 @@ public interface TraduccionRepository extends JpaRepository<Traduccion, Long> {
     // Permite buscar "sabiduria.suntzu%" para obtener todas las de ese autor
     @Query("SELECT t FROM Traduccion t WHERE t.clave LIKE CONCAT(:prefix, '%') AND t.idioma = :idioma")
     List<Traduccion> findByClaveStartingWithAndIdioma(@Param("prefix") String prefix, @Param("idioma") String idioma);
+    List<Traduccion> findByClave(String clave);
 }

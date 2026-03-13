@@ -84,4 +84,14 @@ public interface SesionProgramadaRepository extends JpaRepository<SesionPrograma
             "LEFT JOIN FETCH s.sensei " +
             "ORDER BY s.fechaHoraInicio DESC")
     List<SesionProgramada> findAllWithDetails();
+    List<SesionProgramada> findByGrupoInAndFechaHoraInicioBetween(
+            Collection<GrupoEntrenamiento> grupos,
+            LocalDateTime inicio,
+            LocalDateTime fin
+    );
+List<SesionProgramada> findBySenseiAndFechaHoraInicioBetween (
+            Sensei sensei,
+            LocalDateTime inicio,
+            LocalDateTime fin
+    );
 }

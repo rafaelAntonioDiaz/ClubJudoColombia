@@ -24,6 +24,18 @@
     --judo-sombra-suave: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     --judo-sombra-card: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
     --judo-radius: 12px;
+    [theme~="badge"].success {
+        background-color: var(--lumo-success-color);
+        color: white;
+    }
+    [theme~="badge"].warning {
+        background-color: var(--lumo-warning-color);
+        color: black;
+    }
+    [theme~="badge"].error {
+        background-color: var(--lumo-error-color);
+        color: white;
+    }
 }
 
 /* ==================== FONDO GLOBAL ==================== */

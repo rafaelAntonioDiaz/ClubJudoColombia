@@ -27,6 +27,6 @@ public interface GrupoEntrenamientoRepository extends JpaRepository<GrupoEntrena
     long countBySenseiIdAndNombreContainingIgnoreCase(Long senseiId, String nombre);
     // Agrega esto en GrupoEntrenamientoRepository.java
     Optional<GrupoEntrenamiento> findBySenseiAndNombre(Sensei sensei, String nombre);
-
+    List<GrupoEntrenamiento> findBySensei(Sensei sensei);
     List<GrupoEntrenamiento> findAllByJudokasContains(Judoka judoka);
 }
