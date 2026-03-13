@@ -92,7 +92,6 @@ public class JudokaLayout extends AppLayout {
         String nombreCompleto = judokaOpt.map(j -> j.getNombre() + " " + j.getApellido())
                 .orElse("Judoka");
         System.out.println(">>> URL recuperada: " + judokaOpt.map(Judoka::getUrlFotoPerfil).orElse("null"));
-        String urlFoto = judokaOpt.map(Judoka::getUrlFotoPerfil).orElse(null);
 
         // 2. Saludo personalizado
         Span saludo = new Span(traduccionService.get("dashboard.welcome", nombreCompleto));
@@ -106,10 +105,11 @@ public class JudokaLayout extends AppLayout {
         // 3. Avatar con foto (si existe)
         Avatar avatar = new Avatar();
         avatar.setName(nombreCompleto);
+        String urlFoto = judokaOpt.map(Judoka::getUrlFotoPerfil).orElse(null);
         if (urlFoto != null && !urlFoto.isEmpty()) {
-            avatar.setImage(urlFoto);
+            avatar.setImage(urlFoto); // Usa la URL directamente
         } else {
-            avatar.setName(nombreCompleto); // iniciales
+            avatar.setName(nombreCompleto);
         }
         avatar.setColorIndex(nombreCompleto.hashCode() % 10);
         avatar.addClassName("judoka-avatar");

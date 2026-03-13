@@ -46,6 +46,7 @@ import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.upload.Upload;
 
+import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.router.*;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
@@ -140,9 +141,9 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
         layout.setAlignItems(FlexComponent.Alignment.CENTER);
         layout.setPadding(true);
 
-        // ✅ Usar los datos del judoka, no del usuario
         String nombreCompleto = judokaActual.getNombre() + " " + judokaActual.getApellido();
-        // 1. Contenedor de Avatar
+
+        // Contenedor del avatar
         avatarContainer = new Div();
         avatarContainer.setWidth("120px");
         avatarContainer.setHeight("120px");
@@ -156,9 +157,7 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
                 .set("align-items", "center")
                 .set("justify-content", "center");
 
-        cargarImagenEnAvatar();
-
-        // 2. Upload (Usa el UploadHandler Moderno)
+        // Upload
         Upload upload = new Upload();
         upload.setAcceptedFileTypes("image/jpeg", "image/png", "image/jpg");
         upload.setMaxFiles(1);
@@ -172,13 +171,16 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
         upload.setUploadHandler(event -> {
             try {
                 judokaService.actualizarFotoPerfil(judokaActual, event.getInputStream(), event.getFileName());
+
+                // Recargar el judoka desde BD para obtener la nueva URL
+                judokaActual = judokaRepository.findById(judokaActual.getId())
+                        .orElseThrow(() -> new RuntimeException("Judoka no encontrado después de subir foto"));
+
                 getUI().ifPresent(ui -> ui.access(() -> {
                     cargarImagenEnAvatar();
                     Notification.show(traduccionService.get("msg.foto.actualizada"), 2000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     upload.clearFileList();
-                    // Recargar la página después de un pequeño retraso para asegurar que la notificación se vea
-                    ui.getPage().executeJs("setTimeout(function() { location.reload(); }, 1500);");
                 }));
             } catch (Exception e) {
                 getUI().ifPresent(ui -> ui.access(() ->
@@ -208,22 +210,24 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
         stats.add(crearStatItem(VaadinIcon.CALENDAR_USER, String.valueOf(judokaActual.getEdad()), traduccionService.get("lbl.edad")));
 
         layout.add(avatarWrapper, nombreH2, cinturonBadge, stats);
+
+        // Cargar imagen inicial (si existe)
+        cargarImagenEnAvatar();
+
         return layout;
     }
 
     private void cargarImagenEnAvatar() {
         avatarContainer.removeAll();
-        String nombreArchivo = judokaActual.getUrlFotoPerfil();
-
-        if (nombreArchivo != null && !nombreArchivo.isEmpty()) {
-            // Generar URL firmada usando el servicio
-            String urlFirmada = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), nombreArchivo);
-            avatarImage = new Image(urlFirmada, traduccionService.get("alt.foto.perfil"));
-            avatarImage.setWidth("100%");
-            avatarImage.setHeight("100%");
-            avatarImage.getStyle().set("object-fit", "cover");
-            avatarContainer.add(avatarImage);
+        String url = judokaActual.getUrlFotoPerfil();
+        if (url != null && !url.isEmpty()) {
+            // Usar elemento nativo para evitar problemas con Image de Vaadin
+            Element img = new Element("img");
+            img.setAttribute("src", url);
+            img.setAttribute("style", "width:100%; height:100%; object-fit:cover;");
+            avatarContainer.getElement().appendChild(img);
         } else {
+            // Fallback a iniciales
             Avatar placeholder = new Avatar(judokaActual.getNombre() + " " + judokaActual.getApellido());
             placeholder.setWidth("100%");
             placeholder.setHeight("100%");

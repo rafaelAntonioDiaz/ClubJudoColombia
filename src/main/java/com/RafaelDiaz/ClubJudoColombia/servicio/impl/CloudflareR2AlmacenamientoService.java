@@ -26,7 +26,9 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
 
     @Autowired
     private S3Presigner s3Presigner;
+
     private static final Logger log = LoggerFactory.getLogger(CloudflareR2AlmacenamientoService.class);
+
     private final S3Client s3Client;
 
     @Value("${cloudflare.r2.bucket-name}")
@@ -89,57 +91,37 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
 
     @Override
     public String obtenerUrl(Long judokaId, String nombreArchivo) {
-        System.out.println(">>> obtenerUrl: publicUrl=" + publicUrl + ", judokaId=" + judokaId + ", nombre=" + nombreArchivo);
-        String url = publicUrl + "/judokas/" + judokaId + "/" + nombreArchivo;
-        System.out.println(">>> URL generada: " + url);
-        return publicUrl + "/judokas/" + judokaId + "/" + nombreArchivo;
+        String key = "judokas/" + judokaId + "/" + nombreArchivo;
+        return generarUrlSegura(key);
     }
 
     public String generarUrlSegura(String objectKey) {
         try {
-            // 1. Limpieza y extracción de la llave exacta
-            if (objectKey != null && objectKey.startsWith("http")) {
-                java.net.URL url = new java.net.URL(objectKey);
-                // Decodificamos %20 (espacios) para evitar errores
-                objectKey = URLDecoder.decode(url.getPath(), StandardCharsets.UTF_8);
-
-                if (objectKey.startsWith("/")) {
-                    objectKey = objectKey.substring(1);
-                }
-
-                // Blindaje extra: Si la ruta incluyó el bucket, lo cortamos
-                if (objectKey.startsWith("judo-assets/")) {
-                    objectKey = objectKey.substring("judo-assets/".length());
-                }
+            // Validaciones críticas
+            if (bucketName == null) {
+                throw new IllegalStateException("bucketName no está inyectado. Revisa la propiedad cloudflare.r2.bucket-name");
+            }
+            if (objectKey == null || objectKey.isBlank()) {
+                throw new IllegalArgumentException("objectKey no puede ser nulo o vacío");
+            }
+            if (s3Presigner == null) {
+                throw new IllegalStateException("s3Presigner no está inyectado. Revisa la configuración de AWS SDK");
             }
 
-            // 2. MAGIA PURA: Detectamos el tipo real analizando la extensión
-            String tipoContenido = "application/pdf"; // Asumimos PDF por defecto
-            String nombreMinusculas = objectKey.toLowerCase();
-
-            if (nombreMinusculas.endsWith(".png")) {
-                tipoContenido = "image/png";
-            } else if (nombreMinusculas.endsWith(".jpg") || nombreMinusculas.endsWith(".jpeg")) {
-                tipoContenido = "image/jpeg";
-            }
-
-            // 3. Construimos la petición obligando al navegador a obedecer
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(objectKey)
-                    .responseContentType(tipoContenido) // <--- ¡Corrige el pantallazo negro!
-                    .responseContentDisposition("inline") // <--- ¡Lo muestra en la pestaña sí o sí!
+                    // No incluyas responseContentType ni responseContentDisposition a menos que sean estrictamente necesarios
                     .build();
 
-            // 4. Firmamos la URL por 15 minutos
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofMinutes(15))
+                    .signatureDuration(Duration.ofDays(7)) // 7 días de validez
                     .getObjectRequest(getObjectRequest)
                     .build();
 
             return s3Presigner.presignGetObject(presignRequest).url().toString();
-
         } catch (Exception e) {
-            throw new RuntimeException("Fallo crítico al firmar el documento: " + objectKey, e);
+            throw new RuntimeException("Fallo al firmar el documento: " + objectKey, e);
         }
-    }}
+    }
+}

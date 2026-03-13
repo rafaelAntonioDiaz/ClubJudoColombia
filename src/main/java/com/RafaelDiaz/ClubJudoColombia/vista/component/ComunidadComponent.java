@@ -58,6 +58,8 @@ public class ComunidadComponent extends VerticalLayout {
     private final TraduccionService traduccionService;
     private final FileStorageService fileStorageService;
     private final PublicacionService publicacionService;
+    private final FotoPerfilService fotoPerfilService;
+
     private final ChatService chatService;
 
     private VerticalLayout feedLayout;
@@ -69,13 +71,14 @@ public class ComunidadComponent extends VerticalLayout {
     public ComunidadComponent(Long senseiId, SecurityService securityService,
                               TraduccionService traduccionService,
                               FileStorageService fileStorageService,
-                              PublicacionService publicacionService,
+                              PublicacionService publicacionService, FotoPerfilService fotoPerfilService,
                               ChatService chatService) {
         this.dojoId = senseiId;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
         this.fileStorageService = fileStorageService;
         this.publicacionService = publicacionService;
+        this.fotoPerfilService = fotoPerfilService;
         this.chatService = chatService;
 
         setSizeFull();
@@ -206,6 +209,12 @@ public class ComunidadComponent extends VerticalLayout {
         // Header Post
         String nombreAutor = post.getAutor().getNombre() + " " + post.getAutor().getApellido();
         Avatar avatar = new Avatar(nombreAutor);
+        String fotoUrl = fotoPerfilService.getFotoPerfilUrl(post.getAutor());
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            avatar.setImage(fotoUrl);
+        } else {
+            avatar.setColorIndex(Math.abs(nombreAutor.hashCode()) % 7);
+        }
         avatar.setColorIndex(Math.abs(nombreAutor.hashCode()) % 7);
         Span nombre = new Span(nombreAutor);
         nombre.getStyle().set("font-weight", "bold").set("margin-left", "10px");
@@ -295,9 +304,21 @@ public class ComunidadComponent extends VerticalLayout {
     }
 
     private Component crearFilaComentario(Comentario c) {
-        Span autor = new Span(c.getAutor().getNombre() + ": ");
-        autor.getStyle().set("font-weight", "bold");
-        return new Div(autor, new Span(c.getContenido()));
+        HorizontalLayout layout = new HorizontalLayout();
+        layout.setAlignItems(Alignment.CENTER);
+
+        String nombreAutor = c.getAutor().getNombre() + " " + c.getAutor().getApellido();
+        Avatar avatar = new Avatar(nombreAutor);
+        avatar.setWidth("24px");
+        avatar.setHeight("24px");
+        String fotoUrl = fotoPerfilService.getFotoPerfilUrl(c.getAutor());
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            avatar.setImage(fotoUrl);
+        }
+
+        Span texto = new Span(c.getContenido());
+        layout.add(avatar, texto);
+        return layout;
     }
 
     // ================================================================
@@ -334,10 +355,19 @@ public class ComunidadComponent extends VerticalLayout {
     private void cargarMensajesChat() {
         List<MensajeChat> historial = chatService.obtenerHistorialDelDojo(this.dojoId);
         List<MessageListItem> items = historial.stream().map(msg -> {
-            MessageListItem item = new MessageListItem(msg.getContenido(),
+            Usuario autor = msg.getAutor();
+            String nombre = autor.getNombre() + " " + autor.getApellido();
+            String fotoUrl = fotoPerfilService.getFotoPerfilUrl(autor);
+            MessageListItem item = new MessageListItem(
+                    msg.getContenido(),
                     msg.getFecha().toInstant(ZoneOffset.UTC),
-                    msg.getAutor().getNombre());
-            item.setUserColorIndex(Math.abs(msg.getAutor().getNombre().hashCode()) % 7);
+                    nombre
+            );
+            if (fotoUrl != null && !fotoUrl.isEmpty()) {
+                item.setUserImage(fotoUrl);
+            } else {
+                item.setUserColorIndex(Math.abs(nombre.hashCode()) % 7);
+            }
             return item;
         }).collect(Collectors.toList());
         messageList.setItems(items);

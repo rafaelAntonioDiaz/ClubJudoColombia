@@ -81,8 +81,12 @@ public class Usuario implements Serializable {
      */
     @Column(name = "activo", nullable = false)
     private boolean activo = true; // Valor por defecto
-    // ... (después del campo 'private boolean activo = true;')
 
+    @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
+    private Sensei sensei;
+
+    @OneToMany(mappedBy = "acudiente", fetch = FetchType.LAZY)
+    private List<Judoka> judokas;
     /**
      * Relación Muchos-a-Muchos (ManyToMany) con la entidad Rol.
      * Un usuario puede tener múltiples roles, y un rol puede tener múltiples usuarios.
@@ -206,7 +210,6 @@ public class Usuario implements Serializable {
     public void setPerfilMecenas(Mecenas perfilMecenas) {
         this.perfilMecenas = perfilMecenas;
     }
-
 
 
     @Override

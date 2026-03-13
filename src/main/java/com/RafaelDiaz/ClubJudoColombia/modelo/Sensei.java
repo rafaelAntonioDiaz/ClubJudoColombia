@@ -47,6 +47,8 @@ public class Sensei implements Serializable {
     @Column(name = "ruta_certificaciones_archivo")
     private String rutaCertificaciones;
 
+    @Column(name = "url_foto_perfil", length = 1000) // o columnDefinition = "TEXT"
+    private String urlFotoPerfil;
     /**
      * Campo de texto largo para la biografía del Sensei.
      */
@@ -70,6 +72,14 @@ public class Sensei implements Serializable {
     }
 
     // --- Getters y Setters (Actualizados) ---
+
+    public String getUrlFotoPerfil() {
+        return urlFotoPerfil;
+    }
+
+    public void setUrlFotoPerfil(String urlFotoPerfil) {
+        this.urlFotoPerfil = urlFotoPerfil;
+    }
 
     public void setSaldoWallet(BigDecimal saldoWallet) {
         this.saldoWallet = saldoWallet;

@@ -20,7 +20,7 @@ public class ComunidadJudokaView extends VerticalLayout {
                                TraduccionService traduccionService,
                                FileStorageService fileStorageService,
                                PublicacionService publicacionService,
-                               ChatService chatService) {
+                               ChatService chatService, FotoPerfilService fotoPerfilService) {
 
         setSizeFull();
         setPadding(false);
@@ -35,7 +35,7 @@ public class ComunidadJudokaView extends VerticalLayout {
         // 3. PASAR EL ID AL COMPONENTE
         ComunidadComponent comunidad = new ComunidadComponent(
                 miDojoId,
-                securityService, traduccionService, fileStorageService, publicacionService, chatService);
+                securityService, traduccionService, fileStorageService, publicacionService, fotoPerfilService, chatService);
 
         add(comunidad);
     }

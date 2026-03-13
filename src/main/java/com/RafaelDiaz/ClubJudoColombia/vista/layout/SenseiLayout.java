@@ -1,11 +1,13 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.layout;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.IdiomaSelector;
 import com.RafaelDiaz.ClubJudoColombia.vista.sensei.GestorInvitacionesView;
+import com.RafaelDiaz.ClubJudoColombia.vista.sensei.PerfilSenseiView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -25,6 +27,8 @@ import com.vaadin.flow.spring.security.AuthenticationContext;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.PostConstruct; // Vital para la inicialización segura
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Optional;
 
 public class SenseiLayout extends AppLayout {
 
@@ -80,8 +84,16 @@ public class SenseiLayout extends AppLayout {
         Span saludo = new Span(getTexto("dashboard.welcome", "Hola") + " " + username);
         saludo.addClassName("layout-welcome-text");
         saludo.getStyle().set("font-size", "0.9rem").set("margin-right", "15px");
+        Optional<Sensei> senseiOpt = securityService.getAuthenticatedSensei();
+        String nombreCompleto = senseiOpt.map(s ->
+                s.getUsuario().getNombre() + " " + s.getUsuario().getApellido()).orElse("Sensei");
+        String fotoUrl = senseiOpt.map(Sensei::getUrlFotoPerfil).orElse(null);
 
-        Avatar avatar = new Avatar(username);
+        Avatar avatar = new Avatar();
+        avatar.setName(nombreCompleto);
+        if (fotoUrl != null && !fotoUrl.isEmpty()) {
+            avatar.setImage(fotoUrl);
+        }
         avatar.addClassNames(LumoUtility.Margin.Right.MEDIUM);
 
         HorizontalLayout header = new HorizontalLayout(new DrawerToggle(), logo, saludo, new IdiomaSelector(), avatar);
@@ -134,6 +146,8 @@ public class SenseiLayout extends AppLayout {
 
         // --- 7. ADMINISTRACIÓN ---
         agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);
+
+        agregarTab(tabs, getTexto("menu.mi.perfil", "Perfil"), VaadinIcon.COGS, PerfilSenseiView.class);
 
         // --- SALIR ---
         Tab logoutTab = new Tab(createLogoutLink());

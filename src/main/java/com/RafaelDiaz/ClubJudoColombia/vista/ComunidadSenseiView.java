@@ -19,7 +19,8 @@ public class ComunidadSenseiView extends VerticalLayout {
                                TraduccionService traduccionService,
                                FileStorageService fileStorageService,
                                PublicacionService publicacionService,
-                               ChatService chatService) {
+                               ChatService chatService,
+                               FotoPerfilService fotoPerfilService) {
 
         setSizeFull();
         setPadding(false);
@@ -30,7 +31,7 @@ public class ComunidadSenseiView extends VerticalLayout {
             return;
         }
         ComunidadComponent comunidad = new ComunidadComponent(miSenseiId,
-                securityService, traduccionService, fileStorageService, publicacionService, chatService);
+                        securityService, traduccionService, fileStorageService, publicacionService, fotoPerfilService, chatService);
 
         add(comunidad);
     }
