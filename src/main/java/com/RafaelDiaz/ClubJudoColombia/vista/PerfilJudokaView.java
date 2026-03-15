@@ -62,8 +62,7 @@ import java.util.stream.Collectors;
 import static io.netty.util.concurrent.FastThreadLocal.removeAll;
 
 @Route(value = "perfil-judoka", layout = JudokaLayout.class)
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR",
-        "ROLE_ACUDIENTE", "ROLE_SENSEI", "ROLE_MASTER", "ROLE_MECENAS"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
 @PageTitle("Mi Santuario | Club Judo Colombia")
 public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Long> {
 
@@ -616,13 +615,24 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
     }
     private ApexCharts crearGraficoAntropometria(List<DatosAntropometricosDTO> historial) {
         List<String> fechas = historial.stream().map(d -> d.getFecha().toString()).collect(Collectors.toList());
-        List<Double> pesos = historial.stream().map(DatosAntropometricosDTO::getPeso).collect(Collectors.toList());
-        List<Double> estaturas = historial.stream().map(DatosAntropometricosDTO::getEstatura).collect(Collectors.toList());
-        List<Double> imcs = historial.stream().map(DatosAntropometricosDTO::getImc).collect(Collectors.toList());
 
-        // Crear título para el eje Y
+        // Redondear todos los valores a un decimal
+        List<Double> pesos = historial.stream()
+                .map(d -> Math.round(d.getPeso() * 10) / 10.0)
+                .collect(Collectors.toList());
+        List<Double> estaturas = historial.stream()
+                .map(d -> Math.round(d.getEstatura() * 10) / 10.0)
+                .collect(Collectors.toList());
+        List<Double> imcs = historial.stream()
+                .map(d -> Math.round(d.getImc() * 10) / 10.0)
+                .collect(Collectors.toList());
+
         com.github.appreciated.apexcharts.config.yaxis.Title yTitle = new com.github.appreciated.apexcharts.config.yaxis.Title();
         yTitle.setText("Valores");
+
+        // Formateador del eje Y para mostrar un decimal (incluso si es .0)
+        com.github.appreciated.apexcharts.config.yaxis.Labels labels = new com.github.appreciated.apexcharts.config.yaxis.Labels();
+        labels.setFormatter("function(val) { return val.toFixed(1); }");
 
         return ApexChartsBuilder.get()
                 .withChart(ChartBuilder.get()
@@ -636,7 +646,7 @@ public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Lo
                         new Series<>("IMC", imcs.toArray(new Double[0]))
                 )
                 .withXaxis(XAxisBuilder.get().withCategories(fechas.toArray(new String[0])).build())
-                .withYaxis(YAxisBuilder.get().withTitle(yTitle).build())
+                .withYaxis(YAxisBuilder.get().withTitle(yTitle).withLabels(labels).build())
                 .withLegend(LegendBuilder.get().withPosition(Position.TOP).build())
                 .build();
     }

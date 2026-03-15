@@ -62,7 +62,7 @@ public class SeguridadInicializer {
 
         Usuario masterUser = new Usuario(masterUsername, passwordEncoder.encode("contraseña"),
                 "Rafael", "Díaz");
-        masterUser.setEmail("master@judocolombia.com");
+        masterUser.setEmail("rafael.antonio.diaz@gmail.com");
         masterUser.setActivo(true);
         masterUser.setRoles(Set.of(rolMaster, rolSensei));
         masterUser = usuarioRepo.save(masterUser);

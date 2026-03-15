@@ -2,6 +2,8 @@ package com.RafaelDiaz.ClubJudoColombia.servicio.inicializacion;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Traduccion;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.TraduccionRepository;
+import com.vaadin.flow.component.html.H4;
+import com.vaadin.flow.component.html.Paragraph;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -822,7 +824,8 @@ public class TraduccionInicializer {
 
         agregarSiNoExiste(lista, clavesExistentes, "agenda.titulo", "Agenda", "Agenda", "Agenda");
         agregarSiNoExiste(lista, clavesExistentes, "finanzas.titulo", "Finanzas", "Finance", "Finanças");
-        agregarSiNoExiste(lista, clavesExistentes, "admin.titulo", "Admin", "Admin", "Admin");
+        agregarSiNoExiste(lista, clavesExistentes, "admin.titulo", "Configuración del SaaS", "SaaS Configuration", "Admin");
+        agregarSiNoExiste(lista, clavesExistentes, "admin.descripcion", "Parametrice su escenario", "Parameterize your setting", "Parametrize seu cenário");
 
 
         // =========================================================

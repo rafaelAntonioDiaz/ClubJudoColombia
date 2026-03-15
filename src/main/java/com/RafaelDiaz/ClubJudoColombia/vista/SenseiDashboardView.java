@@ -212,7 +212,8 @@ public class SenseiDashboardView extends VerticalLayout {
             Button btn = new Button(traduccionService.get("sensei.btn.ver_perfil", "Ver Perfil"),
                     new Icon(VaadinIcon.USER));
             btn.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
-            btn.addClickListener(e -> UI.getCurrent().navigate(PerfilJudokaView.class, j.getId()));
+            btn.addClickListener(e ->
+                    UI.getCurrent().navigate("dashboard-judoka/" + j.getId()));
             return btn;
         }).setHeader(traduccionService.get("grid.judoka.accion", "Acción"));
 

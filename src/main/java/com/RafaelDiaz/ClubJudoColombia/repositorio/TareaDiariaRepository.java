@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.repositorio;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TareaDiaria;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.CategoriaEjercicio;
 import com.vaadin.hilla.mappedtypes.Pageable;
@@ -19,4 +20,5 @@ public interface TareaDiariaRepository extends JpaRepository<TareaDiaria, Long> 
     TareaDiaria findByNombreContainingIgnoreCase(String nombre);
     // Necesario para el DataInitializer
     Optional<TareaDiaria> findByNombreIgnoreCase(String nombre);
+    boolean existsByNombreAndSenseiCreador(String nombre, Sensei sensei);
 }

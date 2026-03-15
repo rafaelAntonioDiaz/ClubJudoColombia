@@ -95,6 +95,24 @@ public class SecurityService {
                         .anyMatch(auth -> auth.getAuthority().equals("ROLE_SENSEI")))
                 .orElse(false);
     }
+    public boolean isMecenas() {
+        return getAuthenticatedUserDetails()
+                .map(user -> user.getAuthorities().stream()
+                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_MECENAS")))
+                .orElse(false);
+    }
+    public boolean isAcudiente() {
+        return getAuthenticatedUserDetails()
+                .map(user -> user.getAuthorities().stream()
+                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_ACUDIENTE")))
+                .orElse(false);
+    }
+    public boolean isMaster() {
+        return getAuthenticatedUserDetails()
+                .map(user -> user.getAuthorities().stream()
+                        .anyMatch(auth -> auth.getAuthority().equals("ROLE_MASTER")))
+                .orElse(false);
+    }
     /**
      * MAGIA MULTI-TENANT: Obtiene el ID del Sensei logueado.
      * Si ya está en la caché de la sesión, lo devuelve al instante.

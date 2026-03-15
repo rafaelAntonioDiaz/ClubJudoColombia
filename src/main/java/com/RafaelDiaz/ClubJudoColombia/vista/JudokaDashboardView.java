@@ -45,8 +45,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.i18n.LocaleChangeEvent;
 import com.vaadin.flow.i18n.LocaleChangeObserver;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.*;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.server.auth.AccessAnnotationChecker;
 import jakarta.annotation.security.RolesAllowed;
@@ -57,10 +56,11 @@ import java.util.stream.Collectors;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("dashboard-judoka")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR","ROLE_ACUDIENTE","ROLE_MASTER"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR",
+        "ROLE_ACUDIENTE", "ROLE_SENSEI", "ROLE_MASTER", "ROLE_MECENAS"})
 @PageTitle("Combat Profile | Club Judo Colombia")
 @CssImport("./styles/dashboard-judoka.css")
-public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObserver {
+public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObserver, HasUrlParameter<Long> {
 
     private final JudokaDashboardService dashboardService;
     private final SecurityService securityService;
@@ -88,6 +88,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     private Map<BloqueAgudelo, Double> valoresRadar = new EnumMap<>(BloqueAgudelo.class);
     // Contenedor de botones para que sea accesible globalmente si se requiere
     private FlexLayout chipsLayout;
+    private Long parametroId;
 
     @Autowired
     public JudokaDashboardView(JudokaDashboardService dashboardService,
@@ -103,7 +104,6 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         super(securityService, accessChecker, traduccionService, judokaRepository);
         this.calendarioService = calendarioService;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
-        System.out.println("🔧 JudokaDashboardView constructor iniciado");
         this.dashboardService = dashboardService;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
@@ -114,28 +114,47 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         this.sabiduriaService = sabiduriaService;
         this.judokaRepository = judokaRepository;
 
-        initJudoka();
-        buildModernDashboard();
+
         System.out.println("🔧 JudokaDashboardView constructor finalizado");
     }
 
     private void initJudoka() {
-        // 1. Prioridad: ¿Viene por Magic Link?
-        System.out.println("🔧 initJudoka() - Iniciando");
-        Long judokaId = (Long) VaadinSession.getCurrent().getAttribute("JUDOKA_ACTUAL_ID");
-        System.out.println("🔧 JUDOKA_ACTUAL_ID desde sesión: " + judokaId);
-        if (judokaId != null) {
-            this.judokaActual = judokaRepository.findByIdWithDetails(judokaId)
-                    .orElseThrow(() -> new RuntimeException("Judoka no encontrado con ID: " + judokaId));
-            System.out.println("🔧 Judoka obtenido por ID: " + judokaActual.getNombre());
+        if (parametroId != null) {
+            // Cargar judoka por ID (con detalles)
+            judokaActual = judokaRepository.findByIdWithDetails(parametroId)
+                    .orElseThrow(() -> new RuntimeException("Judoka no encontrado con ID: " + parametroId));
+
+            // Verificar permisos (solo sensei, master o el propio judoka pueden ver)
+            Usuario usuarioActual = securityService.getAuthenticatedUsuario().orElse(null);
+            if (usuarioActual == null) {
+                throw new RuntimeException("Usuario no autenticado");
+            }
+
+            boolean puedeVer = false;
+            if (securityService.isSensei() || securityService.isMaster()) {
+                // Sensei: debe ser el sensei de este judoka
+                puedeVer = judokaActual.getSensei() != null &&
+                        judokaActual.getSensei().getUsuario().equals(usuarioActual);
+            } else if (securityService.isMecenas()) {
+                puedeVer = judokaActual.getMecenas() != null &&
+                        judokaActual.getMecenas().getUsuario().equals(usuarioActual);
+            } else if (securityService.isAcudiente()) {
+                puedeVer = judokaActual.getAcudiente() != null &&
+                        judokaActual.getAcudiente().equals(usuarioActual);
+            } else {
+                // Es el propio judoka
+                puedeVer = judokaActual.getUsuario().equals(usuarioActual);
+            }
+
+            if (!puedeVer) {
+                throw new RuntimeException("No tienes permiso para ver este perfil");
+            }
         } else {
-            // 2. Fallback: usuario autenticado normal (Acudiente/Sensei/Master)
-            this.judokaActual = securityService.getAuthenticatedJudoka()
-                    .orElseThrow(() -> new RuntimeException("Error: Judoka no autenticado."));
-            System.out.println("🔧 Judoka obtenido por securityService");
+            // Sin parámetro: cargar el judoka autenticado
+            judokaActual = securityService.getAuthenticatedJudoka()
+                    .orElseThrow(() -> new RuntimeException("Judoka no autenticado"));
         }
     }
-
     private void buildModernDashboard() {
         VerticalLayout mainLayout = new VerticalLayout();
         mainLayout.addClassName("judoka-dashboard-content");
@@ -584,4 +603,11 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
         );
     }
 
+    @Override
+    public void setParameter(BeforeEvent event, @OptionalParameter Long parameter) {
+        this.parametroId = parameter;
+        // Inicializar después de recibir el parámetro
+        initJudoka();
+        buildModernDashboard();
+    }
 }

@@ -91,10 +91,10 @@ public class DatosMuestraInicializer {
     @Transactional
     public void inicializar(Sensei masterSensei) {
         // Si ya existe algún sensei de muestra, asumimos que los datos ya están cargados
-        if (usuarioRepo.findByUsername("kiuzo").isPresent()) {
-            System.out.println(">>> Datos de muestra ya existen. Omitiendo.");
-            return;
-        }
+       // if (usuarioRepo.findByUsername("kiuzo").isPresent()) {
+     //       System.out.println(">>> Datos de muestra ya existen. Omitiendo.");
+     //       return;
+    //    }
 
         System.out.println(">>> Creando senseis y judokas de muestra...");
 
@@ -493,11 +493,9 @@ public class DatosMuestraInicializer {
     }
 
     private void crearBibliotecaTareas(Sensei sensei) {
-        if (tareaDiariaRepository.count() > 0) return;
-
         System.out.println(">>> Creando biblioteca de tareas para Sensei " + sensei.getUsuario().getNombre());
 
-        List<TareaDiaria> tareas = List.of(
+        List<TareaDiaria> tareasNuevas = List.of(
                 new TareaDiaria("Calentamiento articular", "10 min de movilidad dinámica", sensei, CategoriaEjercicio.FLEXIBILIDAD),
                 new TareaDiaria("Técnica de suelo (Ne-waza)", "15 min de inmovilizaciones y transiciones", sensei, CategoriaEjercicio.TECNICA),
                 new TareaDiaria("Uchi-komi con gomas", "100 repeticiones (velocidad)", sensei, CategoriaEjercicio.VELOCIDAD),
@@ -505,9 +503,63 @@ public class DatosMuestraInicializer {
                 new TareaDiaria("Flexiones de pecho", "4 series x 15 reps", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
                 new TareaDiaria("Abdominales en V", "3 series x 20 reps", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
                 new TareaDiaria("Sentadillas con salto", "4 series x 10 reps", sensei, CategoriaEjercicio.POTENCIA),
-                new TareaDiaria("Estiramiento final", "10 min estático", sensei, CategoriaEjercicio.FLEXIBILIDAD)
+                new TareaDiaria("Estiramiento final", "10 min estático", sensei, CategoriaEjercicio.FLEXIBILIDAD),
+
+                // --- BLOQUE: PRINCIPIANTES ---
+
+                // Flexibilidad y Agilidad (Protección y Coordinación)
+                new TareaDiaria("Movilidad Articular Integral", "10 min de rotaciones y movilidad dinámica", sensei, CategoriaEjercicio.FLEXIBILIDAD),
+                new TareaDiaria("Ukemi (Caídas) Básicas", "10 min de rodadas y caídas laterales suaves", sensei, CategoriaEjercicio.AGILIDAD),
+                new TareaDiaria("Puente de cuello asistido", "3 series x 30 seg - Soporte con manos", sensei, CategoriaEjercicio.FLEXIBILIDAD),
+
+                // Técnica y Anticipación
+                new TareaDiaria("Uchi-komi en sombra", "4 series x 15 reps - Enfoque en postura y desequilibrio (Kuzushi)", sensei, CategoriaEjercicio.TECNICA),
+                new TareaDiaria("Juego de toques (Hombros/Rodillas)", "3 rondas x 2 min - Reacción al movimiento del compañero", sensei, CategoriaEjercicio.ANTICIPACION),
+
+                // Resistencia Muscular y Dinámica
+                new TareaDiaria("Flexiones de pecho regulares", "4 series x 12 reps - Rango completo", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
+                new TareaDiaria("Sentadillas al aire (Bodyweight)", "4 series x 15 reps - Espalda recta", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
+                new TareaDiaria("Desplazamientos Ebi (Camarón)", "4 series x 10 metros - Movilidad de cadera en suelo", sensei, CategoriaEjercicio.RESISTENCIA_DINAMICA),
+                new TareaDiaria("Caminata de oso (Bear Crawl)", "3 series x 15 metros - Estabilidad de hombros", sensei, CategoriaEjercicio.RESISTENCIA_DINAMICA),
+
+                // Isometría y Base Aeróbica
+                new TareaDiaria("Plancha frontal (Plank)", "3 series x 45 seg - Core estable", sensei, CategoriaEjercicio.RESISTENCIA_ISOMETRICA),
+                new TareaDiaria("Ne-waza ligero (Suelo)", "4 rondas x 3 min - Combate fluido sin fuerza excesiva", sensei, CategoriaEjercicio.APTITUD_AEROBICA),
+
+                // --- BLOQUE: AVANZADOS ---
+
+                // Potencia y Velocidad
+                new TareaDiaria("Flexiones Pliométricas (Con aplauso)", "4 series x 8 reps - Explosividad de empuje", sensei, CategoriaEjercicio.POTENCIA),
+                new TareaDiaria("Saltos al cajón o Jump Squats altos", "4 series x 6 reps - Triple extensión rápida", sensei, CategoriaEjercicio.POTENCIA),
+                new TareaDiaria("Uchi-komi con bandas elásticas", "100 repeticiones cronometradas - Máxima velocidad", sensei, CategoriaEjercicio.VELOCIDAD),
+                new TareaDiaria("Entradas a Seoi-Nage relámpago", "10 repeticiones en menos de 15 segundos", sensei, CategoriaEjercicio.VELOCIDAD),
+
+                // Resistencia Específica de Judo
+                new TareaDiaria("Dominadas agarrando Judogi", "4 series al fallo - Tracción y fuerza de agarre", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
+                new TareaDiaria("Sentadillas a una pierna (Pistol Squats)", "3 series x 6 reps por pierna - Equilibrio y fuerza", sensei, CategoriaEjercicio.RESISTENCIA_MUSCULAR_LOCALIZADA),
+                new TareaDiaria("Suspensión isométrica en barra (con Gi)", "3 series x máximo tiempo - Resistencia de agarre", sensei, CategoriaEjercicio.RESISTENCIA_ISOMETRICA),
+                new TareaDiaria("Sentadilla isométrica en pared (Wall Sit)", "3 series x 90 seg - Posición de defensa baja", sensei, CategoriaEjercicio.RESISTENCIA_ISOMETRICA),
+
+                // Aptitud Anaeróbica y Aeróbica (Sistemas de Energía)
+                new TareaDiaria("Sprawls reactivos (Tabata)", "8 rondas: 20s trabajo / 10s descanso - Defensa de derribo", sensei, CategoriaEjercicio.APTITUD_ANAEROBICA),
+                new TareaDiaria("Nage-komi con fatiga", "Lanzamientos continuos durante 2 minutos a máxima intensidad", sensei, CategoriaEjercicio.APTITUD_ANAEROBICA),
+                new TareaDiaria("Randori de pie y suelo continuo", "6 rondas x 5 min - Simulación de competencia", sensei, CategoriaEjercicio.APTITUD_AEROBICA),
+
+                // Anticipación y Agilidad avanzada
+                new TareaDiaria("Práctica de caída reactiva (Ukemi ciego)", "Compañero empuja sorpresivamente desde varios ángulos", sensei, CategoriaEjercicio.ANTICIPACION),
+                new TareaDiaria("Transiciones rápidas de inmovilización (Osaekomi)", "Cambiar de Hon-Kesa-Gatame a Yoko-Shiho en < 2 seg", sensei, CategoriaEjercicio.AGILIDAD)
         );
-        tareaDiariaRepository.saveAll(tareas);
+        List<TareaDiaria> aGuardar = new ArrayList<>();
+        for (TareaDiaria t : tareasNuevas) {
+            if (!tareaDiariaRepository.existsByNombreAndSenseiCreador(t.getNombre(), sensei)) {
+                t.setSenseiCreador(sensei); // Asegurar el sensei
+                aGuardar.add(t);
+            }
+        }
+        if (!aGuardar.isEmpty()) {
+            tareaDiariaRepository.saveAll(aGuardar);
+            System.out.println(">>> Se agregaron " + aGuardar.size() + " nuevas tareas para " + sensei.getUsuario().getNombre());
+        }
     }
 
     private void crearMacrociclosParaSensei(Sensei sensei) {
@@ -829,44 +881,60 @@ public class DatosMuestraInicializer {
 
     private void crearSesionesAdicionales(Sensei sensei, GrupoEntrenamiento grupo) {
         LocalDate hoy = LocalDate.now();
+        // Horarios diferentes para cada semana (9, 10, 11, 12) para evitar solapamiento
+        int[] horas = {9, 10, 11, 12};
+
         for (int i = -3; i <= 3; i++) {
             LocalDate fechaBase = hoy.plusMonths(i).withDayOfMonth(15);
             for (int w = 0; w < 4; w++) {
                 LocalDate fecha = fechaBase.plusWeeks(w);
                 if (fecha.getMonth() != fechaBase.getMonth()) continue;
+
                 SesionProgramada sesion = new SesionProgramada();
                 sesion.setNombre("Entrenamiento " + (i < 0 ? "Histórico" : "Planificado") + " - Semana " + (w+1));
                 sesion.setGrupo(grupo);
                 sesion.setSensei(sensei);
-                sesion.setFechaHoraInicio(fecha.atTime(16, 0));
-                sesion.setFechaHoraFin(fecha.atTime(17, 30));
+                sesion.setFechaHoraInicio(fecha.atTime(horas[w], 0));
+                sesion.setFechaHoraFin(fecha.atTime(horas[w] + 1, 30)); // Duración 1.5 horas
                 sesion.setTipoSesion(TipoSesion.TECNICA);
                 sesion.setLatitud(6.2442 + (Math.random() - 0.5) * 0.1);
                 sesion.setLongitud(-75.5812 + (Math.random() - 0.5) * 0.1);
                 sesion.setRadioPermitidoMetros(100);
+
                 sesionService.guardar(sesion);
             }
         }
     }
     private void generarAntropometriaHistorica(Judoka maria, Judoka julian) {
         LocalDateTime hoy = LocalDateTime.now();
-        // Generar mediciones cada mes durante los últimos 6 meses
-        for (int i = 0; i < 6; i++) {
-            LocalDateTime fecha = hoy.minusMonths(i).withDayOfMonth(15).withHour(10).withMinute(0);
+        // Generar mediciones cada 3 meses durante los últimos 4 años (16 trimestres)
+        int totalMediciones = 16; // 4 años * 4 trimestres
 
-            // Valores para María (crecimiento progresivo)
-            double pesoMaria = 55.0 + i * 0.4; // de 55.0 a 57.0 kg
-            double estaturaMaria = 158.0 + i * 0.4; // de 158 a 160 cm
-            double cinturaMaria = 66.0 + i * 0.3;
-            double envergaduraMaria = 162.0 + i * 0.5;
+        for (int i = 0; i < totalMediciones; i++) {
+            // Retroceder i trimestres (cada 3 meses)
+            LocalDateTime fecha = hoy.minusMonths(i * 3).withDayOfMonth(15).withHour(10).withMinute(0);
+
+            // Factor de tiempo: a mayor i (más antiguo), menor valor
+            // Usamos (totalMediciones - 1 - i) para que i=0 (hoy) tenga el factor máximo
+            int factor = totalMediciones - 1 - i;
+
+            // --- Valores para María (crecimiento progresivo) ---
+            // A los 12 años (hace 4 años): peso 48 kg, estatura 150 cm
+            // A los 16 años (hoy): peso 57 kg, estatura 160 cm
+            double pesoMaria = 48.0 + factor * (9.0 / (totalMediciones - 1)); // +9 kg en 4 años
+            double estaturaMaria = 150.0 + factor * (10.0 / (totalMediciones - 1)); // +10 cm
+            double cinturaMaria = 62.0 + factor * (4.0 / (totalMediciones - 1)); // +4 cm
+            double envergaduraMaria = 155.0 + factor * (8.0 / (totalMediciones - 1)); // +8 cm
 
             registrarAntropometria(maria, pesoMaria, estaturaMaria, cinturaMaria, envergaduraMaria, fecha);
 
-            // Valores para Julián (crecimiento más rápido por ser niño)
-            double pesoJulian = 32.0 + i * 0.5; // de 32 a 34 kg
-            double estaturaJulian = 135.0 + i * 0.6; // de 135 a 138 cm
-            double cinturaJulian = 58.0 + i * 0.4;
-            double envergaduraJulian = 132.0 + i * 0.6;
+            // --- Valores para Julián (crecimiento más rápido) ---
+            // A los 6 años (hace 4 años): peso 22 kg, estatura 120 cm
+            // A los 10 años (hoy): peso 34 kg, estatura 138 cm
+            double pesoJulian = 22.0 + factor * (12.0 / (totalMediciones - 1)); // +12 kg
+            double estaturaJulian = 120.0 + factor * (18.0 / (totalMediciones - 1)); // +18 cm
+            double cinturaJulian = 52.0 + factor * (6.0 / (totalMediciones - 1)); // +6 cm
+            double envergaduraJulian = 118.0 + factor * (14.0 / (totalMediciones - 1)); // +14 cm
 
             registrarAntropometria(julian, pesoJulian, estaturaJulian, cinturaJulian, envergaduraJulian, fecha);
         }
