@@ -94,4 +94,9 @@ List<SesionProgramada> findBySenseiAndFechaHoraInicioBetween (
             LocalDateTime inicio,
             LocalDateTime fin
     );
+    boolean existsByGrupoAndFechaHoraInicioAndFechaHoraFin(
+            GrupoEntrenamiento grupo,
+            LocalDateTime fechaHoraInicio,
+            LocalDateTime fechaHoraFin
+    );
 }

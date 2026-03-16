@@ -42,6 +42,7 @@ public class DatosMuestraInicializer {
     private final TareaDiariaRepository tareaDiariaRepository;
     private final GrupoEntrenamientoRepository grupoRepository;
     private final EjecucionTareaRepository ejecucionTareaRepository;
+    private final SesionProgramadaRepository sesionProgramadaRepository;
     private final MicrocicloService microcicloService;
 
     public DatosMuestraInicializer(UsuarioRepository usuarioRepo,
@@ -63,7 +64,7 @@ public class DatosMuestraInicializer {
                                    PalmaresRepository palmaresRepo,
                                    TareaDiariaRepository tareaDiariaRepository,
                                    GrupoEntrenamientoRepository grupoRepository,
-                                   EjecucionTareaRepository ejecucionTareaRepository,
+                                   EjecucionTareaRepository ejecucionTareaRepository, SesionProgramadaRepository sesionProgramadaRepository,
                                    MicrocicloService microcicloService) {
         this.usuarioRepo = usuarioRepo;
         this.senseiRepo = senseiRepo;
@@ -85,6 +86,7 @@ public class DatosMuestraInicializer {
         this.tareaDiariaRepository = tareaDiariaRepository;
         this.grupoRepository = grupoRepository;
         this.ejecucionTareaRepository = ejecucionTareaRepository;
+        this.sesionProgramadaRepository = sesionProgramadaRepository;
         this.microcicloService = microcicloService;
     }
 
@@ -151,6 +153,7 @@ public class DatosMuestraInicializer {
 
         // 17. Crear sesiones en meses anteriores y futuros
         crearSesionesAdicionales(kiuzo, grupoDemo);
+        crearFamiliaJaimes(masterSensei);
 
         System.out.println(">>> Datos de muestra cargados exitosamente.");
     }
@@ -160,8 +163,15 @@ public class DatosMuestraInicializer {
     // ------------------------------------------------------------------------
 
     private GrupoEntrenamiento crearGrupoUnificado(Sensei sensei, List<Judoka> judokas) {
+        String nombreGrupo = "Grupo de Demostración";
+        Optional<GrupoEntrenamiento> existente = grupoRepository.findBySenseiAndNombre(sensei, nombreGrupo);
+        if (existente.isPresent()) {
+            System.out.println(">>> Grupo '" + nombreGrupo + "' ya existe. Reutilizando.");
+            return existente.get();
+        }
+
         GrupoEntrenamiento grupo = new GrupoEntrenamiento();
-        grupo.setNombre("Grupo de Demostración");
+        grupo.setNombre(nombreGrupo);
         grupo.setDescripcion("Grupo unificado para pruebas (incluye María y Julián)");
         grupo.setSensei(sensei);
         grupo = grupoRepository.save(grupo);
@@ -172,7 +182,6 @@ public class DatosMuestraInicializer {
         }
         return grupo;
     }
-
     private Microciclo crearPlanAcondicionamiento(Sensei sensei, GrupoEntrenamiento grupo) {
         Microciclo plan = new Microciclo();
         plan.setNombre("Plan Base de Acondicionamiento");
@@ -672,50 +681,58 @@ public class DatosMuestraInicializer {
     }
     private void crearSesionesGPS(Sensei sensei, GrupoEntrenamiento grupo) {
         LocalDate hoy = LocalDate.now();
-        // Sesión para hoy (si es un día de entrenamiento)
-        SesionProgramada sesion1 = new SesionProgramada();
-        sesion1.setNombre("Entrenamiento Técnico - Parque Norte");
-        sesion1.setGrupo(grupo);
-        sesion1.setSensei(sensei);
-        sesion1.setFechaHoraInicio(hoy.atTime(16, 0));
-        sesion1.setFechaHoraFin(hoy.atTime(17, 30));
-        sesion1.setTipoSesion(TipoSesion.TECNICA);
-        sesion1.setLatitud(6.2716);
-        sesion1.setLongitud(-75.5634);
-        sesion1.setRadioPermitidoMetros(100);
-        sesionService.guardar(sesion1);
 
-        // Sesión para pasado mañana
-        SesionProgramada sesion2 = new SesionProgramada();
-        sesion2.setNombre("Entrenamiento Físico - Estadio");
-        sesion2.setGrupo(grupo);
-        sesion2.setSensei(sensei);
-        sesion2.setFechaHoraInicio(hoy.plusDays(2).atTime(6, 0));
-        sesion2.setFechaHoraFin(hoy.plusDays(2).atTime(7, 30));
-        sesion2.setTipoSesion(TipoSesion.ACONDICIONAMIENTO);
-        sesion2.setLatitud(6.2545);
-        sesion2.setLongitud(-75.5916);
-        sesion2.setRadioPermitidoMetros(150);
-        sesionService.guardar(sesion2);
+        // Sesión 1: hoy a las 16:00
+        LocalDateTime inicio1 = hoy.atTime(16, 0);
+        LocalDateTime fin1 = hoy.atTime(17, 30);
+        if (!sesionProgramadaRepository.existsByGrupoAndFechaHoraInicioAndFechaHoraFin(grupo, inicio1, fin1)) {
+            SesionProgramada sesion1 = new SesionProgramada();
+            sesion1.setNombre("Entrenamiento Técnico - Parque Norte");
+            sesion1.setGrupo(grupo);
+            sesion1.setSensei(sensei);
+            sesion1.setFechaHoraInicio(inicio1);
+            sesion1.setFechaHoraFin(fin1);
+            sesion1.setTipoSesion(TipoSesion.TECNICA);
+            sesion1.setLatitud(6.2716);
+            sesion1.setLongitud(-75.5634);
+            sesion1.setRadioPermitidoMetros(100);
+            sesionService.guardar(sesion1);
+        }
 
-        // Sesión para la próxima semana
-        SesionProgramada sesion3 = new SesionProgramada();
-        sesion3.setNombre("Randori - Dojo Central");
-        sesion3.setGrupo(grupo);
-        sesion3.setSensei(sensei);
-        sesion3.setFechaHoraInicio(hoy.plusWeeks(1)
-                .with(TemporalAdjusters.nextOrSame(DayOfWeek.WEDNESDAY))
-                .atTime(18, 0));
-        sesion3.setFechaHoraFin(hoy.plusWeeks(1)
-                .with(TemporalAdjusters.nextOrSame(DayOfWeek.WEDNESDAY))
-                .atTime(19, 30));
-        sesion3.setTipoSesion(TipoSesion.RANDORI);
-        sesion3.setLatitud(6.2442);
-        sesion3.setLongitud(-75.5812);
-        sesion3.setRadioPermitidoMetros(100);
-        sesionService.guardar(sesion3);
-    }
-    // ------------------------------------------------------------------------
+        // Sesión 2: pasado mañana a las 6:00
+        LocalDateTime inicio2 = hoy.plusDays(2).atTime(6, 0);
+        LocalDateTime fin2 = hoy.plusDays(2).atTime(7, 30);
+        if (!sesionProgramadaRepository.existsByGrupoAndFechaHoraInicioAndFechaHoraFin(grupo, inicio2, fin2)) {
+            SesionProgramada sesion2 = new SesionProgramada();
+            sesion2.setNombre("Entrenamiento Físico - Estadio");
+            sesion2.setGrupo(grupo);
+            sesion2.setSensei(sensei);
+            sesion2.setFechaHoraInicio(inicio2);
+            sesion2.setFechaHoraFin(fin2);
+            sesion2.setTipoSesion(TipoSesion.ACONDICIONAMIENTO);
+            sesion2.setLatitud(6.2545);
+            sesion2.setLongitud(-75.5916);
+            sesion2.setRadioPermitidoMetros(150);
+            sesionService.guardar(sesion2);
+        }
+
+        // Sesión 3: próximo miércoles a las 18:00
+        LocalDateTime inicio3 = hoy.with(TemporalAdjusters.nextOrSame(DayOfWeek.WEDNESDAY)).atTime(18, 0);
+        LocalDateTime fin3 = hoy.with(TemporalAdjusters.nextOrSame(DayOfWeek.WEDNESDAY)).atTime(19, 30);
+        if (!sesionProgramadaRepository.existsByGrupoAndFechaHoraInicioAndFechaHoraFin(grupo, inicio3, fin3)) {
+            SesionProgramada sesion3 = new SesionProgramada();
+            sesion3.setNombre("Randori - Dojo Central");
+            sesion3.setGrupo(grupo);
+            sesion3.setSensei(sensei);
+            sesion3.setFechaHoraInicio(inicio3);
+            sesion3.setFechaHoraFin(fin3);
+            sesion3.setTipoSesion(TipoSesion.RANDORI);
+            sesion3.setLatitud(6.2442);
+            sesion3.setLongitud(-75.5812);
+            sesion3.setRadioPermitidoMetros(100);
+            sesionService.guardar(sesion3);
+        }
+    }    // ------------------------------------------------------------------------
     // NUEVOS MÉTODOS PARA DATOS ADICIONALES
     // ------------------------------------------------------------------------
 
@@ -880,6 +897,7 @@ public class DatosMuestraInicializer {
     }
 
     private void crearSesionesAdicionales(Sensei sensei, GrupoEntrenamiento grupo) {
+
         LocalDate hoy = LocalDate.now();
         // Horarios diferentes para cada semana (9, 10, 11, 12) para evitar solapamiento
         int[] horas = {9, 10, 11, 12};
@@ -891,7 +909,7 @@ public class DatosMuestraInicializer {
                 if (fecha.getMonth() != fechaBase.getMonth()) continue;
 
                 SesionProgramada sesion = new SesionProgramada();
-                sesion.setNombre("Entrenamiento " + (i < 0 ? "Histórico" : "Planificado") + " - Semana " + (w+1));
+                sesion.setNombre("Entrenamiento " + (i < 0 ? "Histórico" : "Planificado") + " - Semana " + (w + 1));
                 sesion.setGrupo(grupo);
                 sesion.setSensei(sensei);
                 sesion.setFechaHoraInicio(fecha.atTime(horas[w], 0));
@@ -900,11 +918,13 @@ public class DatosMuestraInicializer {
                 sesion.setLatitud(6.2442 + (Math.random() - 0.5) * 0.1);
                 sesion.setLongitud(-75.5812 + (Math.random() - 0.5) * 0.1);
                 sesion.setRadioPermitidoMetros(100);
-
-                sesionService.guardar(sesion);
+                if (!sesionProgramadaRepository.existsByGrupoAndFechaHoraInicioAndFechaHoraFin(grupo, sesion.getFechaHoraInicio(), sesion.getFechaHoraFin())) {
+                    sesionService.guardar(sesion);
+                }
             }
         }
     }
+
     private void generarAntropometriaHistorica(Judoka maria, Judoka julian) {
         LocalDateTime hoy = LocalDateTime.now();
         // Generar mediciones cada 3 meses durante los últimos 4 años (16 trimestres)
@@ -938,5 +958,124 @@ public class DatosMuestraInicializer {
 
             registrarAntropometria(julian, pesoJulian, estaturaJulian, cinturaJulian, envergaduraJulian, fecha);
         }
+    }
+    private void crearFamiliaJaimes(Sensei master) {
+        // Evitar duplicados
+        if (usuarioRepo.findByUsername("juliana_v8@test.com").isPresent()) {
+            System.out.println(">>> El escenario Familia Jaimes ya existe. Omitiendo.");
+            return;
+        }
+
+        System.out.println(">>> Creando escenario Familia Jaimes (V8)...");
+
+        // 1. Crear rol acudiente si no existe
+        Rol rolAcudiente = rolRepo.findByNombre("ROLE_ACUDIENTE")
+                .orElseGet(() -> rolRepo.save(new Rol("ROLE_ACUDIENTE")));
+
+        // 2. Crear usuario acudiente (Juliana)
+        Usuario juliana = new Usuario();
+        juliana.setUsername("juliana_v8@test.com");
+        juliana.setNombre("Juliana");
+        juliana.setApellido("Jaimes");
+        juliana.setEmail("juliana_v8@test.com");
+        juliana.setPasswordHash(passwordEncoder.encode("1234"));
+        juliana.setRoles(Set.of(rolAcudiente));
+        juliana.setActivo(true);
+        juliana = usuarioRepo.save(juliana);
+
+        // 3. Crear grupo
+        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(master, "Jóvenes Girón - V8")
+                .orElseGet(() -> {
+                    GrupoEntrenamiento g = new GrupoEntrenamiento();
+                    g.setNombre("Jóvenes Girón - V8");
+                    g.setSensei(master);
+                    return grupoRepository.save(g);
+                });
+        // 4. Crear judokas
+        String[][] datosJudokas = {
+                {"Thaliana", "Jaimes", "FEMENINO"},
+                {"Nahomy", "Jaimes", "FEMENINO"},
+                {"Marian", "Jaimes", "FEMENINO"},
+                {"Johan", "Jaimes", "MASCULINO"}
+        };
+        for (String[] d : datosJudokas) {
+            Judoka j = new Judoka();
+            j.setNombre(d[0]);
+            j.setApellido(d[1]);
+            j.setAcudiente(juliana);
+            j.setSensei(master);
+            j.setGrupo(grupo);
+            j.setFechaNacimiento(LocalDate.now().minusYears(15));
+            j.setSexo(Sexo.valueOf(d[2]));
+            j.setGrado(GradoCinturon.BLANCO);
+            j.setEstado(EstadoJudoka.ACTIVO);
+            j.setMatriculaPagada(true);
+            j.setSuscripcionActiva(true);
+            j.setFechaVencimientoSuscripcion(LocalDate.now().plusMonths(1));
+            judokaRepo.save(j);
+        }
+
+        // 5. Crear macrociclo
+        Macrociclo macro = new Macrociclo();
+        macro.setNombre("Adquisición Inicial");
+        macro.setObjetivoPrincipal("Adaptación base");
+        macro.setSensei(master);
+        macro.setFechaInicio(LocalDate.now());
+        macro.setFechaFin(LocalDate.now().plusMonths(4));
+        macro = macrocicloRepository.save(macro);
+
+        // 6. Crear tareas específicas si no existen
+        TareaDiaria tareaMov = tareaDiariaRepository.findByNombreAndSenseiCreador("Movilidad Articular", master)
+                .orElseGet(() -> {
+                    TareaDiaria t = new TareaDiaria();
+                    t.setNombre("Movilidad Articular");
+                    t.setSenseiCreador(master);
+                    t.setCategoria(CategoriaEjercicio.AGILIDAD);
+                    return tareaDiariaRepository.save(t);
+                });
+
+        TareaDiaria tareaUchi = tareaDiariaRepository.findByNombreAndSenseiCreador("Uchikomi", master)
+                .orElseGet(() -> {
+                    TareaDiaria t = new TareaDiaria();
+                    t.setNombre("Uchikomi");
+                    t.setSenseiCreador(master);
+                    t.setCategoria(CategoriaEjercicio.TECNICA);
+                    return tareaDiariaRepository.save(t);
+                });
+
+        // 7. Crear microciclo
+        Microciclo micro = new Microciclo();
+        micro.setNombre("Semana de Prueba V8");
+        micro.setMacrociclo(macro);
+        micro.setSensei(master);
+        micro.setFechaInicio(LocalDate.now());
+        micro.setFechaFin(LocalDate.now().plusDays(7));
+        micro.setEstado(EstadoMicrociclo.ACTIVO);
+        micro.setTipoMicrociclo(TipoMicrociclo.AJUSTE);
+        micro.setMesocicloATC(MesocicloATC.ADQUISICION);
+        micro.getGruposAsignados().add(grupo);
+        micro = microcicloRepo.save(micro);
+
+        // 8. Ejercicios planificados
+        EjercicioPlanificado ep1 = new EjercicioPlanificado();
+        ep1.setMicrociclo(micro);
+        ep1.setTareaDiaria(tareaMov);
+        ep1.setDuracionMinutos(15);
+        ep1.setNotasSensei("Fase inicial");
+        ep1.setOrden(1);
+        // Opcional: días asignados (por defecto ninguno)
+        micro.addEjercicio(ep1);
+
+        EjercicioPlanificado ep2 = new EjercicioPlanificado();
+        ep2.setMicrociclo(micro);
+        ep2.setTareaDiaria(tareaUchi);
+        ep2.setDuracionMinutos(45);
+        ep2.setNotasSensei("Fase técnica");
+        ep2.setOrden(2);
+        micro.addEjercicio(ep2);
+
+        microcicloRepo.save(micro);
+
+        System.out.println(">>> Escenario Familia Jaimes creado correctamente.");
     }
 }

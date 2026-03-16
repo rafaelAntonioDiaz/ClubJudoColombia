@@ -37,7 +37,6 @@ public class SenseiLayout extends AppLayout {
     private final ConfiguracionService configuracionService;
     private final AuthenticationContext authenticationContext;
 
-    // INYECCIÓN DE CAMPO: Permite mantener el constructor original intacto
     @Autowired
     private TraduccionService traduccionService;
 
@@ -145,9 +144,11 @@ public class SenseiLayout extends AppLayout {
         //agregarTab(tabs, getTexto("inventario.titulo", "Tienda"), VaadinIcon.CART, InventarioView.class);
 
         // --- 7. ADMINISTRACIÓN ---
+
         agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);
 
         agregarTab(tabs, getTexto("menu.mi.perfil", "Perfil"), VaadinIcon.COGS, PerfilSenseiView.class);
+        agregarTab(tabs, getTexto("menu.backup", "Back up"), VaadinIcon.COGS, BackupView.class);
 
         // --- SALIR ---
         Tab logoutTab = new Tab(createLogoutLink());

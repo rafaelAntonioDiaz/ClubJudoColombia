@@ -21,4 +21,6 @@ public interface TareaDiariaRepository extends JpaRepository<TareaDiaria, Long> 
     // Necesario para el DataInitializer
     Optional<TareaDiaria> findByNombreIgnoreCase(String nombre);
     boolean existsByNombreAndSenseiCreador(String nombre, Sensei sensei);
+
+    Optional<TareaDiaria> findByNombreAndSenseiCreador(String uchikomi, Sensei master);
 }

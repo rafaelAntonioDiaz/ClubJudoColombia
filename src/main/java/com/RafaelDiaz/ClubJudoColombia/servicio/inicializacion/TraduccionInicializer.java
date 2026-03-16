@@ -826,7 +826,7 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "finanzas.titulo", "Finanzas", "Finance", "Finanças");
         agregarSiNoExiste(lista, clavesExistentes, "admin.titulo", "Configuración del SaaS", "SaaS Configuration", "Admin");
         agregarSiNoExiste(lista, clavesExistentes, "admin.descripcion", "Parametrice su escenario", "Parameterize your setting", "Parametrize seu cenário");
-
+        agregarSiNoExiste(lista, clavesExistentes, "menu.backup", "Respaldo BD", "Database Backup", "Backup de BD");
 
         // =========================================================
         // 2. BIBLIOTECA DE SABIDURÍA (CITAS DE MAESTROS)
