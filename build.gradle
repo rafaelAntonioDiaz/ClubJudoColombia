@@ -1,9 +1,9 @@
 buildscript {
     repositories {
-    	mavenCentral()
-	    maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
-			maven { setUrl("https://repo.spring.io/milestone") }
-		}
+        mavenCentral()
+        maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
+        maven { setUrl("https://repo.spring.io/milestone") }
+    }
 }
 plugins {
     id 'java'
@@ -11,8 +11,10 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.vaadin' version '24.8.4'
 }
+
 group = 'com.RafaelDiaz'
 version = '0.0.1-SNAPSHOT'
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -21,80 +23,78 @@ java {
 
 repositories {
     mavenLocal()
-	mavenCentral()
-	maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
-	maven { setUrl("https://repo.spring.io/milestone") }
-	maven { setUrl("https://maven.vaadin.com/vaadin-addons") }
+    mavenCentral()
+    maven { setUrl("https://maven.vaadin.com/vaadin-prereleases") }
+    maven { setUrl("https://repo.spring.io/milestone") }
+    maven { setUrl("https://maven.vaadin.com/vaadin-addons") }
     maven { setUrl("https://jitpack.io") }
 }
+
 ext {
     vaadinVersion = '24.8.4'
-    springSecurityVersion = '6.4.1'
 }
 
 configurations {
-	developmentOnly
-	runtimeClasspath {
-		extendsFrom developmentOnly
-	}
+    developmentOnly
+    runtimeClasspath {
+        extendsFrom developmentOnly
+    }
 }
 
 dependencies {
     // ---- Spring Boot ----
-    // Para la persistencia (Entidades, Repositorios)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    // Para tener un servidor web (necesario para Vaadin)
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    // Para enviar correos
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-
-    // Herramientas de desarrollo (reinicios automáticos, etc.)
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    // Amazon
-    // 1. AWS SDK BOM (Bill of Materials) - Gestiona las versiones automáticamente
-    implementation platform('software.amazon.awssdk:bom:2.25.11')
-    // 2. Cliente específico de AWS S3 (V2)
-    implementation 'software.amazon.awssdk:s3'
-    // ---- Vaadin ----
-    // Importa la lista de versiones correctas de Vaadin
-    implementation enforcedPlatform("com.vaadin:vaadin-bom:$vaadinVersion")
-
-    implementation platform("com.vaadin:vaadin-bom:$vaadinVersion")
-    // upload component specifically
-    implementation("com.vaadin:vaadin-upload-flow")
-
-    implementation("com.vaadin:vaadin-core:$vaadinVersion")
-    // El "starter" que integra Vaadin con Spring Boot
-    implementation 'com.vaadin:vaadin-spring-boot-starter'
-    // Para la seguridad (autenticación, autorización y encriptación)
-    //implementation "com.vaadin:vaadin-spring-boot-starter-security:$vaadinVersion"
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
-// --- NUEVA DEPENDENCIA (Flyway) ---
-    // Para migraciones de base de datos (versionar la BD con archivos SQL)
-    implementation 'org.flywaydb:flyway-mysql'
+    // Herramientas de desarrollo
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // AWS SDK para S3 (Cloudflare R2 es compatible)
+    implementation platform('software.amazon.awssdk:bom:2.25.11')
+    implementation 'software.amazon.awssdk:s3'
+
+    // ---- Vaadin ----
+    implementation enforcedPlatform("com.vaadin:vaadin-bom:$vaadinVersion")
+    implementation 'com.vaadin:vaadin-spring-boot-starter'
+    // Si necesitas el componente Upload explícitamente (ya incluido en starter, pero por si acaso)
+    implementation 'com.vaadin:vaadin-upload-flow'
+
+    // Otras utilidades
     implementation 'org.apache.pdfbox:pdfbox:3.0.3'
     implementation 'com.github.appreciated:apexcharts:24.0.1'
     implementation 'com.github.librepdf:openpdf:1.3.30'
 
+    // Base de datos H2 (runtime)
     runtimeOnly 'com.h2database:h2'
+
     // ---- Testing ----
-    testImplementation('org.springframework.boot:spring-boot-starter-test') {
-        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-    }
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
-
 
 dependencyManagement {
     imports {
         mavenBom "com.vaadin:vaadin-bom:$vaadinVersion"
     }
-    test {
-        useJUnitPlatform()
-    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Configuración del plugin de Vaadin
+vaadin {
+    productionMode = true  // Se activará mediante perfil, pero podemos dejarlo así
+}
+
+// Asegurar que el frontend se construya al generar el JAR
+tasks.named("vaadinBuildFrontend") {
+    enabled = true
+}
+tasks.named("build") {
+    dependsOn tasks.named("vaadinBuildFrontend")
 }
