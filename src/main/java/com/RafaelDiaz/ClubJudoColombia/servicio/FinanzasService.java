@@ -29,6 +29,7 @@ public class FinanzasService {
     private final CuentaCobroRepository cuentaCobroRepo;
     private final ConceptoFinancieroRepository conceptoRepo;
     private final PagoRepository pagoRepo;
+
     private final SecurityService securityService;
     private final TraduccionService traduccionService;
     private final ConfiguracionService configService;
@@ -191,8 +192,7 @@ public class FinanzasService {
             // B. Definir Tarifas (Lógica SaaS vs Club)
             // TODO: Mejorar la detección de "Es mi alumno" vs "Es de un Sensei externo"
             // Por ahora usamos la lógica: Si el Sensei es el del usuario ADMIN, es alumno propio.
-            boolean esAlumnoPropio = judoka.getSensei().getUsuario().getUsername().equals("admin");
-
+            boolean esAlumnoPropio = judoka.getSensei() != null && judoka.getSensei().isEsClubPropio();
             BigDecimal monto;
             String conceptoKey;
             BigDecimal comisionSensei = BigDecimal.ZERO;
@@ -254,10 +254,11 @@ public class FinanzasService {
         );
 
         // 4. Dispersión de Fondos (Revenue Share)
+        BigDecimal comision = configService.obtenerConfiguracion().getCOMISION_SENSEI_MENSUALIDAD();
         if (cuenta.getValorComisionSensei() != null && cuenta.getValorComisionSensei().compareTo(BigDecimal.ZERO) > 0) {
             Sensei sensei = cuenta.getJudokaBeneficiario().getSensei();
             if (sensei != null) {
-                sensei.abonarComision(cuenta.getValorComisionSensei());
+                sensei.abonarComision(comision);
                 senseiRepo.save(sensei);
             }
         }
@@ -364,8 +365,7 @@ public class FinanzasService {
 
         // 1. DETECTAR EL TIPO DE ALUMNO (Regla: master_admin)
         // Verificamos si el Sensei del alumno es el dueño del sistema
-        boolean esAlumnoPropio = judoka.getSensei().getUsuario().getUsername().equals("master_admin");
-
+        boolean esAlumnoPropio = judoka.getSensei() != null && judoka.getSensei().isEsClubPropio();
         if (esAlumnoPropio) {
             // --- CASO A: ALUMNO PROPIO (Club Judo Colombia) ---
             // Debe pagar: Matrícula + Mensualidad Club

@@ -20,6 +20,10 @@ public class TokenInvitacion implements Serializable {
     @JoinColumn(name = "id_sensei", nullable = true)
     private Sensei sensei;
 
+    @Column(name = "es_club_propio")
+    private Boolean esClubPropio;
+
+    // Getter y setter
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_judoka", nullable = true)
     private Judoka judoka;
@@ -120,6 +124,14 @@ public class TokenInvitacion implements Serializable {
     public String getToken() { return token; }
     public Judoka getJudoka() { return judoka; }
     public void setUsado(boolean usado) { this.usado = usado; }
+
+    public Boolean getEsClubPropio() {
+        return esClubPropio;
+    }
+
+    public void setEsClubPropio(Boolean esClubPropio) {
+        this.esClubPropio = esClubPropio;
+    }
 
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;

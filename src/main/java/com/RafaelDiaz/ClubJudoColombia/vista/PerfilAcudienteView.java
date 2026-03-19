@@ -7,6 +7,11 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MetodoPago;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.JudokaLayout;
+import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.qrcode.QRCodeWriter;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.avatar.Avatar;
@@ -29,12 +34,19 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinServletRequest;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.RolesAllowed;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -239,20 +251,19 @@ public class PerfilAcudienteView extends VerticalLayout {
         String token = accesoDojoService.generarNuevoPase(judoka);
 
         // Construimos la URL absoluta
-        var request = com.vaadin.flow.server.VaadinServletRequest.getCurrent().getHttpServletRequest();
-        String urlBase = request.getRequestURL().toString().replace(request.getRequestURI(), "") + request.getContextPath();
-        String linkCompleto = urlBase + "/acceso-dojo/" + token;
+        String linkCompleto = obtenerBaseUrl() + "/acceso/" + token;
 
-        // Resto del diálogo igual...
         Dialog dialog = new Dialog();
         dialog.setHeaderTitle("Pase de Acceso: " + judoka.getNombre());
 
         VerticalLayout layout = new VerticalLayout();
-        layout.add(new Paragraph("Comparte este enlace con tu hijo o escanea el QR al llegar al club."));
-
-        Icon qrIcon = VaadinIcon.QRCODE.create();
-        qrIcon.setSize("100px");
-        qrIcon.getStyle().set("align-self", "center");
+        layout.add(new Paragraph("Comparte este enlace con tu hijo o genera el QR"));
+        Button btnVerQR = new Button("Ver QR", VaadinIcon.QRCODE.create());
+        btnVerQR.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+        btnVerQR.setWidthFull();
+        btnVerQR.addClickListener(e -> {
+            mostrarDialogoQR(linkCompleto);
+        });
 
         TextArea linkField = new TextArea("Enlace de Acceso Directo");
         linkField.setValue(linkCompleto);
@@ -264,7 +275,7 @@ public class PerfilAcudienteView extends VerticalLayout {
             Notification.show("Enlace copiado al portapapeles");
         });
 
-        layout.add(qrIcon, linkField, btnCopiar);
+        layout.add(btnVerQR, linkField, btnCopiar);
         dialog.add(layout);
         dialog.getFooter().add(new Button("Cerrar", e -> dialog.close()));
         dialog.open();
@@ -363,10 +374,57 @@ public class PerfilAcudienteView extends VerticalLayout {
         contenedorHijos.removeAll();
         judokaService.findByAcudiente(acudiente).forEach(h -> contenedorHijos.add(crearTarjetaHijo(h)));
     }
+    private void mostrarDialogoQR(String link) {
+        try {
+            String base64 = generarQRBase64(link, 300, 300);
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
 
-    // --- MÉTODO HELPER CORREGIDO ---
+            // The direct Vaadin 24.8 replacement for StreamResource
+            DownloadHandler handler = DownloadHandler.fromInputStream(event ->
+                    new DownloadResponse(
+                            new ByteArrayInputStream(imageBytes),
+                            "qr.png",
+                            "image/png",
+                            imageBytes.length // Length is optional but good practice
+                    )
+            );
+
+            Image qrImage = new Image(handler, "Código QR");
+            qrImage.setWidth("300px");
+            qrImage.setHeight("300px");
+
+            Dialog dialog = new Dialog();
+            dialog.add(new VerticalLayout(qrImage, new Button("Cerrar", e -> dialog.close())));
+            dialog.setWidth("auto");
+            dialog.setHeight("auto");
+            dialog.open();
+        } catch (Exception ex) {
+            NotificationHelper.error("Error al generar QR: " + ex.getMessage());
+        }
+    }
+
+    // --- MÉTODOS HELPER  ---
     private String formatearMoneda(BigDecimal valor) {
         if (valor == null) return configuracionService.obtenerFormatoMoneda().format(0);
         return configuracionService.obtenerFormatoMoneda().format(valor);
+    }
+    private String obtenerBaseUrl() {
+        VaadinServletRequest request = VaadinServletRequest.getCurrent();
+        String scheme = request.getScheme();
+        String serverName = request.getServerName();
+        int serverPort = request.getServerPort();
+        if ((scheme.equals("http") && serverPort == 80) || (scheme.equals("https") && serverPort == 443)) {
+            return scheme + "://" + serverName;
+        } else {
+            return scheme + "://" + serverName + ":" + serverPort;
+        }
+    }
+    public String generarQRBase64(String texto, int ancho, int alto) throws WriterException, IOException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        var bitMatrix = qrCodeWriter.encode(texto, BarcodeFormat.QR_CODE, ancho, alto);
+        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+        byte[] pngData = pngOutputStream.toByteArray();
+        return Base64.getEncoder().encodeToString(pngData);
     }
 }

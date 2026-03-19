@@ -4,11 +4,17 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.qrcode.QRCodeWriter;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -18,9 +24,15 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinServletRequest;
+import com.vaadin.flow.server.streams.DownloadHandler;
+import com.vaadin.flow.server.streams.DownloadResponse;
 import jakarta.annotation.security.RolesAllowed;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @PageTitle("Gestor de Invitaciones | Club Judo Colombia")
@@ -33,6 +45,7 @@ public class GestorInvitacionesView extends VerticalLayout {
 
     // --- Componentes del Formulario Base ---
     private final ComboBox<OpcionRol> comboRoles = new ComboBox<>("¿A quién deseas invitar?");
+    private final ComboBox<String> comboTipoSensei = new ComboBox<>("Tipo de Sensei");
     private final TextField nombreField = new TextField("Nombre");
     private final TextField apellidoField = new TextField("Apellido");
     private final TextField celularField = new TextField("Celular / WhatsApp");
@@ -82,6 +95,13 @@ public class GestorInvitacionesView extends VerticalLayout {
         // Si no es master, deshabilitamos el combo para que no intente "hackear" el rol
         comboRoles.setEnabled(isMaster);
         comboRoles.setWidthFull();
+        comboTipoSensei.setItems("Club Propio", "Externo (SaaS)");
+        comboTipoSensei.setValue("Externo (SaaS)"); // valor por defecto
+        comboTipoSensei.setVisible(false);
+        comboRoles.addValueChangeListener(e -> {
+            boolean isSensei = e.getValue() != null && "ROLE_SENSEI".equals(e.getValue().rolDb());
+            comboTipoSensei.setVisible(isSensei);
+        });
     }
     private void configurarFormulario() {
         VerticalLayout cardForm = new VerticalLayout();
@@ -105,7 +125,7 @@ public class GestorInvitacionesView extends VerticalLayout {
         form.add(nombreField, apellidoField, celularField, emailField);
         form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("400px", 2));
 
-        cardForm.add(titulo, subtitulo, comboRoles, form, btnGenerar);
+        cardForm.add(titulo, subtitulo, comboRoles, comboTipoSensei, form, btnGenerar);
         add(cardForm);
     }
 
@@ -131,10 +151,18 @@ public class GestorInvitacionesView extends VerticalLayout {
             ));
         });
 
+        Button btnVerQR = new Button("Ver QR", VaadinIcon.QRCODE.create());
+        btnVerQR.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+        btnVerQR.setWidthFull();
+        btnVerQR.addClickListener(e -> {
+            String link = mensajeWhatsApp.getValue().split("👉 ")[1].trim(); // Extrae el link del mensaje
+            mostrarDialogoQR(link);
+        });
+
         btnNuevaInvitacion.setWidthFull();
         btnNuevaInvitacion.addClickListener(e -> reiniciarParaLote());
+        panelResultado.add(new H2("¡Enlace Generado!"), mensajeWhatsApp, btnCopiar, btnVerQR, btnNuevaInvitacion);
 
-        panelResultado.add(new H2("¡Enlace Generado!"), mensajeWhatsApp, btnCopiar, btnNuevaInvitacion);
         add(panelResultado);
     }
 
@@ -143,30 +171,31 @@ public class GestorInvitacionesView extends VerticalLayout {
             NotificationHelper.error("Por favor completa todos los campos.");
             return;
         }
-
         try {
             String rolElegido = comboRoles.getValue().rolDb();
+
+            boolean esClubPropio = "Club Propio".equals(comboTipoSensei.getValue()); // <-- DECLARAR AQUÍ
+
             String tokenGenerado = admisionesService.generarInvitacion(
                     nombreField.getValue().trim(),
                     apellidoField.getValue().trim(),
                     emailField.getValue().trim(),
                     celularField.getValue().trim(),
                     rolElegido,
-                    obtenerBaseUrl()
+                    obtenerBaseUrl(),
+                    esClubPropio
             );
 
-            // Generar el texto contextual
-            String linkFinal = obtenerBaseUrl() + "/acceso-dojo/" + tokenGenerado;
+            String linkFinal = obtenerBaseUrl() + "/acceso/" + tokenGenerado;
             boolean isMaster = securityService.getAuthenticatedUserDetails()
                     .map(u -> u.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MASTER")))
                     .orElse(false);
-
             String msj = redactarMensajeInteligente(isMaster, nombreField.getValue(), linkFinal, rolElegido);
             mensajeWhatsApp.setValue(msj);
 
             // Transición de UI
-            btnGenerar.getParent().ifPresent(parent -> ((VerticalLayout) parent).setVisible(false)); // Oculta formulario
-            panelResultado.setVisible(true); // Muestra resultados
+            btnGenerar.getParent().ifPresent(parent -> ((VerticalLayout) parent).setVisible(false));
+            panelResultado.setVisible(true);
 
             NotificationHelper.success("Invitación registrada en el sistema.");
 
@@ -175,7 +204,6 @@ public class GestorInvitacionesView extends VerticalLayout {
             ex.printStackTrace();
         }
     }
-
     private String redactarMensajeInteligente(boolean isMaster, String nombreInvitado, String link, String rol) {
         String remitente = isMaster ? "el Profesor Rafael" : "tu Profesor de Judo";
 
@@ -223,7 +251,45 @@ public class GestorInvitacionesView extends VerticalLayout {
             return scheme + "://" + serverName + ":" + serverPort;
         }
     }
+    private void mostrarDialogoQR(String link) {
+        try {
+            String base64 = generarQRBase64(link, 300, 300);
+            byte[] imageBytes = Base64.getDecoder().decode(base64);
+
+            // The direct Vaadin 24.8 replacement for StreamResource
+            DownloadHandler handler = DownloadHandler.fromInputStream(event ->
+                    new DownloadResponse(
+                            new ByteArrayInputStream(imageBytes),
+                            "qr.png",
+                            "image/png",
+                            imageBytes.length // Length is optional but good practice
+                    )
+            );
+
+            Image qrImage = new Image(handler, "Código QR");
+            qrImage.setWidth("300px");
+            qrImage.setHeight("300px");
+
+            Dialog dialog = new Dialog();
+            dialog.add(new VerticalLayout(qrImage, new Button("Cerrar", e -> dialog.close())));
+            dialog.setWidth("auto");
+            dialog.setHeight("auto");
+            dialog.open();
+        } catch (Exception ex) {
+            NotificationHelper.error("Error al generar QR: " + ex.getMessage());
+        }
+    }
 
     // Helper Record para el ComboBox
     public record OpcionRol(String nombreVisible, String rolDb) {}
+
+    public String generarQRBase64(String texto, int ancho, int alto) throws WriterException, IOException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        var bitMatrix = qrCodeWriter.encode(texto, BarcodeFormat.QR_CODE, ancho, alto);
+        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+        byte[] pngData = pngOutputStream.toByteArray();
+        return Base64.getEncoder().encodeToString(pngData);
+    }
+
 }

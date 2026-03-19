@@ -5,6 +5,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.*;
+import com.RafaelDiaz.ClubJudoColombia.vista.admin.GestionSenseisView;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.IdiomaSelector;
 import com.RafaelDiaz.ClubJudoColombia.vista.sensei.GestorInvitacionesView;
 import com.RafaelDiaz.ClubJudoColombia.vista.sensei.PerfilSenseiView;
@@ -144,11 +145,12 @@ public class SenseiLayout extends AppLayout {
         //agregarTab(tabs, getTexto("inventario.titulo", "Tienda"), VaadinIcon.CART, InventarioView.class);
 
         // --- 7. ADMINISTRACIÓN ---
-
-        agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);
-
         agregarTab(tabs, getTexto("menu.mi.perfil", "Perfil"), VaadinIcon.COGS, PerfilSenseiView.class);
+
+        agregarTab(tabs, getTexto("menu.senseis", "Senseis"), VaadinIcon.COGS, GestionSenseisView.class);
+
         agregarTab(tabs, getTexto("menu.backup", "Back up"), VaadinIcon.COGS, BackupView.class);
+        agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);
 
         // --- SALIR ---
         Tab logoutTab = new Tab(createLogoutLink());

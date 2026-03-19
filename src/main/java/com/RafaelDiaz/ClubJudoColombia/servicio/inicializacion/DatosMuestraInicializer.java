@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DatosMuestraInicializer {
-
+    private final MecenasRepository mecenasRepo;
     private final UsuarioRepository usuarioRepo;
     private final SenseiRepository senseiRepo;
     private final JudokaRepository judokaRepo;
@@ -45,7 +45,7 @@ public class DatosMuestraInicializer {
     private final SesionProgramadaRepository sesionProgramadaRepository;
     private final MicrocicloService microcicloService;
 
-    public DatosMuestraInicializer(UsuarioRepository usuarioRepo,
+    public DatosMuestraInicializer(MecenasRepository mecenasRepo, UsuarioRepository usuarioRepo,
                                    SenseiRepository senseiRepo,
                                    JudokaRepository judokaRepo,
                                    RolRepository rolRepo,
@@ -66,6 +66,7 @@ public class DatosMuestraInicializer {
                                    GrupoEntrenamientoRepository grupoRepository,
                                    EjecucionTareaRepository ejecucionTareaRepository, SesionProgramadaRepository sesionProgramadaRepository,
                                    MicrocicloService microcicloService) {
+        this.mecenasRepo = mecenasRepo;
         this.usuarioRepo = usuarioRepo;
         this.senseiRepo = senseiRepo;
         this.judokaRepo = judokaRepo;
@@ -571,16 +572,6 @@ public class DatosMuestraInicializer {
         }
     }
 
-    private void crearMacrociclosParaSensei(Sensei sensei) {
-        Macrociclo macro = new Macrociclo();
-        macro.setNombre("Preparación Juegos Nacionales 2026");
-        macro.setObjetivoPrincipal("Alcanzar el pico de forma en agosto");
-        macro.setFechaInicio(LocalDate.now().minusMonths(2));
-        macro.setFechaFin(LocalDate.now().plusMonths(6));
-        macro.setSensei(sensei);
-        macro = macrocicloRepository.save(macro);
-    }
-
     private void crearMicrociclosParaSensei(Sensei sensei) {
         if (microcicloRepo.count() > 0) return;
 
@@ -968,9 +959,12 @@ public class DatosMuestraInicializer {
 
         System.out.println(">>> Creando escenario Familia Jaimes (V8)...");
 
-        // 1. Crear rol acudiente si no existe
+        // 1. Crear roles  si no existen
         Rol rolAcudiente = rolRepo.findByNombre("ROLE_ACUDIENTE")
                 .orElseGet(() -> rolRepo.save(new Rol("ROLE_ACUDIENTE")));
+
+        Rol rolMecenas = rolRepo.findByNombre("ROLE_MECENAS")
+                .orElseGet(() -> rolRepo.save(new Rol("ROLE_MECENAS")));
 
         // 2. Crear usuario acudiente (Juliana)
         Usuario juliana = new Usuario();
@@ -983,7 +977,25 @@ public class DatosMuestraInicializer {
         juliana.setActivo(true);
         juliana = usuarioRepo.save(juliana);
 
-        // 3. Crear grupo
+        // 3. Crear usuario Mecenas (Carlos, patrocinador)
+        Usuario carlos = new Usuario();
+        carlos.setUsername("carlos_jaimes@test.com");
+        carlos.setNombre("Carlos");
+        carlos.setApellido("Mecenas");
+        carlos.setEmail("carlos_jaimes@test.com");
+        carlos.setPasswordHash(passwordEncoder.encode("1234"));
+        carlos.setRoles(Set.of(rolMecenas));
+        carlos.setActivo(true);
+        carlos = usuarioRepo.save(carlos);
+
+        // 4. Crear perfil de Mecenas
+        Mecenas mecenas = new Mecenas();
+        mecenas.setUsuario(carlos);
+        mecenas.setTipo(TipoMecenas.PERSONA_NATURAL);
+        mecenas.setDescripcionPatrocinio("Patrocina a los jóvenes Jaimes");
+        mecenas = mecenasRepo.save(mecenas);
+
+        // 5. Crear grupo
         GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(master, "Jóvenes Girón - V8")
                 .orElseGet(() -> {
                     GrupoEntrenamiento g = new GrupoEntrenamiento();
@@ -991,7 +1003,7 @@ public class DatosMuestraInicializer {
                     g.setSensei(master);
                     return grupoRepository.save(g);
                 });
-        // 4. Crear judokas
+        // 6. Crear judokas
         String[][] datosJudokas = {
                 {"Thaliana", "Jaimes", "FEMENINO"},
                 {"Nahomy", "Jaimes", "FEMENINO"},
@@ -1003,6 +1015,7 @@ public class DatosMuestraInicializer {
             j.setNombre(d[0]);
             j.setApellido(d[1]);
             j.setAcudiente(juliana);
+            j.setMecenas(mecenas);
             j.setSensei(master);
             j.setGrupo(grupo);
             j.setFechaNacimiento(LocalDate.now().minusYears(15));

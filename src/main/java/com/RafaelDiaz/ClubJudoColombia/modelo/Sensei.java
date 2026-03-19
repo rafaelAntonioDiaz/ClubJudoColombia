@@ -22,6 +22,9 @@ public class Sensei implements Serializable {
     @JoinColumn(name = "id_usuario", referencedColumnName = "id_usuario", unique = true, nullable = false)
     private Usuario usuario;
 
+    @Column(name = "es_club_propio", nullable = false)
+    private boolean esClubPropio = false; // Por defecto false (externo)
+
     @Column(name = "nombre_dojo", length = 100)
     private String nombreDojo;
 
@@ -72,6 +75,14 @@ public class Sensei implements Serializable {
     }
 
     // --- Getters y Setters (Actualizados) ---
+
+    public boolean isEsClubPropio() {
+        return esClubPropio;
+    }
+
+    public void setEsClubPropio(boolean esClubPropio) {
+        this.esClubPropio = esClubPropio;
+    }
 
     public String getUrlFotoPerfil() {
         return urlFotoPerfil;

@@ -54,7 +54,7 @@ public class AdmisionesService {
     @Transactional
     public String generarInvitacion(String nombre, String apellido,
                                     String email, String celular,
-                                    String rolEsperado, String baseUrl) {
+                                    String rolEsperado, String baseUrl, boolean esClubPropio) {
 
         // 1. Crear o recuperar el Usuario base (por si reenvían la invitación)
         Usuario usuarioInvitado = usuarioRepository.findByUsername(email).orElse(new Usuario());
@@ -102,7 +102,7 @@ public class AdmisionesService {
         token.setSensei(senseiActual); // Nullable si invita el MASTER
         token.setJudoka(judokaVinculado); // Nullable si es Mecenas/Sensei
         token.generarToken(48); // Válido por 48 horas
-
+        token.setEsClubPropio(rolEsperado.equals("ROLE_SENSEI") ? esClubPropio : null);
         tokenRepository.save(token);
 
         // 4. (Opcional) Respaldo por correo electrónico

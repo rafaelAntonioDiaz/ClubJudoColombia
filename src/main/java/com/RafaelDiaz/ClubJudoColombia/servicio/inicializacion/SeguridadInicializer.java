@@ -72,6 +72,7 @@ public class SeguridadInicializer {
         masterSensei.setGrado(GradoCinturon.NEGRO_4_DAN);
         masterSensei.setAnosPractica(25);
         masterSensei.setBiografia("Director de la Plataforma SaaS.");
+        masterSensei.setEsClubPropio(true);
         return senseiRepo.save(masterSensei);
     }
 }

@@ -22,11 +22,9 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
@@ -269,11 +267,13 @@ public class MecenasDashboardView extends VerticalLayout {
 
         Span cinturon = new Span("Cinturón " + j.getGrado());
         cinturon.getElement().getThemeList().add("badge");
-        Button btnPerfil = new Button("Ver Perfil", VaadinIcon.USER.create());
+
+        Button btnPerfil = new Button("Ver Perfil Competitivo", VaadinIcon.CHART.create());
         btnPerfil.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
         btnPerfil.addClickListener(e ->
-                UI.getCurrent().navigate(PerfilJudokaView.class, j.getId())
+                UI.getCurrent().navigate(JudokaDashboardView.class, j.getId())
         );
+
         // Estado financiero del atleta (Visual simple)
         boolean alDia = j.getFechaVencimientoSuscripcion() != null &&
                 j.getFechaVencimientoSuscripcion().isAfter(java.time.LocalDate.now());

@@ -71,23 +71,38 @@ public class SecurityService {
     @Transactional(readOnly = true)
     public Optional<Judoka> getAuthenticatedJudoka() {
         VaadinSession session = VaadinSession.getCurrent();
-        // 1. Prioridad: ¿Viene por Magic Link? (ID guardado en sesión)
-        Long judokaId = (Long) session.getAttribute("JUDOKA_ACTUAL_ID");
-        System.out.println("getAuthenticatedJudoka: session attribute = " + session.getAttribute("JUDOKA_ACTUAL_ID"));
-
-        if (judokaId != null) {
-            return judokaRepository.findByIdWithDetails(judokaId);
+        // 1. Prioridad: ¿Viene por Magic Link? (ID guardado en sesión de Vaadin)
+        if (session != null) {
+            Long judokaId = (Long) session.getAttribute("JUDOKA_ACTUAL_ID");
+            if (judokaId != null) {
+                return judokaRepository.findByIdWithDetails(judokaId);
+            }
         }
 
-        // 2. Fallback: usuario autenticado normal (Acudiente/Sensei/Master)
-        return getAuthenticatedUserDetails().flatMap(userDetails -> {
-            return usuarioRepository.findByUsername(userDetails.getUsername())
-                    .flatMap(usuario -> {
-                        List<Judoka> judokas = judokaRepository.findByAcudienteWithDetails(usuario);
-                        return judokas.stream().findFirst();
-                    });
-        });
+        // 2. Intentar obtener el UserDetails y ver si el username tiene formato "judoka_"
+        Optional<UserDetails> userDetailsOpt = getAuthenticatedUserDetails();
+        if (userDetailsOpt.isPresent()) {
+            String username = userDetailsOpt.get().getUsername();
+            if (username != null && username.startsWith("judoka_")) {
+                try {
+                    Long id = Long.parseLong(username.substring(7));
+                    return judokaRepository.findByIdWithDetails(id);
+                } catch (NumberFormatException e) {
+                    // Ignorar, no es un ID válido
+                }
+            }
+        }
+
+        // 3. Fallback: usuario autenticado normal (Acudiente/Sensei/Master)
+        return getAuthenticatedUserDetails().flatMap(userDetails ->
+                usuarioRepository.findByUsername(userDetails.getUsername())
+                        .flatMap(usuario -> {
+                            List<Judoka> judokas = judokaRepository.findByAcudienteWithDetails(usuario);
+                            return judokas.stream().findFirst();
+                        })
+        );
     }
+
 
     public boolean isSensei() {
         return getAuthenticatedUserDetails()
