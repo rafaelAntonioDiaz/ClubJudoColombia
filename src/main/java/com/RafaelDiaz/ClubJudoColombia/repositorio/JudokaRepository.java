@@ -35,11 +35,13 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
             "LEFT JOIN FETCH s.usuario " +
             "WHERE j.estado = :estado")
     List<Judoka> findByEstadoWithDetails(@Param("estado") EstadoJudoka estado);
+
     // Mantenemos compatibilidad con nombres genéricos si es necesario
     List<Judoka> findByEstado(EstadoJudoka estadoJudoka);
+
     Optional<Judoka> findByTokenAccesoDirecto(String token);
-    // 1. SEGURIDAD: Buscar judokas de un Sensei específico
-    List<Judoka> findBySensei(Sensei sensei);
+
+
     // Solo contar los judokas de su propio dojo (Para el Dashboard del Sensei)
     long countBySenseiId(Long senseiId);
     // Para limpiar tokens/aspirantes caducados en toda la plataforma
@@ -51,16 +53,24 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
             "LEFT JOIN FETCH s.usuario " +
             "WHERE j.acudiente = :acudiente")
     List<Judoka> findByAcudienteWithDetails(@Param("acudiente") Usuario acudiente);
-    // Añade esto en tu JudokaRepository
+
     @Query("SELECT j FROM Judoka j " +
             "LEFT JOIN FETCH j.acudiente " +
             "LEFT JOIN FETCH j.sensei s " +
             "LEFT JOIN FETCH s.usuario " +  // <-- NUEVO
             "WHERE j.id = :id")
     Optional<Judoka> findByIdWithDetails(@Param("id") Long id);
-    // Buscar por el username del acudiente (ahora el nombre correcto del campo)
+
+    // Buscar por el username del acudiente
     Optional<Judoka> findByAcudiente_Username(String username);
+
     @Query("SELECT j FROM Judoka j LEFT JOIN FETCH j.acudiente WHERE j.grupo = :grupo")
     List<Judoka> findByGrupoWithAcudiente(@Param("grupo") GrupoEntrenamiento grupo);
-    List<Judoka> findByGrupo(GrupoEntrenamiento grupo);
+
+    @Query("SELECT j FROM Judoka j LEFT JOIN FETCH j.mecenas WHERE j.acudiente = :acudiente")
+    List<Judoka> findByAcudienteWithMecenas(@Param("acudiente") Usuario acudiente);    List<Judoka> findByGrupo(GrupoEntrenamiento grupo);
+
+    List<Judoka> findBySensei(Sensei sensei);
+
+    List<Judoka> findByGrupoFacturacionAndEstado(GrupoEntrenamiento grupo, EstadoJudoka estadoJudoka);
 }

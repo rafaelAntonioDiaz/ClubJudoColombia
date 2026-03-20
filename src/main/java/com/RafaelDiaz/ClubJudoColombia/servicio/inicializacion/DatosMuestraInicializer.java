@@ -3,18 +3,13 @@ package com.RafaelDiaz.ClubJudoColombia.servicio.inicializacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.*;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
-import com.RafaelDiaz.ClubJudoColombia.servicio.ChatService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.MicrocicloService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SesionService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.UsuarioService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.YearMonth;
+import java.math.BigDecimal;
+import java.time.*;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -44,6 +39,8 @@ public class DatosMuestraInicializer {
     private final EjecucionTareaRepository ejecucionTareaRepository;
     private final SesionProgramadaRepository sesionProgramadaRepository;
     private final MicrocicloService microcicloService;
+    private final GrupoEntrenamientoService grupoService;
+    private final ConfiguracionService configService;
 
     public DatosMuestraInicializer(MecenasRepository mecenasRepo, UsuarioRepository usuarioRepo,
                                    SenseiRepository senseiRepo,
@@ -65,7 +62,7 @@ public class DatosMuestraInicializer {
                                    TareaDiariaRepository tareaDiariaRepository,
                                    GrupoEntrenamientoRepository grupoRepository,
                                    EjecucionTareaRepository ejecucionTareaRepository, SesionProgramadaRepository sesionProgramadaRepository,
-                                   MicrocicloService microcicloService) {
+                                   MicrocicloService microcicloService, GrupoEntrenamientoService grupoService, ConfiguracionService configService) {
         this.mecenasRepo = mecenasRepo;
         this.usuarioRepo = usuarioRepo;
         this.senseiRepo = senseiRepo;
@@ -89,6 +86,8 @@ public class DatosMuestraInicializer {
         this.ejecucionTareaRepository = ejecucionTareaRepository;
         this.sesionProgramadaRepository = sesionProgramadaRepository;
         this.microcicloService = microcicloService;
+        this.grupoService = grupoService;
+        this.configService = configService;
     }
 
     @Transactional
@@ -119,6 +118,7 @@ public class DatosMuestraInicializer {
         Microciclo planAcond = crearPlanAcondicionamiento(kiuzo, grupoDemo);
         Microciclo planEval = crearPlanEvaluacion(kiuzo, grupoDemo);
         crearMicrociclosParaSensei(kiuzo);
+        crearGruposParaSensei(kiuzo);
         // 6. Generar resultados de pruebas históricos (varias fechas)
         generarResultadosFisicosConHistorial(maria, "EXPERTO");
         generarResultadosFisicosConHistorial(julian, "NOVATO");
@@ -165,16 +165,31 @@ public class DatosMuestraInicializer {
 
     private GrupoEntrenamiento crearGrupoUnificado(Sensei sensei, List<Judoka> judokas) {
         String nombreGrupo = "Grupo de Demostración";
+        // Opcional: evitar duplicados
         Optional<GrupoEntrenamiento> existente = grupoRepository.findBySenseiAndNombre(sensei, nombreGrupo);
         if (existente.isPresent()) {
             System.out.println(">>> Grupo '" + nombreGrupo + "' ya existe. Reutilizando.");
-            return existente.get();
+            GrupoEntrenamiento grupo = existente.get();
+            // Asegurar que los judokas estén en el grupo
+            for (Judoka j : judokas) {
+                j.setGrupo(grupo);
+                judokaRepo.save(j);
+            }
+            return grupo;
         }
 
         GrupoEntrenamiento grupo = new GrupoEntrenamiento();
         grupo.setNombre(nombreGrupo);
         grupo.setDescripcion("Grupo unificado para pruebas (incluye María y Julián)");
         grupo.setSensei(sensei);
+
+        // ✅ Asignar valores financieros desde configuración
+        grupo.setTarifaMensual(configService.getGrupoTarifaDefault());
+        grupo.setComisionSensei(configService.getGrupoComisionDefault());
+        grupo.setIncluyeMatricula(configService.isGrupoIncluyeMatriculaDefault());
+        grupo.setMontoMatricula(configService.getGrupoMontoMatriculaDefault());
+        grupo.setDiasGracia(configService.getGrupoDiasGraciaDefault());
+
         grupo = grupoRepository.save(grupo);
 
         for (Judoka j : judokas) {
@@ -183,6 +198,7 @@ public class DatosMuestraInicializer {
         }
         return grupo;
     }
+
     private Microciclo crearPlanAcondicionamiento(Sensei sensei, GrupoEntrenamiento grupo) {
         Microciclo plan = new Microciclo();
         plan.setNombre("Plan Base de Acondicionamiento");
@@ -577,14 +593,20 @@ public class DatosMuestraInicializer {
 
         System.out.println(">>> Creando microciclos para Sensei " + sensei.getUsuario().getNombre());
 
-        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(sensei, "Selección Mayores")
-                .orElseGet(() -> {
-                    GrupoEntrenamiento g = new GrupoEntrenamiento();
-                    g.setNombre("Selección Mayores");
-                    g.setDescripcion("Grupo de competencia");
-                    g.setSensei(sensei);
-                    return grupoRepository.save(g);
-                });
+        // ✅ Crear grupo con valores por defecto usando el servicio
+        GrupoEntrenamiento grupo = grupoService.crearGrupo(
+                sensei,
+                "Selección Mayores",
+                "Grupo de competencia",
+                configService.getGrupoTarifaDefault(),
+                configService.getGrupoComisionDefault(),
+                configService.isGrupoIncluyeMatriculaDefault(),
+                configService.getGrupoMontoMatriculaDefault(),
+                configService.getGrupoDiasGraciaDefault()
+        );
+
+        System.out.println(">>> Creando microciclos para Sensei " + sensei.getUsuario().getNombre());
+
 
         Microciclo planAcond = new Microciclo();
         planAcond.setNombre("Base de pretemporada");
@@ -996,13 +1018,16 @@ public class DatosMuestraInicializer {
         mecenas = mecenasRepo.save(mecenas);
 
         // 5. Crear grupo
-        GrupoEntrenamiento grupo = grupoRepository.findBySenseiAndNombre(master, "Jóvenes Girón - V8")
-                .orElseGet(() -> {
-                    GrupoEntrenamiento g = new GrupoEntrenamiento();
-                    g.setNombre("Jóvenes Girón - V8");
-                    g.setSensei(master);
-                    return grupoRepository.save(g);
-                });
+        GrupoEntrenamiento grupo = grupoService.crearGrupo(
+                master,
+                "Jóvenes Girón - V8",
+                "Grupo para la familia Jaimes",
+                configService.getGrupoTarifaDefault(),
+                configService.getGrupoComisionDefault(),
+                configService.isGrupoIncluyeMatriculaDefault(),
+                configService.getGrupoMontoMatriculaDefault(),
+                configService.getGrupoDiasGraciaDefault()
+        );
         // 6. Crear judokas
         String[][] datosJudokas = {
                 {"Thaliana", "Jaimes", "FEMENINO"},
@@ -1090,5 +1115,30 @@ public class DatosMuestraInicializer {
         microcicloRepo.save(micro);
 
         System.out.println(">>> Escenario Familia Jaimes creado correctamente.");
+    }
+    // En DataInitializer
+
+    private void crearGruposParaSensei(Sensei sensei) {
+        ConfiguracionSistema config = configService.obtenerConfiguracion();
+
+        // Grupo 1 con valores por defecto
+        grupoService.crearGrupo(sensei,
+                "Grupo Principiantes",
+                "Para niños que inician",
+                config.getGrupoTarifaDefault(),
+                config.getGrupoComisionDefault(),
+                config.isGrupoIncluyeMatriculaDefault(),
+                config.getGrupoMontoMatriculaDefault(),
+                config.getGrupoDiasGraciaDefault());
+
+        // Grupo 2 con valores personalizados
+        grupoService.crearGrupo(sensei,
+                "Grupo Avanzados",
+                "Competidores",
+                new BigDecimal("30000"),
+                new BigDecimal("8000"),
+                true,
+                new BigDecimal("50000"),
+                3);
     }
 }

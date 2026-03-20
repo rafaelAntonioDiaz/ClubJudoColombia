@@ -32,6 +32,25 @@ public class ConfiguracionSistema {
     @Email(message = "{validation.email.invalido}") // <--- I18n Key
     private String emailSoporte;
 
+    @Column(name = "tarifa_minima_global", precision = 10, scale = 2)
+    private BigDecimal tarifaMinimaGlobal = new BigDecimal("10000"); // ejemplo
+
+    // Getters y setters para los valores por defecto de grupos
+    @Column(name = "grupo_tarifa_default", precision = 10, scale = 2)
+    private BigDecimal grupoTarifaDefault = new BigDecimal("20000");
+
+    @Column(name = "grupo_comision_default", precision = 10, scale = 2)
+    private BigDecimal grupoComisionDefault = new BigDecimal("5000");
+
+    @Column(name = "grupo_incluye_matricula_default")
+    private boolean grupoIncluyeMatriculaDefault = false;
+
+    @Column(name = "grupo_monto_matricula_default", precision = 10, scale = 2)
+    private BigDecimal grupoMontoMatriculaDefault = new BigDecimal("0");
+
+    @Column(name = "grupo_dias_gracia_default")
+    private int grupoDiasGraciaDefault = 5;
+
     // URL del logo para recibos y cabecera
     private String urlLogo;
 
@@ -144,4 +163,53 @@ public class ConfiguracionSistema {
     public void setFIN_MATRICULA_ANUAL(BigDecimal FIN_MATRICULA_ANUAL) {
         this.FIN_MATRICULA_ANUAL = FIN_MATRICULA_ANUAL;
     }
+
+    public BigDecimal getTarifaMinimaGlobal() {
+        return tarifaMinimaGlobal;
+    }
+
+    public void setTarifaMinimaGlobal(BigDecimal tarifaMinimaGlobal) {
+        this.tarifaMinimaGlobal = tarifaMinimaGlobal;
+    }
+
+    public BigDecimal getGrupoTarifaDefault() {
+        return grupoTarifaDefault;
+    }
+
+    public void setGrupoTarifaDefault(BigDecimal grupoTarifaDefault) {
+        this.grupoTarifaDefault = grupoTarifaDefault;
+    }
+
+    public BigDecimal getGrupoComisionDefault() {
+        return grupoComisionDefault;
+    }
+
+    public void setGrupoComisionDefault(BigDecimal grupoComisionDefault) {
+        this.grupoComisionDefault = grupoComisionDefault;
+    }
+
+    public boolean isGrupoIncluyeMatriculaDefault() {
+        return grupoIncluyeMatriculaDefault;
+    }
+
+    public void setGrupoIncluyeMatriculaDefault(boolean grupoIncluyeMatriculaDefault) {
+        this.grupoIncluyeMatriculaDefault = grupoIncluyeMatriculaDefault;
+    }
+
+    public BigDecimal getGrupoMontoMatriculaDefault() {
+        return grupoMontoMatriculaDefault;
+    }
+
+    public void setGrupoMontoMatriculaDefault(BigDecimal grupoMontoMatriculaDefault) {
+        this.grupoMontoMatriculaDefault = grupoMontoMatriculaDefault;
+    }
+
+    public int getGrupoDiasGraciaDefault() {
+        return grupoDiasGraciaDefault;
+    }
+
+    public void setGrupoDiasGraciaDefault(int grupoDiasGraciaDefault) {
+        this.grupoDiasGraciaDefault = grupoDiasGraciaDefault;
+    }
+
 }

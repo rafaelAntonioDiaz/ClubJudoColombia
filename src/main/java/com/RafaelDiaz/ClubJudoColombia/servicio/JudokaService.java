@@ -50,15 +50,6 @@ public class JudokaService {
         this.senseiRepository = senseiRepository;
     }
 
-
-    // Método adicional útil para el nuevo modelo
-    public List<Judoka> findAllJudokasByAcudiente(Usuario acudiente) {
-        return judokaRepository.findByAcudiente(acudiente);
-    }
-    public List<Judoka> obtenerJudokasPorAcudiente(Usuario usuario) {
-        return judokaRepository.findByAcudiente(usuario);
-    }
-
     @Transactional
     public Judoka ascenderGrado(Judoka judoka, GradoCinturon nuevoGrado) {
         judoka.setGrado(nuevoGrado);
@@ -198,10 +189,9 @@ public class JudokaService {
     }
     @Transactional(readOnly = true)
     public List<Judoka> findByAcudiente(Usuario acudiente) {
-        return judokaRepository.findAll().stream()
-                .filter(j -> j.getAcudiente() != null && j.getAcudiente().equals(acudiente))
-                .collect(Collectors.toList());
+        return judokaRepository.findByAcudienteWithMecenas(acudiente);
     }
+
     private void agregarPruebaAlPlan(Microciclo micro, String keyPrueba, int orden) {
         Optional<PruebaEstandar> pruebaOpt = pruebaRepository.findByNombreKey(keyPrueba);
         if (pruebaOpt.isPresent()) {

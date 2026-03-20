@@ -4,41 +4,53 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class AdmisionesService {
     private final SecurityService securityService;
+    private final EmailService emailService;
+    private final ConfiguracionService configuracionService;
+    private final GrupoEntrenamientoService grupoService;
     private final JudokaRepository judokaRepository;
     private final UsuarioRepository usuarioRepository;
     private final DocumentoRequisitoRepository documentoRepository;
     private final RolRepository rolRepository;
+    private final GrupoEntrenamientoRepository grupoRepository;
     private final TraduccionService traduccionService;
     private final TokenInvitacionRepository tokenRepository;
-    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     private final JudokaService judokaService;
+    private static final Logger logger = LoggerFactory.getLogger(AdmisionesService.class);
 
-    public AdmisionesService(SecurityService securityService, JudokaRepository judokaRepository,
+    public AdmisionesService(SecurityService securityService, ConfiguracionService configuracionService, GrupoEntrenamientoService grupoService, JudokaRepository judokaRepository,
                              UsuarioRepository usuarioRepository,
                              DocumentoRequisitoRepository documentoRepository,
-                             RolRepository rolRepository,
+                             RolRepository rolRepository, GrupoEntrenamientoRepository grupoRepository,
                              TraduccionService traduccionService,
                              TokenInvitacionRepository tokenRepository,
                              EmailService emailService, PasswordEncoder passwordEncoder,
                              JudokaService judokaService) {
         this.securityService = securityService;
+        this.configuracionService = configuracionService;
+        this.grupoService = grupoService;
         this.judokaRepository = judokaRepository;
         this.usuarioRepository = usuarioRepository;
         this.documentoRepository = documentoRepository;
         this.rolRepository = rolRepository;
+        this.grupoRepository = grupoRepository;
         this.traduccionService = traduccionService;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
@@ -54,65 +66,107 @@ public class AdmisionesService {
     @Transactional
     public String generarInvitacion(String nombre, String apellido,
                                     String email, String celular,
-                                    String rolEsperado, String baseUrl, boolean esClubPropio) {
+                                    String rolEsperado, String baseUrl,
+                                    Boolean esClubPropio, Long grupoId) {
 
-        // 1. Crear o recuperar el Usuario base (por si reenvían la invitación)
+        // 1. Validar que el grupo sea obligatorio para roles de judoka
+        if (("ROLE_JUDOKA".equals(rolEsperado) || "ROLE_JUDOKA_ADULTO".equals(rolEsperado)) && grupoId == null) {
+            throw new RuntimeException("Debes seleccionar un grupo para el nuevo judoka.");
+        }
+
+        // 2. Obtener el sensei que invita (puede ser null si invita el Master)
+        Sensei senseiActual = securityService.getAuthenticatedSensei().orElse(null);
+
+        // 3. Si se proporcionó grupoId, validar que exista y pertenezca al sensei (o al sensei del grupo si el que invita es Master)
+        GrupoEntrenamiento grupo = null;
+        if (grupoId != null) {
+            grupo = grupoRepository.findById(grupoId)
+                    .orElseThrow(() -> new RuntimeException("El grupo seleccionado no existe."));
+
+            if (senseiActual != null && !grupo.getSensei().getId().equals(senseiActual.getId())) {
+                throw new RuntimeException("No puedes invitar a un grupo que no te pertenece.");
+            }
+        }
+
+        // 4. Crear o recuperar el Usuario base
         Usuario usuarioInvitado = usuarioRepository.findByUsername(email).orElse(new Usuario());
-        usuarioInvitado.setUsername(email); // El email es la llave maestra
+        usuarioInvitado.setUsername(email);
         usuarioInvitado.setEmail(email);
         usuarioInvitado.setNombre(nombre);
         usuarioInvitado.setApellido(apellido);
         usuarioInvitado.setCelular(celular);
-        usuarioInvitado.setActivo(false); // Pendiente de Onboarding
+        usuarioInvitado.setActivo(false);
+        usuarioInvitado.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
 
-        // Clave temporal encriptada e irrompible (usarán Magic Link para entrar)
-        usuarioInvitado.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
-
-        // Asignación estricta del Rol
+        // Asignar rol
         Rol rol = rolRepository.findByNombre(rolEsperado)
-                .orElseThrow(() -> new RuntimeException("Error Crítico: El rol " + rolEsperado + " no existe."));
-        usuarioInvitado.setRoles(new java.util.HashSet<>(java.util.Set.of(rol)));
+                .orElseThrow(() -> new RuntimeException("El rol " + rolEsperado + " no existe."));
+        usuarioInvitado.setRoles(Set.of(rol));
 
         usuarioRepository.saveAndFlush(usuarioInvitado);
 
-        // 2. Determinar quién invita y si requiere perfil deportivo
-        Sensei senseiActual = securityService.getAuthenticatedSensei().orElse(null);
+        // 5. Crear Judoka si el rol lo requiere
         Judoka judokaVinculado = null;
+        if ("ROLE_JUDOKA".equals(rolEsperado) || "ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
 
-        // Solo creamos entidad Judoka si es un aspirante a tatami
-        if (rolEsperado.equals("ROLE_JUDOKA")) {
-            Judoka nuevoJudoka = new Judoka();
-            nuevoJudoka.setAcudiente(usuarioInvitado);
-            nuevoJudoka.setCelular(celular);
-            if (senseiActual != null) {
-                nuevoJudoka.setSensei(senseiActual);
+            judokaVinculado = new Judoka();
+
+            // --- DIFERENCIACIÓN CLAVE ---
+            if ("ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
+                // Adulto: el acudiente es él mismo
+                judokaVinculado.setAcudiente(usuarioInvitado);
+            } else {
+                // Menor: el acudiente es el usuario que se está creando (el padre/madre)
+                // Nota: En este flujo, el usuario invitado es el acudiente, no el judoka.
+                // El judoka menor no tiene usuario propio, solo el acudiente.
+                // Por lo tanto, NO debemos crear un usuario para el menor. El usuario ya es el acudiente.
+                // Pero aquí estamos creando un judoka asociado al acudiente, eso está bien.
+                judokaVinculado.setAcudiente(usuarioInvitado);
             }
-            nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
-            judokaRepository.saveAndFlush(nuevoJudoka);
 
-            // Disparador mágico para el plan de evaluación
-            judokaService.inicializarJudokaNuevo(nuevoJudoka);
-            judokaVinculado = nuevoJudoka;
+            judokaVinculado.setCelular(celular);
+            judokaVinculado.setSensei(senseiActual);
+            judokaVinculado.setEstado(EstadoJudoka.PENDIENTE);
+
+            // Asignar grupo de facturación (nuevo campo)
+            judokaVinculado.setGrupoFacturacion(grupo);
+
+            // Si el senseiActual es null (Master invita), asignamos el sensei del grupo
+            if (senseiActual == null && grupo != null) {
+                judokaVinculado.setSensei(grupo.getSensei());
+            }
+
+            judokaRepository.saveAndFlush(judokaVinculado);
+
+            // Inicializar datos adicionales del judoka (peso, talla, etc.) - si aplica
+            judokaService.inicializarJudokaNuevo(judokaVinculado);
+
+            // Asignar el judoka al grupo (relación many-to-many)
+            if (grupo != null) {
+                grupoService.addJudokaToGrupo(grupo.getId(), judokaVinculado.getId());
+            }
         }
 
-        // 3. Generar el Token Unificado
+        // 6. Generar el Token de invitación
         TokenInvitacion token = new TokenInvitacion();
         token.setUsuarioInvitado(usuarioInvitado);
         token.setRolEsperado(rolEsperado);
-        token.setSensei(senseiActual); // Nullable si invita el MASTER
-        token.setJudoka(judokaVinculado); // Nullable si es Mecenas/Sensei
-        token.generarToken(48); // Válido por 48 horas
+        token.setSensei(senseiActual);
+        token.setJudoka(judokaVinculado);
+        token.setGrupo(grupo); // Guardamos el grupo para referencia histórica
         token.setEsClubPropio(rolEsperado.equals("ROLE_SENSEI") ? esClubPropio : null);
+        token.generarToken(48); // Válido 48 horas
         tokenRepository.save(token);
 
-        // 4. (Opcional) Respaldo por correo electrónico
+        // 7. (Opcional) Enviar email
         if (email != null && !email.isEmpty()) {
             emailService.enviarInvitacionMagicLink(email, nombre, token.getToken(), baseUrl);
         }
 
-        // 5. Retornar el token para que la vista genere el texto de WhatsApp
+        // 8. Retornar el token
         return token.getToken();
     }
+
     /**
      * Sube un documento (Waiver, Médico, etc)
      */
@@ -144,7 +198,7 @@ public class AdmisionesService {
         List<String> faltantes = new ArrayList<>();
 
         // Identificar si es SaaS o alumno directo del Master
-        boolean esSaaS = !judoka.getSensei().getUsuario().getUsername().equals("master_admin");
+        boolean esSaaS = judoka.getSensei() != null && !judoka.getSensei().getUsuario().getUsername().equals("master_admin");
 
         // --- LA TRINIDAD DEL DOJO PRINCIPAL ---
         // Solo exigimos Waiver y EPS si NO es SaaS
@@ -177,11 +231,8 @@ public class AdmisionesService {
         // --- SI PASA TODAS LAS PRUEBAS, LO ACTIVAMOS ---
         judoka.setEstado(EstadoJudoka.ACTIVO);
 
-        Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
-                .orElseThrow(() -> new RuntimeException("Error Crítico: No existe el rol ROLE_JUDOKA."));
-
         Usuario usuario = judoka.getUsuario();
-        usuario.setRoles(new java.util.HashSet<>(java.util.Set.of(rolJudoka)));
+        // NO reasignamos roles, ya vienen correctos desde la invitación
         usuario.setActivo(true);
 
         usuarioRepository.save(usuario);

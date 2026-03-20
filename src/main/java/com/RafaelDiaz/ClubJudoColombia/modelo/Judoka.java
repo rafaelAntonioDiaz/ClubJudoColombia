@@ -166,6 +166,9 @@ public class Judoka implements Serializable {
     @Column(name = "fecha_devolucion_judogi")
     private LocalDate fechaDevolucionJudogi;
 
+    @ManyToOne
+    @JoinColumn(name = "id_grupo_facturacion")
+    private GrupoEntrenamiento grupoFacturacion;
 
     public Judoka() {}
 
@@ -384,6 +387,14 @@ public class Judoka implements Serializable {
 
     public boolean isSuscripcionActiva() {
         return suscripcionActiva;
+    }
+
+    public GrupoEntrenamiento getGrupoFacturacion() {
+        return grupoFacturacion;
+    }
+
+    public void setGrupoFacturacion(GrupoEntrenamiento grupoFacturacion) {
+        this.grupoFacturacion = grupoFacturacion;
     }
 
     @Override

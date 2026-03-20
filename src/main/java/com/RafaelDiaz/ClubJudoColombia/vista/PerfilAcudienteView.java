@@ -34,6 +34,7 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinServletRequest;
 import com.vaadin.flow.server.streams.DownloadHandler;
 import com.vaadin.flow.server.streams.DownloadResponse;
@@ -43,6 +44,7 @@ import jakarta.annotation.security.RolesAllowed;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
@@ -217,7 +219,7 @@ public class PerfilAcudienteView extends VerticalLayout {
         btnDetalle.addClassNames(LumoUtility.Margin.Left.AUTO);
         btnDetalle.addClickListener(e -> {
             // Navegación a PerfilJudokaView con el ID del judoka
-            UI.getCurrent().navigate(PerfilJudokaView.class, hijo.getId());
+            UI.getCurrent().navigate(JudokaDashboardView.class, hijo.getId());
         });
         btnDetalle.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
         btnDetalle.addClassNames(LumoUtility.Margin.Left.AUTO);
@@ -227,10 +229,8 @@ public class PerfilAcudienteView extends VerticalLayout {
             btnDetalle.setEnabled(false);
             btnDetalle.getElement().setProperty("title", "Disponible cuando el Master apruebe el ingreso");
         } else {
-            btnDetalle.addClickListener(e -> {
-                // Aquí pondrás la navegación a la vista real de Progreso cuando la construyas
-                Notification.show("Navegando al progreso de " + hijo.getNombre());
-            });
+            btnDetalle.setEnabled(true);
+
         }
 
         acciones.add(btnMagicLink, btnDetalle);
@@ -376,33 +376,29 @@ public class PerfilAcudienteView extends VerticalLayout {
     }
     private void mostrarDialogoQR(String link) {
         try {
-            String base64 = generarQRBase64(link, 300, 300);
-            byte[] imageBytes = Base64.getDecoder().decode(base64);
+            byte[] imageBytes = generarQRBytes(link, 300, 300);
+            StreamResource resource = new StreamResource("qr.png", () -> new ByteArrayInputStream(imageBytes));
+            resource.setContentType("image/png");
 
-            // The direct Vaadin 24.8 replacement for StreamResource
-            DownloadHandler handler = DownloadHandler.fromInputStream(event ->
-                    new DownloadResponse(
-                            new ByteArrayInputStream(imageBytes),
-                            "qr.png",
-                            "image/png",
-                            imageBytes.length // Length is optional but good practice
-                    )
-            );
-
-            Image qrImage = new Image(handler, "Código QR");
+            Image qrImage = new Image(resource, "Código QR");
             qrImage.setWidth("300px");
             qrImage.setHeight("300px");
 
             Dialog dialog = new Dialog();
             dialog.add(new VerticalLayout(qrImage, new Button("Cerrar", e -> dialog.close())));
-            dialog.setWidth("auto");
-            dialog.setHeight("auto");
             dialog.open();
         } catch (Exception ex) {
-            NotificationHelper.error("Error al generar QR: " + ex.getMessage());
+            Notification.show("Error al generar QR: " + ex.getMessage());
         }
     }
-
+    // Modificar generarQRBase64 para que devuelva byte[]
+    private byte[] generarQRBytes(String texto, int ancho, int alto) throws WriterException, IOException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        var bitMatrix = qrCodeWriter.encode(texto, BarcodeFormat.QR_CODE, ancho, alto);
+        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+        return pngOutputStream.toByteArray();
+    }
     // --- MÉTODOS HELPER  ---
     private String formatearMoneda(BigDecimal valor) {
         if (valor == null) return configuracionService.obtenerFormatoMoneda().format(0);
@@ -418,13 +414,5 @@ public class PerfilAcudienteView extends VerticalLayout {
         } else {
             return scheme + "://" + serverName + ":" + serverPort;
         }
-    }
-    public String generarQRBase64(String texto, int ancho, int alto) throws WriterException, IOException {
-        QRCodeWriter qrCodeWriter = new QRCodeWriter();
-        var bitMatrix = qrCodeWriter.encode(texto, BarcodeFormat.QR_CODE, ancho, alto);
-        ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-        MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-        byte[] pngData = pngOutputStream.toByteArray();
-        return Base64.getEncoder().encodeToString(pngData);
     }
 }

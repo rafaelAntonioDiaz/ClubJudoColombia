@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 import java.time.LocalTime;
@@ -75,6 +76,22 @@ public class GrupoEntrenamiento implements Serializable {
     private Set<Microciclo> microciclosAsignados = new HashSet<>();
 
 
+    @Column(name = "tarifa_mensual", nullable = false, precision = 10, scale = 2)
+    private BigDecimal tarifaMensual;
+
+    @Column(name = "comision_sensei", nullable = false, precision = 10, scale = 2)
+    private BigDecimal comisionSensei;
+
+    @Column(name = "incluye_matricula", nullable = false)
+    private boolean incluyeMatricula = false;
+
+    @Column(name = "monto_matricula", precision = 10, scale = 2)
+    private BigDecimal montoMatricula; // puede ser null si incluyeMatricula es false
+
+    @Column(name = "dias_gracia", nullable = false)
+    private int diasGracia = 5;
+
+    // Getters y setters
     // --- Constructores ---
     public GrupoEntrenamiento() {}
 
@@ -153,6 +170,46 @@ public class GrupoEntrenamiento implements Serializable {
 
     public void setMicrociclosAsignados(Set<Microciclo> microciclosAsignados) {
         this.microciclosAsignados = microciclosAsignados;
+    }
+
+    public BigDecimal getTarifaMensual() {
+        return tarifaMensual;
+    }
+
+    public void setTarifaMensual(BigDecimal tarifaMensual) {
+        this.tarifaMensual = tarifaMensual;
+    }
+
+    public BigDecimal getComisionSensei() {
+        return comisionSensei;
+    }
+
+    public void setComisionSensei(BigDecimal comisionSensei) {
+        this.comisionSensei = comisionSensei;
+    }
+
+    public boolean isIncluyeMatricula() {
+        return incluyeMatricula;
+    }
+
+    public void setIncluyeMatricula(boolean incluyeMatricula) {
+        this.incluyeMatricula = incluyeMatricula;
+    }
+
+    public BigDecimal getMontoMatricula() {
+        return montoMatricula;
+    }
+
+    public void setMontoMatricula(BigDecimal montoMatricula) {
+        this.montoMatricula = montoMatricula;
+    }
+
+    public int getDiasGracia() {
+        return diasGracia;
+    }
+
+    public void setDiasGracia(int diasGracia) {
+        this.diasGracia = diasGracia;
     }
 
     // --- hashCode y equals ---

@@ -29,4 +29,6 @@ public interface GrupoEntrenamientoRepository extends JpaRepository<GrupoEntrena
     Optional<GrupoEntrenamiento> findBySenseiAndNombre(Sensei sensei, String nombre);
     List<GrupoEntrenamiento> findBySensei(Sensei sensei);
     List<GrupoEntrenamiento> findAllByJudokasContains(Judoka judoka);
+
+    List<GrupoEntrenamiento> findByJudokas_Id(Long judokaId);
 }

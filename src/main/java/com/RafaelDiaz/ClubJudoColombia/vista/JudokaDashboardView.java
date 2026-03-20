@@ -56,7 +56,7 @@ import java.util.stream.Collectors;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("dashboard-judoka")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR",
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR", "ROLE_JUDOKA_ADULTO",
         "ROLE_ACUDIENTE", "ROLE_SENSEI", "ROLE_MASTER", "ROLE_MECENAS"})
 @PageTitle("Combat Profile | Club Judo Colombia")
 @CssImport("./styles/dashboard-judoka.css")

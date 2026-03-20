@@ -30,7 +30,7 @@ import java.io.InputStream;
 
 @PageTitle("Activación de Perfil | Club Judo Colombia")
 @Route("completar-perfil-judoka")
-@RolesAllowed("ROLE_JUDOKA")
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_JUDOKA_ADULTO"})
 public class CompletarPerfilJudokaView extends VerticalLayout {
 
     private static final Logger log = LoggerFactory.getLogger(CompletarPerfilJudokaView.class);

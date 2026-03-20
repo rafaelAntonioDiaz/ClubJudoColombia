@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
 import static io.netty.util.concurrent.FastThreadLocal.removeAll;
 
 @Route(value = "perfil-judoka", layout = JudokaLayout.class)
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR","ROLE_JUDOKA_ADULTO"})
 @PageTitle("Mi Santuario | Club Judo Colombia")
 public class PerfilJudokaView extends JudokaLayout implements HasUrlParameter<Long> {
 

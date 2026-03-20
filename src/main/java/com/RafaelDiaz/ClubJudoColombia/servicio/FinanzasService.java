@@ -29,6 +29,7 @@ public class FinanzasService {
     private final CuentaCobroRepository cuentaCobroRepo;
     private final ConceptoFinancieroRepository conceptoRepo;
     private final PagoRepository pagoRepo;
+    private final GrupoEntrenamientoRepository grupoRepository;
 
     private final SecurityService securityService;
     private final TraduccionService traduccionService;
@@ -39,7 +40,7 @@ public class FinanzasService {
                            MovimientoCajaRepository movimientoRepo,
                            CuentaCobroRepository cuentaCobroRepo,
                            ConceptoFinancieroRepository conceptoRepo,
-                           PagoRepository pagoRepo,
+                           PagoRepository pagoRepo, GrupoEntrenamientoRepository grupoRepository,
                            SecurityService securityService,
                            TraduccionService traduccionService,
                            ConfiguracionService configService) {
@@ -49,6 +50,7 @@ public class FinanzasService {
         this.cuentaCobroRepo = cuentaCobroRepo;
         this.conceptoRepo = conceptoRepo;
         this.pagoRepo = pagoRepo;
+        this.grupoRepository = grupoRepository;
         this.securityService = securityService;
         this.traduccionService = traduccionService;
         this.configService = configService;
@@ -172,48 +174,39 @@ public class FinanzasService {
     // =========================================================================
 
     /**
-     * CRON JOB: Generación masiva de deudas el día 1 de cada mes.
+     * CRON JOB: Genera las cuentas de cobro mensuales para todos los judokas activos,
+     * agrupados por su grupo de facturación.
      */
     @Transactional
     public void generarCobrosMensualesMasivos() {
-        ConfiguracionSistema config = configService.obtenerConfiguracion();
         LocalDate hoy = LocalDate.now();
         String periodo = hoy.getMonth().name() + " " + hoy.getYear();
 
-        List<Judoka> activos = judokaRepo.findByEstado(EstadoJudoka.ACTIVO);
+        // Obtener todos los grupos que tienen al menos un judoka activo
+        List<GrupoEntrenamiento> grupos = grupoRepository.findAll(); // O puedes filtrar con una consulta más específica
 
-        for (Judoka judoka : activos) {
-            // A. Definir Responsable
-            Usuario responsable = (judoka.getMecenas() != null) ?
-                    judoka.getMecenas().getUsuario() : judoka.getAcudiente();
+        for (GrupoEntrenamiento grupo : grupos) {
+            // Obtener judokas activos que facturan con este grupo
+            // Asumiendo que tienes un repositorio de Judoka con un método como:
+            // List<Judoka> findByGrupoFacturacionAndEstado(GrupoEntrenamiento grupo, EstadoJudoka estado)
+            List<Judoka> judokasActivos = judokaRepo.findByGrupoFacturacionAndEstado(grupo, EstadoJudoka.ACTIVO);
 
-            if (responsable == null) continue; // Safety check
+            for (Judoka judoka : judokasActivos) {
+                Usuario responsable = obtenerResponsableFinanciero(judoka);
 
-            // B. Definir Tarifas (Lógica SaaS vs Club)
-            // TODO: Mejorar la detección de "Es mi alumno" vs "Es de un Sensei externo"
-            // Por ahora usamos la lógica: Si el Sensei es el del usuario ADMIN, es alumno propio.
-            boolean esAlumnoPropio = judoka.getSensei() != null && judoka.getSensei().isEsClubPropio();
-            BigDecimal monto;
-            String conceptoKey;
-            BigDecimal comisionSensei = BigDecimal.ZERO;
+                if (responsable == null) continue;
 
-            if (esAlumnoPropio) {
-                monto = config.getFIN_SENSEI_MASTER_MENSUALIDAD(); // $50.000
-                conceptoKey = CONCEPTO_MENSUALIDAD_CLUB;
-            } else {
-                monto = config.getFIN_SAAS_CANON_FIJO(); // $15.000
-                conceptoKey = CONCEPTO_MENSUALIDAD_SAAS;
-                // El Sensei externo gana una comisión (Ej. $5.000) que se descuenta al pagar
-                // Nota: Aquí podrías usar una configuración global o específica del Sensei
-                comisionSensei = new BigDecimal("5000");
-            }
-
-            // C. Crear la Deuda
-            // Evitamos duplicados
-            if (!existeCobro(judoka, periodo)) {
-                crearCuentaCobro(judoka, responsable, monto, comisionSensei,
-                        traduccionService.get(conceptoKey, periodo),
-                        config.getFIN_DIA_VENCIMIENTO().intValue());
+                // Evitar duplicados (misma persona, mismo período)
+                if (!existeCobro(judoka, periodo)) {
+                    crearCuentaCobro(
+                            judoka,
+                            responsable,
+                            grupo.getTarifaMensual(),
+                            grupo.getComisionSensei(),
+                            traduccionService.get("finanzas.concepto.mensualidad", grupo.getNombre(), periodo),
+                            grupo.getDiasGracia()
+                    );
+                }
             }
         }
     }
@@ -247,18 +240,19 @@ public class FinanzasService {
                 cuenta.getValorTotal(),
                 TipoTransaccion.INGRESO,
                 metodoPago,
-                cuenta.getConcepto(), // Usamos el concepto de la cuenta como nombre
+                cuenta.getConcepto(),
                 cuenta.getJudokaBeneficiario(),
                 "Cobro Cuenta #" + cuenta.getId(),
                 urlComprobante
         );
 
-        // 4. Dispersión de Fondos (Revenue Share)
-        BigDecimal comision = configService.obtenerConfiguracion().getCOMISION_SENSEI_MENSUALIDAD();
-        if (cuenta.getValorComisionSensei() != null && cuenta.getValorComisionSensei().compareTo(BigDecimal.ZERO) > 0) {
+        // 4. Dispersión de Fondos (Revenue Share) - CORREGIDO: usa la comisión de la cuenta
+        if (cuenta.getValorComisionSensei() != null &&
+                cuenta.getValorComisionSensei().compareTo(BigDecimal.ZERO) > 0) {
+
             Sensei sensei = cuenta.getJudokaBeneficiario().getSensei();
             if (sensei != null) {
-                sensei.abonarComision(comision);
+                sensei.abonarComision(cuenta.getValorComisionSensei()); // ✅ Usa el valor de la cuenta
                 senseiRepo.save(sensei);
             }
         }
@@ -271,7 +265,6 @@ public class FinanzasService {
         cuenta.setPagoAsociado(pago);
         cuentaCobroRepo.save(cuenta);
     }
-
     // =========================================================================
     // 3. GESTIÓN DE SENSEIS (WALLET)
     // =========================================================================
@@ -353,9 +346,12 @@ public class FinanzasService {
      * MÉTODO DE ADMISIÓN (Mesa de Control):
      * Genera la primera factura según si es alumno del Master o de un Sensei externo.
      */
+    /**
+     * Genera las cuentas de cobro de bienvenida (matrícula + primera mensualidad)
+     * basándose en el grupo de facturación del judoka.
+     */
     @Transactional
     public void generarCobroBienvenida(Judoka judoka) {
-        ConfiguracionSistema config = configService.obtenerConfiguracion();
         Usuario responsable = (judoka.getMecenas() != null) ?
                 judoka.getMecenas().getUsuario() : judoka.getAcudiente();
 
@@ -363,48 +359,36 @@ public class FinanzasService {
             throw new RuntimeException("Error: El judoka no tiene responsable financiero (Acudiente/Mecenas).");
         }
 
-        // 1. DETECTAR EL TIPO DE ALUMNO (Regla: master_admin)
-        // Verificamos si el Sensei del alumno es el dueño del sistema
-        boolean esAlumnoPropio = judoka.getSensei() != null && judoka.getSensei().isEsClubPropio();
-        if (esAlumnoPropio) {
-            // --- CASO A: ALUMNO PROPIO (Club Judo Colombia) ---
-            // Debe pagar: Matrícula + Mensualidad Club
-
-            // 1. Matrícula Anual
-            if (config.getFIN_MATRICULA_ANUAL().compareTo(BigDecimal.ZERO) > 0) {
-                crearCuentaCobro(judoka, responsable,
-                        config.getFIN_MATRICULA_ANUAL(),
-                        BigDecimal.ZERO, // Sin comisión
-                        traduccionService.get("finanzas.concepto.matricula", LocalDate.now().getYear()),
-                        5); // Vence en 5 días
-            }
-
-            // 2. Primera Mensualidad
-            crearCuentaCobro(judoka, responsable,
-                    config.getFIN_SENSEI_MASTER_MENSUALIDAD(),
-                    BigDecimal.ZERO,
-                    traduccionService.get("finanzas.concepto.mensualidad_club", "Mes 1"),
-                    5);
-
-        } else {
-            // --- CASO B: ALUMNO EXTERNO (SaaS) ---
-            // Solo paga: Uso de Plataforma
-
-            crearCuentaCobro(judoka, responsable,
-                    config.getFIN_SAAS_CANON_FIJO(),
-                    BigDecimal.ZERO, // O la comisión definida
-                    traduccionService.get("finanzas.concepto.inscripcion_saas"),
-                    3); // Vence en 3 días
+        GrupoEntrenamiento grupo = judoka.getGrupoFacturacion();
+        if (grupo == null) {
+            throw new RuntimeException("Error: El judoka no tiene grupo de facturación asignado.");
         }
 
-        // 3. CAMBIO DE ESTADO
-        // No activamos al usuario todavía.
-        // Lo dejamos en PENDIENTE (o ESPERANDO_PAGO si tienes el enum) pero con deuda generada.
-        // El sistema de Login o el Dashboard le mostrará "Tienes pagos pendientes" y no lo dejará entrar al Dojo.
-        // Nota: Si mantienes el estado PENDIENTE, asegúrate de que tu lógica de login revise deudas.
-        // Si usas un estado nuevo, actualízalo aquí:
-        // judoka.setEstado(EstadoJudoka.ESPERANDO_PAGO);
-        judokaRepo.save(judoka);
+        // 1. Matrícula si el grupo la incluye
+        if (grupo.isIncluyeMatricula() && grupo.getMontoMatricula() != null &&
+                grupo.getMontoMatricula().compareTo(BigDecimal.ZERO) > 0) {
+
+            crearCuentaCobro(
+                    judoka,
+                    responsable,
+                    grupo.getMontoMatricula(),
+                    BigDecimal.ZERO, // La matrícula no genera comisión para el sensei
+                    traduccionService.get("finanzas.concepto.matricula", LocalDate.now().getYear()),
+                    grupo.getDiasGracia()
+            );
+        }
+
+        // 2. Primera mensualidad
+        crearCuentaCobro(
+                judoka,
+                responsable,
+                grupo.getTarifaMensual(),
+                grupo.getComisionSensei(),
+                traduccionService.get("finanzas.concepto.mensualidad_inicial", grupo.getNombre()),
+                grupo.getDiasGracia()
+        );
+
+        judokaRepo.save(judoka); // Por si cambia algo (no debería)
     }
     /**
      * CRON JOB: Ejecutar el día 6 de cada mes.
@@ -492,5 +476,29 @@ public class FinanzasService {
 
         cuenta.setEstado(EstadoPago.EN_REVISION);
         cuentaCobroRepo.save(cuenta);
+    }
+
+    private Usuario obtenerResponsableFinanciero(Judoka judoka) {
+        if (judoka.getMecenas() != null) {
+            return judoka.getMecenas().getUsuario();
+        }
+        return judoka.getAcudiente();
+    }
+    public List<SenseiLiquidacionDTO> obtenerSenseisConSaldo() {
+        List<Sensei> senseis = senseiRepo.findBySaldoWalletGreaterThan(BigDecimal.ZERO);
+        return senseis.stream()
+                .map(s -> new SenseiLiquidacionDTO(
+                        s.getId(),
+                        s.getUsuario().getNombre() + " " + s.getUsuario().getApellido(),
+                        s.getSaldoWallet()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // DTO simple (puede ser un record)
+    public record SenseiLiquidacionDTO(Long id, String nombreCompleto, BigDecimal saldo) {}
+    public String formatearMoneda(BigDecimal valor) {
+        if (valor == null) return configService.obtenerFormatoMoneda().format(BigDecimal.ZERO);
+        return configService.obtenerFormatoMoneda().format(valor);
     }
 }

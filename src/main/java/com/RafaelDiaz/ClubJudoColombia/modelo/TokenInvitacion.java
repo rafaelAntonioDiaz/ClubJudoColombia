@@ -44,6 +44,10 @@ public class TokenInvitacion implements Serializable {
     @Column(nullable = false)
     private boolean usado = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_grupo")
+    private GrupoEntrenamiento grupo;
+
     public TokenInvitacion() {}
 
     public TokenInvitacion(Judoka judoka, int horasValidez) {
@@ -131,6 +135,14 @@ public class TokenInvitacion implements Serializable {
 
     public void setEsClubPropio(Boolean esClubPropio) {
         this.esClubPropio = esClubPropio;
+    }
+
+    public GrupoEntrenamiento getGrupo() {
+        return grupo;
+    }
+
+    public void setGrupo(GrupoEntrenamiento grupo) {
+        this.grupo = grupo;
     }
 
     public LocalDateTime getFechaCreacion() {

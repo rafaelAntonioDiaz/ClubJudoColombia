@@ -39,7 +39,13 @@ public class ConfiguracionService {
         config.setId(1L); // Asegurar Singleton
         repository.save(config);
     }
+    public BigDecimal getTarifaMinimaGlobal() {
+        return obtenerConfiguracion().getTarifaMinimaGlobal();
+    }
 
+    public BigDecimal getGrupoTarifaDefault() {
+        return obtenerConfiguracion().getGrupoTarifaDefault();
+    }
     // Métodos Helper para usar en los Layouts
     public boolean esClub() { return obtenerConfiguracion().getNivel() == NivelOrganizacional.CLUB; }
     public boolean esLiga() { return obtenerConfiguracion().getNivel() == NivelOrganizacional.LIGA; }
@@ -81,6 +87,24 @@ public class ConfiguracionService {
 
         return formato;
     }
+    public BigDecimal getGrupoComisionDefault() {
+        return obtenerConfiguracion().getGrupoComisionDefault();
+    }
+    public boolean getGrupoIncluyeMatriculaDefault() {
+        return obtenerConfiguracion().isGrupoIncluyeMatriculaDefault();
+    }
+    public BigDecimal getGrupoMontoMatriculaDefault() {
+        return obtenerConfiguracion().getGrupoMontoMatriculaDefault();
+    }
+    public int getGrupoDiasGraciaDefault() {
+        return obtenerConfiguracion().getGrupoDiasGraciaDefault();
+    }
+
+
+    public boolean isGrupoIncluyeMatriculaDefault() {
+        return obtenerConfiguracion().isGrupoIncluyeMatriculaDefault();
+    }
+
     public int getDiaVencimiento() {
         return obtenerConfiguracion().getFIN_DIA_VENCIMIENTO().intValue();
     }

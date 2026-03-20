@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,4 +24,5 @@ public interface SenseiRepository extends JpaRepository<Sensei, Long> {
     Optional<Sensei> findByUsuarioUsername(String username);
     @Query("SELECT DISTINCT s FROM Sensei s LEFT JOIN FETCH s.usuario")
     List<Sensei> findAllWithUsuario();
+    List<Sensei> findBySaldoWalletGreaterThan(BigDecimal saldo);
 }

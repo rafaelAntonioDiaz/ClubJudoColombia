@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.ConfiguracionSistema;
 import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,15 +31,17 @@ public class GrupoEntrenamientoService {
     private final GrupoEntrenamientoRepository grupoRepository;
     private final JudokaRepository judokaRepository;
     private final MicrocicloRepository planRepository;
+    private final ConfiguracionService configService;
     private final SecurityService securityService;
 
     public GrupoEntrenamientoService(GrupoEntrenamientoRepository grupoRepository,
                                      JudokaRepository judokaRepository,
-                                     MicrocicloRepository planRepository,
+                                     MicrocicloRepository planRepository, ConfiguracionService configService,
                                      SecurityService securityService) {
         this.grupoRepository = grupoRepository;
         this.judokaRepository = judokaRepository;
         this.planRepository = planRepository;
+        this.configService = configService;
         this.securityService = securityService;
     }
 
@@ -80,6 +84,11 @@ public class GrupoEntrenamientoService {
             return grupoRepository.countBySenseiId(miSenseiId);
         }
         return grupoRepository.countBySenseiIdAndNombreContainingIgnoreCase(miSenseiId, filter);
+    }
+
+    @Transactional
+    public List<GrupoEntrenamiento> getGruposPorJudoka(Long judokaId) {
+        return grupoRepository.findByJudokas_Id(judokaId);
     }
 
     @Transactional
@@ -135,6 +144,7 @@ public class GrupoEntrenamientoService {
                 .filter(j -> grado == null || j.getGrado() == grado)
                 .collect(Collectors.toList());
     }
+
     @Transactional
     public void addJudokaToGrupo(Long grupoId, Long judokaId) {
         GrupoEntrenamiento grupo = grupoRepository.findById(grupoId).orElseThrow();
@@ -170,6 +180,7 @@ public class GrupoEntrenamientoService {
             grupoRepository.save(grupo);
         }
     }
+
     @Transactional(readOnly = true)
     public List<Judoka> findJudokasEnGrupo(Long grupoId, String searchNombre, Sexo sexo, GradoCinturon grado) {
         if (grupoId == null) return List.of();
@@ -202,6 +213,7 @@ public class GrupoEntrenamientoService {
         grupo.getJudokas().clear();
         grupoRepository.delete(grupo);
     }
+
     @Transactional(readOnly = true)
     public List<GrupoEntrenamiento> findAllBySenseiId(Long senseiId) {
         return grupoRepository.findBySenseiId(senseiId, PageRequest.of(0, Integer.MAX_VALUE)).getContent();
@@ -218,5 +230,81 @@ public class GrupoEntrenamientoService {
         Hibernate.initialize(grupo.getJudokas()); // Forzar carga de la colección LAZY
         return grupo;
     }
+    public GrupoEntrenamiento crearGrupo(Sensei sensei, String nombre, String descripcion,
+                                         BigDecimal tarifaMensual, BigDecimal comisionSensei,
+                                         boolean incluyeMatricula, BigDecimal montoMatricula,
+                                         int diasGracia) {
+        // Validar tarifa mínima
+        BigDecimal tarifaMinima = configService.getTarifaMinimaGlobal();
+        if (tarifaMensual.compareTo(tarifaMinima) < 0) {
+            throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + tarifaMinima);
+        }
 
+        // Validar matrícula
+        if (incluyeMatricula && (montoMatricula == null || montoMatricula.compareTo(BigDecimal.ZERO) <= 0)) {
+            throw new RuntimeException("Si incluye matrícula, debe indicar un monto válido");
+        }
+
+        GrupoEntrenamiento grupo = new GrupoEntrenamiento();
+        grupo.setSensei(sensei);
+        grupo.setNombre(nombre);
+        grupo.setDescripcion(descripcion);
+        grupo.setTarifaMensual(tarifaMensual);
+        grupo.setComisionSensei(comisionSensei);
+        grupo.setIncluyeMatricula(incluyeMatricula);
+        grupo.setMontoMatricula(incluyeMatricula ? montoMatricula : null);
+        grupo.setDiasGracia(diasGracia);
+
+        return grupoRepository.save(grupo);
+    }
+
+    public GrupoEntrenamiento actualizarGrupo(Long id, String nombre, String descripcion,
+                                              BigDecimal tarifaMensual, BigDecimal comisionSensei,
+                                              boolean incluyeMatricula, BigDecimal montoMatricula,
+                                              int diasGracia) {
+        GrupoEntrenamiento grupo = grupoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
+
+        // Validar tarifa mínima (misma lógica)
+        BigDecimal tarifaMinima = configService.getTarifaMinimaGlobal();
+        if (tarifaMensual.compareTo(tarifaMinima) < 0) {
+            throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + tarifaMinima);
+        }
+
+        if (incluyeMatricula && (montoMatricula == null || montoMatricula.compareTo(BigDecimal.ZERO) <= 0)) {
+            throw new RuntimeException("Si incluye matrícula, debe indicar un monto válido");
+        }
+
+        grupo.setNombre(nombre);
+        grupo.setDescripcion(descripcion);
+        grupo.setTarifaMensual(tarifaMensual);
+        grupo.setComisionSensei(comisionSensei);
+        grupo.setIncluyeMatricula(incluyeMatricula);
+        grupo.setMontoMatricula(incluyeMatricula ? montoMatricula : null);
+        grupo.setDiasGracia(diasGracia);
+
+        return grupoRepository.save(grupo);
+    }
+
+    public void eliminarGrupo(Long id) {
+        GrupoEntrenamiento grupo = grupoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
+        if (!grupo.getJudokas().isEmpty()) {
+            throw new RuntimeException("No se puede eliminar un grupo con judokas asignados");
+        }
+        grupoRepository.delete(grupo);
+    }
+
+    public GrupoEntrenamiento crearGrupoPorDefecto(Sensei sensei) {
+        // Usar valores de configuración
+        ConfiguracionSistema config = configService.obtenerConfiguracion();
+        return crearGrupo(sensei,
+                "Grupo por defecto",
+                "",
+                config.getGrupoTarifaDefault(),
+                config.getGrupoComisionDefault(),
+                config.isGrupoIncluyeMatriculaDefault(),
+                config.getGrupoMontoMatriculaDefault(),
+                config.getGrupoDiasGraciaDefault());
+    }
 }

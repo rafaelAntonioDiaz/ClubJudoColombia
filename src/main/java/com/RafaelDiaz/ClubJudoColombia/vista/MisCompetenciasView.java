@@ -36,7 +36,7 @@ import java.util.Map;
 
 @Route(value = "mis-competencias", layout = JudokaLayout.class)
 @PageTitle("Mis Torneos | Club Judo")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_ACUDIENTE"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_JUDOKA_ADULTO", "ROLE_ACUDIENTE"})
 public class MisCompetenciasView extends VerticalLayout {
 
     private final CompetenciaService competenciaService;

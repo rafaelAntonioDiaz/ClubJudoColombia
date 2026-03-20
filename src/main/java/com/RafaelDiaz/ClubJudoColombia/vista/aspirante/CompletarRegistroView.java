@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
@@ -38,7 +39,7 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     // --- Variables para recordar quién es el usuario ---
     private Usuario usuarioActual;
     private String tokenUuidActual;
-
+    private Paragraph infoPago = new Paragraph();
     // Componentes visuales
     private final H2 titulo = new H2();
     private final Paragraph descripcion = new Paragraph();
@@ -66,23 +67,22 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     @Override
     public void setParameter(BeforeEvent event, String tokenUuid) {
         try {
-            // 1. Buscamos el Judoka
             Judoka judoka = admisionesService.obtenerJudokaPorToken(tokenUuid);
-
-            // --- Guardamos los datos para usarlos en el botón "Activar" ---
             this.usuarioActual = judoka.getUsuario();
             this.tokenUuidActual = tokenUuid;
 
+            // Obtener el grupo del token (necesitamos que el token tenga el grupo)
+            TokenInvitacion token = tokenRepository.findByToken(tokenUuid).orElseThrow();
+            GrupoEntrenamiento grupo = token.getGrupo();
+
             removeAll();
-            construirFormulario(this.usuarioActual);
-
+            construirFormulario(usuarioActual, grupo); // pasar grupo
         } catch (RuntimeException e) {
-
             mostrarError(e.getMessage());
         }
     }
 
-    private void construirFormulario(Usuario usuario) {
+    private void construirFormulario(Usuario usuario, GrupoEntrenamiento grupo) {
         titulo.setText(traduccionService.get("vista.registro.titulo") + " " + usuario.getNombre());
         descripcion.setText(traduccionService.get("vista.registro.descripcion"));
 
@@ -98,7 +98,11 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
 
         formLayout.add(passwordField, confirmarPasswordField, btnActivar);
         formLayout.setMaxWidth("400px");
-
+        if (grupo != null) {
+            infoPago.setText("Valor a pagar: $" + grupo.getTarifaMensual() +
+                    (grupo.isIncluyeMatricula() ? " (incluye matrícula de $" + grupo.getMontoMatricula() + ")" : ""));
+            add(infoPago);
+        }
         add(titulo, descripcion, formLayout);
     }
 

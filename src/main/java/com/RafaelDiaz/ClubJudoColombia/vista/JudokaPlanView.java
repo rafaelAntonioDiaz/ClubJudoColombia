@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 
 @Route("mis-planes")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR", "ROLE_ACUDIENTE"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_JUDOKA_ADULTO", "ROLE_COMPETIDOR", "ROLE_ACUDIENTE"})
 @PageTitle("Microciclos | Club Judo Colombia")
 @CssImport("./styles/plan-judoka.css")
 public class JudokaPlanView extends JudokaLayout {

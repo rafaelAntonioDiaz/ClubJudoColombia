@@ -11,7 +11,7 @@ import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Route(value = "comunidad-judoka", layout = JudokaLayout.class)
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_COMPETIDOR"})
+@RolesAllowed({"ROLE_JUDOKA", "ROLE_JUDOKA_ADULTO", "ROLE_COMPETIDOR"})
 @PageTitle("Comunidad | Club Judo Colombia")
 public class ComunidadJudokaView extends VerticalLayout {
 

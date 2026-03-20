@@ -1,9 +1,11 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.DocumentoRequisito;
+import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.GrupoEntrenamientoRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
 public class ValidacionIngresoView extends VerticalLayout {
 
     private final JudokaRepository judokaRepository;
+    private final GrupoEntrenamientoRepository grupoEntrenamientoRepository;
     private final AdmisionesService admisionesService;
     private final TraduccionService traduccionService;
     private final FinanzasService finanzasService;
@@ -56,12 +59,13 @@ public class ValidacionIngresoView extends VerticalLayout {
     private static final String MASTER_ADMIN_USERNAME = "master_admin";
 
     @Autowired
-    public ValidacionIngresoView(JudokaRepository judokaRepository,
+    public ValidacionIngresoView(JudokaRepository judokaRepository, GrupoEntrenamientoRepository grupoEntrenamientoRepository,
                                  AdmisionesService admisionesService,
                                  TraduccionService traduccionService,
                                  FinanzasService finanzasService,
                                  CloudflareR2AlmacenamientoService cloudflareR2AlmacenamientoService) {
         this.judokaRepository = judokaRepository;
+        this.grupoEntrenamientoRepository = grupoEntrenamientoRepository;
         this.admisionesService = admisionesService;
         this.traduccionService = traduccionService;
         this.finanzasService = finanzasService;
@@ -235,9 +239,19 @@ public class ValidacionIngresoView extends VerticalLayout {
         }
     }
 
+// En ValidacionIngresoView, en el método crearComponentePago
+
     private Component crearComponentePago(Judoka judoka) {
         HorizontalLayout layout = new HorizontalLayout();
         layout.setAlignItems(Alignment.CENTER);
+
+        // Obtener el grupo (primer grupo)
+        grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId());
+        String tarifaEsperada = "";
+        if (grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId()) != null && !grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId()).isEmpty()) {
+            GrupoEntrenamiento grupo = grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId()).iterator().next();
+            tarifaEsperada = "Esperado: $" + grupo.getTarifaMensual();
+        }
 
         Optional<DocumentoRequisito> pagoOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.COMPROBANTE_PAGO);
 
@@ -249,8 +263,13 @@ public class ValidacionIngresoView extends VerticalLayout {
             btnVer.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_TERTIARY);
             link.add(btnVer);
             layout.add(link);
+            if (!tarifaEsperada.isEmpty()) {
+                Span esperado = new Span(tarifaEsperada);
+                esperado.getElement().getThemeList().add("badge contrast");
+                layout.add(esperado);
+            }
         } else {
-            Span sinDoc = new Span("Pendiente de Pago");
+            Span sinDoc = new Span("Pendiente de Pago " + tarifaEsperada);
             sinDoc.getElement().getThemeList().add("badge error contrast");
             layout.add(sinDoc);
         }
