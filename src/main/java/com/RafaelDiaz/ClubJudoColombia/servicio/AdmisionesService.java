@@ -4,6 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -383,5 +384,40 @@ public class AdmisionesService {
             }
         }
         return lista;
+    }
+    // Solo valida que el token sea válido, sin activar ni consumir
+    @Transactional(readOnly = true)
+    public TokenInvitacion validarTokenInvitacion(String tokenUuid) {
+        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
+                .orElseThrow(() -> new RuntimeException(
+                        traduccionService.get("error.token_invalido") // o mensaje directo
+                ));
+        if (!token.isValido()) {
+            throw new RuntimeException(traduccionService.get("error.token_expirado"));
+        }
+
+        // Inicializar el usuario y sus roles dentro de la transacción
+        Usuario usuario = token.getUsuarioInvitado();
+        Hibernate.initialize(usuario);
+        Hibernate.initialize(usuario.getRoles()); // si roles son lazy
+
+        return token;
+    }
+
+    // Activa la cuenta después de que el usuario eligió su contraseña
+    @Transactional
+    public Usuario activarInvitacionConPassword(String tokenUuid, String password) {
+        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
+                .orElseThrow(() -> new RuntimeException("Token inválido."));
+        if (!token.isValido()) {
+            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
+        }
+        Usuario usuario = token.getUsuarioInvitado();
+        usuario.setPasswordHash(passwordEncoder.encode(password));
+        usuario.setActivo(true);
+        usuarioRepository.save(usuario);
+        token.setUsado(true);
+        tokenRepository.save(token);
+        return usuario;
     }
 }

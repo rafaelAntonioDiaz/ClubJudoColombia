@@ -307,4 +307,8 @@ public class GrupoEntrenamientoService {
                 config.getGrupoMontoMatriculaDefault(),
                 config.getGrupoDiasGraciaDefault());
     }
+    @Transactional(readOnly = true)
+    public List<GrupoEntrenamiento> findAllGroups() {
+        return grupoRepository.findAll();
+    }
 }

@@ -41,6 +41,7 @@ public class SecurityConfig extends VaadinWebSecurity {
             }
             auth.requestMatchers(
                     "/registro/**",
+                    "/acceso/**",
                     "/images/**",
                     "/icons/**",
                     "/acceso-dojo/**",

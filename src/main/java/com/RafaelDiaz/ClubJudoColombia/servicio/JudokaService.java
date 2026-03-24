@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoMicrociclo;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -21,8 +23,9 @@ public class JudokaService {
     private final AlmacenamientoCloudService almacenamientoCloudService;
     private final JudokaRepository judokaRepository;
     private final GamificationService gamificationService;
+    private final GrupoEntrenamientoService grupoService;
     private final ReflexionRepository reflexionRepository;
-
+    private final FinanzasService finanzasService;
     // --- DEPENDENCIAS ADICIONALES PARA INICIALIZACIÓN Y SEGURIDAD ---
     private final MicrocicloRepository planRepository;
     private final GrupoEntrenamientoRepository grupoRepository;
@@ -32,8 +35,8 @@ public class JudokaService {
 
     public JudokaService(AlmacenamientoCloudService almacenamientoCloudService,
                          JudokaRepository judokaRepository,
-                         GamificationService gamificationService,
-                         ReflexionRepository reflexionRepository,
+                         GamificationService gamificationService, GrupoEntrenamientoService grupoService,
+                         ReflexionRepository reflexionRepository, FinanzasService finanzasService,
                          MicrocicloRepository planRepository,
                          GrupoEntrenamientoRepository grupoRepository,
                          PruebaEstandarRepository pruebaRepository,
@@ -42,7 +45,9 @@ public class JudokaService {
         this.almacenamientoCloudService = almacenamientoCloudService;
         this.judokaRepository = judokaRepository;
         this.gamificationService = gamificationService;
+        this.grupoService = grupoService;
         this.reflexionRepository = reflexionRepository;
+        this.finanzasService = finanzasService;
         this.planRepository = planRepository;
         this.grupoRepository = grupoRepository;
         this.pruebaRepository = pruebaRepository;
@@ -212,4 +217,32 @@ public class JudokaService {
                 judoka.getMontoMensualidad() : BigDecimal.ZERO;
         return tasaPlataforma.add(mensualidadSensei);
     }
-}
+
+    @Transactional
+    public Judoka crearJudokaPorAcudiente(Usuario acudiente, String nombre, String apellido, LocalDate fechaNacimiento) {
+        // Validar rol
+        if (acudiente.getRoles().stream().noneMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
+            throw new RuntimeException("El usuario no tiene permisos para agregar deportistas.");
+        }
+
+        // Determinar sensei sugerido: si el acudiente ya tiene hijos, usar el sensei del primero
+        Sensei sensei = null;
+        List<Judoka> existing = judokaRepository.findByAcudiente(acudiente);
+        if (!existing.isEmpty()) {
+            sensei = existing.get(0).getSensei();
+        }
+
+        // Crear judoka
+        Judoka judoka = new Judoka();
+        judoka.setNombre(nombre);
+        judoka.setApellido(apellido);
+        judoka.setAcudiente(acudiente);
+        judoka.setFechaNacimiento(fechaNacimiento);
+        judoka.setEstado(EstadoJudoka.PENDIENTE);          // Pendiente de revisión
+        judoka.setSensei(sensei);                         // Puede ser null
+        judoka.setGrupoFacturacion(null);                 // Sin grupo aún
+        judoka.setGrado(GradoCinturon.BLANCO);
+
+        return judokaRepository.save(judoka);
+        // No se generan cargos ni se asigna a ningún grupo
+    }}

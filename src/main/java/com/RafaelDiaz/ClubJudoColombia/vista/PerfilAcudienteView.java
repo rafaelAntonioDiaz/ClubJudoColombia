@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.modelo.CuentaCobro;
@@ -18,7 +19,10 @@ import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.avatar.AvatarVariant;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
@@ -36,8 +40,6 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinServletRequest;
-import com.vaadin.flow.server.streams.DownloadHandler;
-import com.vaadin.flow.server.streams.DownloadResponse;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.RolesAllowed;
 
@@ -63,6 +65,7 @@ public class PerfilAcudienteView extends VerticalLayout {
     private final FinanzasService finanzasService;
     private final AccesoDojoService accesoDojoService;
     private final ConfiguracionService configuracionService;
+    private final GrupoEntrenamientoService grupoService;
     // UI
     private FlexLayout contenedorHijos;
     private Grid<CuentaCobro> gridDeudas;
@@ -71,12 +74,13 @@ public class PerfilAcudienteView extends VerticalLayout {
     public PerfilAcudienteView(SecurityService securityService,
                                JudokaService judokaService,
                                FinanzasService finanzasService,
-                               AccesoDojoService accesoDojoService, ConfiguracionService configuracionService) {
+                               AccesoDojoService accesoDojoService, ConfiguracionService configuracionService, GrupoEntrenamientoService grupoService) {
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.finanzasService = finanzasService;
         this.accesoDojoService = accesoDojoService;
         this.configuracionService = configuracionService;
+        this.grupoService = grupoService;
 
         addClassName("perfil-acudiente-view");
         setSizeFull();
@@ -104,6 +108,11 @@ public class PerfilAcudienteView extends VerticalLayout {
         contenedorHijos.getStyle().set("gap", "20px"); // CSS Gap
         contenedorHijos.setWidthFull();
         add(contenedorHijos);
+        // Botón para agregar nuevo hijo
+        Button btnAgregarHijo = new Button("Agregar Hijo", VaadinIcon.PLUS_CIRCLE.create());
+        btnAgregarHijo.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        btnAgregarHijo.addClickListener(e -> abrirDialogoAgregarHijo(acudiente));
+        add(btnAgregarHijo);
 
         // 3. Sección Finanzas
         H3 tituloFinanzas = new H3("Estado de Cuenta");
@@ -415,4 +424,54 @@ public class PerfilAcudienteView extends VerticalLayout {
             return scheme + "://" + serverName + ":" + serverPort;
         }
     }
+    private void abrirDialogoAgregarHijo(Usuario acudiente) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Agregar nuevo deportista");
+
+        FormLayout form = new FormLayout();
+
+        TextField nombre = new TextField("Nombre");
+        TextField apellido = new TextField("Apellido");
+        DatePicker fechaNacimiento = new DatePicker("Fecha de nacimiento");
+
+        // Combo de grupos disponibles (solo los que tengan sensei activo, por ejemplo)
+        ComboBox<GrupoEntrenamiento> grupoCombo = new ComboBox<>("Grupo de entrenamiento");
+        grupoCombo.setItems(grupoService.findAllGroups()); // o grupoService.findBySenseiActivo()
+        grupoCombo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
+        grupoCombo.setRequired(true);
+
+        form.add(nombre, apellido, fechaNacimiento, grupoCombo);
+        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1));
+
+        Button btnGuardar = new Button("Guardar", e -> {
+            try {
+                // Validaciones
+                if (nombre.isEmpty() || apellido.isEmpty() || fechaNacimiento.isEmpty() || grupoCombo.isEmpty()) {
+                    Notification.show("Todos los campos son obligatorios").addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    return;
+                }
+
+                // Llamar al servicio que creará el judoka
+                Judoka nuevoJudoka = judokaService.crearJudokaPorAcudiente(
+                        acudiente,
+                        nombre.getValue(),
+                        apellido.getValue(),
+                        fechaNacimiento.getValue()
+                );
+
+                Notification.show("Deportista agregado correctamente").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                dialog.close();
+                // Refrescar la lista de hijos
+                cargarDatos(acudiente);
+            } catch (Exception ex) {
+                Notification.show("Error: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+        btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        dialog.add(form);
+        dialog.getFooter().add(new Button("Cancelar", e -> dialog.close()), btnGuardar);
+        dialog.open();
+    }
+
 }

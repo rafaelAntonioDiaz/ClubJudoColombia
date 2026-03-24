@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-@Route(value = "panel-mecenas", layout = JudokaLayout.class)
+@Route(value = "dashboard-mecenas", layout = JudokaLayout.class)
 @PageTitle("Impacto Social | Club Judo Colombia")
 @RolesAllowed({"ROLE_MECENAS", "ROLE_ADMIN"})
 public class MecenasDashboardView extends VerticalLayout {

@@ -44,33 +44,29 @@ public class AccesoController {
                                HttpServletRequest request,
                                HttpServletResponse response) throws IOException {
         try {
-            // 1. Intentar con invitaciones generales (Sensei, Acudiente, Mecenas)
-            Usuario usuario = null;
+            // 1. Intentar como invitación de nuevo usuario
             try {
-                usuario = admisionesService.validarYActivarInvitacion(token);
-            } catch (Exception e) {
-                // Si falla, ignoramos
-            }
-
-            if (usuario != null) {
-                UserDetails springUser = userDetailsService.loadUserByUsername(usuario.getUsername());
-                autenticarYRedirigir(springUser, request, response, determinarRedireccion(usuario, token));
+                admisionesService.validarTokenInvitacion(token);
+                // Si llegamos aquí, es una invitación válida -> redirigir a registro
+                response.sendRedirect("/registro/" + token);
                 return;
+            } catch (Exception e) {
+                // No es invitación, continuar
             }
 
-            // 2. Intentar con token de judoka (igual que antes)
+            // 2. Intentar como token de acceso de judoka (pase)
             Judoka judoka = accesoDojoService.validarPase(token).orElse(null);
             if (judoka != null) {
-                UserDetails springUser = org.springframework.security.core.userdetails.User.builder()
+                UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                         .username("judoka_" + judoka.getId())
                         .password("")
                         .authorities("ROLE_JUDOKA")
                         .build();
-                autenticarYRedirigir(springUser, request, response, "/dashboard-judoka");
+                autenticarYRedirigir(userDetails, request, response, "/dashboard-judoka");
                 return;
             }
 
-            // 3. Token inválido
+            // 3. Token no válido
             response.sendRedirect("/login?error=token-invalido");
 
         } catch (Exception e) {

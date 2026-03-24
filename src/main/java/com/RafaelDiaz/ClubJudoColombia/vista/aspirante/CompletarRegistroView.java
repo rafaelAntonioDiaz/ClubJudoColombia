@@ -1,29 +1,33 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.TokenInvitacionRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
+import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinServletRequest;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 @PageTitle("Completar Registro | Club Judo Colombia")
 @Route("registro")
@@ -31,16 +35,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class CompletarRegistroView extends VerticalLayout implements HasUrlParameter<String> {
 
     private final AdmisionesService admisionesService;
-    private final TokenInvitacionRepository tokenRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserDetailsService userDetailsService;
+    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final TraduccionService traduccionService;
 
-    // --- Variables para recordar quién es el usuario ---
+    private TokenInvitacion tokenActual;
     private Usuario usuarioActual;
-    private String tokenUuidActual;
-    private Paragraph infoPago = new Paragraph();
-    // Componentes visuales
+
+    // Componentes UI
     private final H2 titulo = new H2();
     private final Paragraph descripcion = new Paragraph();
     private final FormLayout formLayout = new FormLayout();
@@ -48,17 +50,13 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     private final PasswordField confirmarPasswordField = new PasswordField();
     private final Button btnActivar = new Button();
 
+    // Constructor con todas las dependencias
     public CompletarRegistroView(AdmisionesService admisionesService,
-                                 TokenInvitacionRepository tokenRepository,
-                                 UsuarioRepository usuarioRepository,
-                                 PasswordEncoder passwordEncoder,
+                                 UserDetailsService userDetailsService,
                                  TraduccionService traduccionService) {
-        this.tokenRepository = tokenRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.traduccionService = traduccionService;
         this.admisionesService = admisionesService;
-
+        this.userDetailsService = userDetailsService;
+        this.traduccionService = traduccionService;
         setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
@@ -67,42 +65,28 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     @Override
     public void setParameter(BeforeEvent event, String tokenUuid) {
         try {
-            Judoka judoka = admisionesService.obtenerJudokaPorToken(tokenUuid);
-            this.usuarioActual = judoka.getUsuario();
-            this.tokenUuidActual = tokenUuid;
-
-            // Obtener el grupo del token (necesitamos que el token tenga el grupo)
-            TokenInvitacion token = tokenRepository.findByToken(tokenUuid).orElseThrow();
-            GrupoEntrenamiento grupo = token.getGrupo();
-
-            removeAll();
-            construirFormulario(usuarioActual, grupo); // pasar grupo
+            tokenActual = admisionesService.validarTokenInvitacion(tokenUuid);
+            usuarioActual = tokenActual.getUsuarioInvitado();
+            construirFormulario();
         } catch (RuntimeException e) {
             mostrarError(e.getMessage());
         }
     }
 
-    private void construirFormulario(Usuario usuario, GrupoEntrenamiento grupo) {
-        titulo.setText(traduccionService.get("vista.registro.titulo") + " " + usuario.getNombre());
+    private void construirFormulario() {
+        titulo.setText(traduccionService.get("vista.registro.titulo") + " " + usuarioActual.getNombre());
         descripcion.setText(traduccionService.get("vista.registro.descripcion"));
 
         passwordField.setLabel(traduccionService.get("label.contrasena"));
-        passwordField.setRequired(true);
-
         confirmarPasswordField.setLabel(traduccionService.get("label.confirmar_contrasena"));
-        confirmarPasswordField.setRequired(true);
-
         btnActivar.setText(traduccionService.get("boton.activar_cuenta"));
+
         btnActivar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnActivar.addClickListener(e -> procesarActivacion());
 
         formLayout.add(passwordField, confirmarPasswordField, btnActivar);
         formLayout.setMaxWidth("400px");
-        if (grupo != null) {
-            infoPago.setText("Valor a pagar: $" + grupo.getTarifaMensual() +
-                    (grupo.isIncluyeMatricula() ? " (incluye matrícula de $" + grupo.getMontoMatricula() + ")" : ""));
-            add(infoPago);
-        }
+
         add(titulo, descripcion, formLayout);
     }
 
@@ -111,38 +95,60 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
         String confirmPass = confirmarPasswordField.getValue();
 
         if (pass.isEmpty() || confirmPass.isEmpty()) {
-            Notificar(traduccionService.get("error.campos_incompletos"), NotificationVariant.LUMO_ERROR);
+            NotificationHelper.error(traduccionService.get("error.campos_incompletos"));
             return;
         }
-
         if (!pass.equals(confirmPass)) {
-            Notificar(traduccionService.get("error.contrasenas_no_coinciden"), NotificationVariant.LUMO_ERROR);
+            NotificationHelper.error(traduccionService.get("error.contrasenas_no_coinciden"));
             return;
         }
 
-        // --- Usar la variable segura que guardamos al inicio ---
-        usuarioActual.setPasswordHash(passwordEncoder.encode(pass));
-        usuarioActual.setActivo(true);
-        usuarioRepository.save(usuarioActual);
+        try {
+            // Activar usuario y consumir token
+            Usuario usuario = admisionesService.activarInvitacionConPassword(tokenActual.getToken(), pass);
 
-        // 2. Eliminar el token de un solo uso (Buscándolo de nuevo para evitar errores de Lazy)
-        tokenRepository.findByToken(tokenUuidActual).ifPresent(tokenRepository::delete);
+            // Autenticar automáticamente
+            UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getUsername());
+            autenticarYRedirigir(userDetails);
 
-        Notificar(traduccionService.get("exito.cuenta_creada"), NotificationVariant.LUMO_SUCCESS);
-
-        // 3. Redirigir al Login
-        UI.getCurrent().navigate("login");
+        } catch (Exception e) {
+            NotificationHelper.error(traduccionService.get("error.activacion") + ": " + e.getMessage());
+        }
     }
 
-    // --- Método mostrarError limpio ---
+    private void autenticarYRedirigir(UserDetails userDetails) {
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(auth);
+        SecurityContextHolder.setContext(context);
+
+        // Obtener request de Vaadin
+        HttpServletRequest request = VaadinServletRequest.getCurrent().getHttpServletRequest();
+        HttpSession session = request.getSession(true);
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        securityContextRepository.saveContext(context, request, null);
+
+        // Redirigir según rol
+        String redirect = determinarRedireccion(usuarioActual);
+        UI.getCurrent().navigate(redirect);
+    }
+
+    private String determinarRedireccion(Usuario usuario) {
+        if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_SENSEI"))) {
+            return "/dashboard-sensei";
+        } else if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
+            return "/mi-familia";
+        } else if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_MECENAS"))) {
+            return "/dashboard-mecenas";
+        } else {
+            return "/";
+        }
+    }
+
     private void mostrarError(String mensaje) {
-        removeAll(); // Limpiamos la pantalla por si acaso
+        removeAll();
         add(new H2(traduccionService.get("error.titulo_ops")));
         add(new Paragraph(mensaje));
-    }
-
-    private void Notificar(String mensaje, NotificationVariant variante) {
-        Notification notification = Notification.show(mensaje, 3000, Notification.Position.TOP_CENTER);
-        notification.addThemeVariants(variante);
     }
 }
