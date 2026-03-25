@@ -16,6 +16,7 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -62,6 +63,22 @@ public class GestionSenseisView extends VerticalLayout {
             });
             return check;
         })).setHeader("Club Propio").setWidth("120px");
+        grid.addColumn(new ComponentRenderer<>(sensei -> {
+            NumberField comisionField = new NumberField();
+            comisionField.setValue(sensei.getComisionPorcentaje().doubleValue());
+            comisionField.setStep(0.01);
+            comisionField.setMin(0);
+            comisionField.setMax(100);
+            comisionField.setWidth("100px");
+            comisionField.addValueChangeListener(e -> {
+                sensei.setComisionPorcentaje(BigDecimal.valueOf(e.getValue()));
+                senseiRepository.save(sensei);
+                Notification.show("Comisión actualizada para " + sensei.getUsuario().getNombre())
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                loadData(); // recargar
+            });
+            return comisionField;
+        })).setHeader("Comisión %").setWidth("120px");
         grid.addColumn(s -> s.getGrado()).setHeader("Grado");
 
         // 🔹 Columna de saldo con badge

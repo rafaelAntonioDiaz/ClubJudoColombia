@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.FinanzasService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.UI;
@@ -36,6 +37,7 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
 
     private final AdmisionesService admisionesService;
     private final UserDetailsService userDetailsService;
+    private final FinanzasService finanzasService;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final TraduccionService traduccionService;
 
@@ -52,10 +54,11 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
 
     // Constructor con todas las dependencias
     public CompletarRegistroView(AdmisionesService admisionesService,
-                                 UserDetailsService userDetailsService,
+                                 UserDetailsService userDetailsService, FinanzasService finanzasService,
                                  TraduccionService traduccionService) {
         this.admisionesService = admisionesService;
         this.userDetailsService = userDetailsService;
+        this.finanzasService = finanzasService;
         this.traduccionService = traduccionService;
         setSizeFull();
         setAlignItems(Alignment.CENTER);
@@ -109,6 +112,9 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
 
             // Autenticar automáticamente
             UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getUsername());
+            if (tokenActual.getJudoka() != null && tokenActual.getGrupo() != null) {
+                finanzasService.generarCobroBienvenida(tokenActual.getJudoka());
+            }
             autenticarYRedirigir(userDetails);
 
         } catch (Exception e) {

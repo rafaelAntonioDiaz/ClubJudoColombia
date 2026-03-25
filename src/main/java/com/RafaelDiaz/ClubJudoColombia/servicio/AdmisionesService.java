@@ -35,6 +35,7 @@ public class AdmisionesService {
 
     private final JudokaService judokaService;
     private static final Logger logger = LoggerFactory.getLogger(AdmisionesService.class);
+    private final FinanzasService finanzasService;
 
     public AdmisionesService(SecurityService securityService, ConfiguracionService configuracionService, GrupoEntrenamientoService grupoService, JudokaRepository judokaRepository,
                              UsuarioRepository usuarioRepository,
@@ -43,7 +44,7 @@ public class AdmisionesService {
                              TraduccionService traduccionService,
                              TokenInvitacionRepository tokenRepository,
                              EmailService emailService, PasswordEncoder passwordEncoder,
-                             JudokaService judokaService) {
+                             JudokaService judokaService, FinanzasService finanzasService) {
         this.securityService = securityService;
         this.configuracionService = configuracionService;
         this.grupoService = grupoService;
@@ -57,6 +58,7 @@ public class AdmisionesService {
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.judokaService = judokaService; // 3. Asignación
+        this.finanzasService = finanzasService;
     }
 
     /**
@@ -68,7 +70,8 @@ public class AdmisionesService {
     public String generarInvitacion(String nombre, String apellido,
                                     String email, String celular,
                                     String rolEsperado, String baseUrl,
-                                    Boolean esClubPropio, Long grupoId) {
+                                    Boolean esClubPropio, Long grupoId,
+                                    BigDecimal comisionPorcentaje) {
 
         // 1. Validar que el grupo sea obligatorio para roles de judoka
         if (("ROLE_JUDOKA".equals(rolEsperado) || "ROLE_JUDOKA_ADULTO".equals(rolEsperado)) && grupoId == null) {
@@ -97,6 +100,7 @@ public class AdmisionesService {
         usuarioInvitado.setApellido(apellido);
         usuarioInvitado.setCelular(celular);
         usuarioInvitado.setActivo(false);
+        usuarioInvitado.setSenseiInvitador(senseiActual);
         usuarioInvitado.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
 
         // Asignar rol
@@ -112,7 +116,6 @@ public class AdmisionesService {
 
             judokaVinculado = new Judoka();
 
-            // --- DIFERENCIACIÓN CLAVE ---
             if ("ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
                 // Adulto: el acudiente es él mismo
                 judokaVinculado.setAcudiente(usuarioInvitado);
@@ -124,7 +127,11 @@ public class AdmisionesService {
                 // Pero aquí estamos creando un judoka asociado al acudiente, eso está bien.
                 judokaVinculado.setAcudiente(usuarioInvitado);
             }
-
+            if (grupo != null) {
+                judokaVinculado.setGrupoFacturacion(grupo);
+                judokaVinculado.setGrupo(grupo);
+                judokaVinculado.setSensei(grupo.getSensei());
+            }
             judokaVinculado.setCelular(celular);
             judokaVinculado.setSensei(senseiActual);
             judokaVinculado.setEstado(EstadoJudoka.PENDIENTE);
@@ -138,7 +145,9 @@ public class AdmisionesService {
             }
 
             judokaRepository.saveAndFlush(judokaVinculado);
-
+            if (judokaVinculado != null && grupo != null) {
+                finanzasService.generarCobroBienvenida(judokaVinculado);
+            }
             // Inicializar datos adicionales del judoka (peso, talla, etc.) - si aplica
             judokaService.inicializarJudokaNuevo(judokaVinculado);
 
@@ -150,6 +159,7 @@ public class AdmisionesService {
 
         // 6. Generar el Token de invitación
         TokenInvitacion token = new TokenInvitacion();
+
         token.setUsuarioInvitado(usuarioInvitado);
         token.setRolEsperado(rolEsperado);
         token.setSensei(senseiActual);
@@ -157,6 +167,10 @@ public class AdmisionesService {
         token.setGrupo(grupo); // Guardamos el grupo para referencia histórica
         token.setEsClubPropio(rolEsperado.equals("ROLE_SENSEI") ? esClubPropio : null);
         token.generarToken(48); // Válido 48 horas
+
+        if ("ROLE_SENSEI".equals(rolEsperado)) {
+            token.setPorcentajeComision(comisionPorcentaje);}
+
         tokenRepository.save(token);
 
         // 7. (Opcional) Enviar email

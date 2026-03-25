@@ -1,9 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
-import com.RafaelDiaz.ClubJudoColombia.modelo.CuentaCobro;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MetodoPago;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
@@ -74,7 +71,8 @@ public class PerfilAcudienteView extends VerticalLayout {
     public PerfilAcudienteView(SecurityService securityService,
                                JudokaService judokaService,
                                FinanzasService finanzasService,
-                               AccesoDojoService accesoDojoService, ConfiguracionService configuracionService, GrupoEntrenamientoService grupoService) {
+                               AccesoDojoService accesoDojoService, ConfiguracionService configuracionService,
+                               GrupoEntrenamientoService grupoService) {
         this.securityService = securityService;
         this.judokaService = judokaService;
         this.finanzasService = finanzasService;
@@ -429,42 +427,40 @@ public class PerfilAcudienteView extends VerticalLayout {
         dialog.setHeaderTitle("Agregar nuevo deportista");
 
         FormLayout form = new FormLayout();
-
         TextField nombre = new TextField("Nombre");
         TextField apellido = new TextField("Apellido");
         DatePicker fechaNacimiento = new DatePicker("Fecha de nacimiento");
 
-        // Combo de grupos disponibles (solo los que tengan sensei activo, por ejemplo)
+        Sensei senseiAcudiente = acudiente.getSenseiInvitador();
+        List<GrupoEntrenamiento> grupos = grupoService.findBySensei(senseiAcudiente);
         ComboBox<GrupoEntrenamiento> grupoCombo = new ComboBox<>("Grupo de entrenamiento");
-        grupoCombo.setItems(grupoService.findAllGroups()); // o grupoService.findBySenseiActivo()
+        grupoCombo.setItems(grupos);
         grupoCombo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
         grupoCombo.setRequired(true);
 
         form.add(nombre, apellido, fechaNacimiento, grupoCombo);
-        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1));
 
         Button btnGuardar = new Button("Guardar", e -> {
+            if (nombre.isEmpty() || apellido.isEmpty() || fechaNacimiento.isEmpty() || grupoCombo.isEmpty()) {
+                Notification.show("Todos los campos son obligatorios")
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
             try {
-                // Validaciones
-                if (nombre.isEmpty() || apellido.isEmpty() || fechaNacimiento.isEmpty() || grupoCombo.isEmpty()) {
-                    Notification.show("Todos los campos son obligatorios").addThemeVariants(NotificationVariant.LUMO_ERROR);
-                    return;
-                }
-
-                // Llamar al servicio que creará el judoka
-                Judoka nuevoJudoka = judokaService.crearJudokaPorAcudiente(
+                judokaService.crearJudokaPorAcudiente(
                         acudiente,
                         nombre.getValue(),
                         apellido.getValue(),
-                        fechaNacimiento.getValue()
+                        fechaNacimiento.getValue(),
+                        grupoCombo.getValue()
                 );
-
-                Notification.show("Deportista agregado correctamente").addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                Notification.show("Deportista agregado correctamente")
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 dialog.close();
-                // Refrescar la lista de hijos
                 cargarDatos(acudiente);
             } catch (Exception ex) {
-                Notification.show("Error: " + ex.getMessage()).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                Notification.show("Error: " + ex.getMessage())
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
             }
         });
         btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -473,5 +469,4 @@ public class PerfilAcudienteView extends VerticalLayout {
         dialog.getFooter().add(new Button("Cancelar", e -> dialog.close()), btnGuardar);
         dialog.open();
     }
-
 }

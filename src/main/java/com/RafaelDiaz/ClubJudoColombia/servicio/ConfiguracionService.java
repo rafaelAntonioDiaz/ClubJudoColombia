@@ -108,4 +108,8 @@ public class ConfiguracionService {
     public int getDiaVencimiento() {
         return obtenerConfiguracion().getFIN_DIA_VENCIMIENTO().intValue();
     }
+
+    public BigDecimal getPrecioMinimoMensual() {
+        return obtenerConfiguracion().getPrecioMinimoMensual();
+    }
 }

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -230,55 +231,50 @@ public class GrupoEntrenamientoService {
         Hibernate.initialize(grupo.getJudokas()); // Forzar carga de la colección LAZY
         return grupo;
     }
+
+    private BigDecimal calcularComisionSensei(BigDecimal tarifa, Sensei sensei) {
+        return tarifa.multiply(sensei.getComisionPorcentaje().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+    }
+
     public GrupoEntrenamiento crearGrupo(Sensei sensei, String nombre, String descripcion,
-                                         BigDecimal tarifaMensual, BigDecimal comisionSensei,
+                                         BigDecimal tarifaMensual, // sin parámetro comision
                                          boolean incluyeMatricula, BigDecimal montoMatricula,
                                          int diasGracia) {
-        // Validar tarifa mínima
-        BigDecimal tarifaMinima = configService.getTarifaMinimaGlobal();
-        if (tarifaMensual.compareTo(tarifaMinima) < 0) {
-            throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + tarifaMinima);
+        BigDecimal precioMinimo = configService.getPrecioMinimoMensual();
+        if (tarifaMensual.compareTo(precioMinimo) < 0) {
+            throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + precioMinimo);
         }
-
-        // Validar matrícula
-        if (incluyeMatricula && (montoMatricula == null || montoMatricula.compareTo(BigDecimal.ZERO) <= 0)) {
-            throw new RuntimeException("Si incluye matrícula, debe indicar un monto válido");
-        }
-
+        BigDecimal comisionCalculada = calcularComisionSensei(tarifaMensual, sensei);
         GrupoEntrenamiento grupo = new GrupoEntrenamiento();
         grupo.setSensei(sensei);
         grupo.setNombre(nombre);
         grupo.setDescripcion(descripcion);
         grupo.setTarifaMensual(tarifaMensual);
-        grupo.setComisionSensei(comisionSensei);
+        grupo.setComisionSensei(comisionCalculada);
         grupo.setIncluyeMatricula(incluyeMatricula);
         grupo.setMontoMatricula(incluyeMatricula ? montoMatricula : null);
         grupo.setDiasGracia(diasGracia);
-
         return grupoRepository.save(grupo);
     }
 
     public GrupoEntrenamiento actualizarGrupo(Long id, String nombre, String descripcion,
-                                              BigDecimal tarifaMensual, BigDecimal comisionSensei,
+                                              BigDecimal tarifaMensual,
                                               boolean incluyeMatricula, BigDecimal montoMatricula,
                                               int diasGracia) {
         GrupoEntrenamiento grupo = grupoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
-
-        // Validar tarifa mínima (misma lógica)
-        BigDecimal tarifaMinima = configService.getTarifaMinimaGlobal();
-        if (tarifaMensual.compareTo(tarifaMinima) < 0) {
-            throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + tarifaMinima);
+        // Validar tarifa mínima
+        BigDecimal precioMinimo = configService.getPrecioMinimoMensual();
+        if (tarifaMensual.compareTo(precioMinimo) < 0) {
+            throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + precioMinimo);
         }
-
-        if (incluyeMatricula && (montoMatricula == null || montoMatricula.compareTo(BigDecimal.ZERO) <= 0)) {
-            throw new RuntimeException("Si incluye matrícula, debe indicar un monto válido");
-        }
+        // Calcular comisión automáticamente
+        BigDecimal comisionCalculada = calcularComisionSensei(tarifaMensual, grupo.getSensei());
 
         grupo.setNombre(nombre);
         grupo.setDescripcion(descripcion);
         grupo.setTarifaMensual(tarifaMensual);
-        grupo.setComisionSensei(comisionSensei);
+        grupo.setComisionSensei(comisionCalculada);
         grupo.setIncluyeMatricula(incluyeMatricula);
         grupo.setMontoMatricula(incluyeMatricula ? montoMatricula : null);
         grupo.setDiasGracia(diasGracia);
@@ -295,20 +291,10 @@ public class GrupoEntrenamientoService {
         grupoRepository.delete(grupo);
     }
 
-    public GrupoEntrenamiento crearGrupoPorDefecto(Sensei sensei) {
-        // Usar valores de configuración
-        ConfiguracionSistema config = configService.obtenerConfiguracion();
-        return crearGrupo(sensei,
-                "Grupo por defecto",
-                "",
-                config.getGrupoTarifaDefault(),
-                config.getGrupoComisionDefault(),
-                config.isGrupoIncluyeMatriculaDefault(),
-                config.getGrupoMontoMatriculaDefault(),
-                config.getGrupoDiasGraciaDefault());
-    }
+
     @Transactional(readOnly = true)
     public List<GrupoEntrenamiento> findAllGroups() {
         return grupoRepository.findAll();
     }
+
 }

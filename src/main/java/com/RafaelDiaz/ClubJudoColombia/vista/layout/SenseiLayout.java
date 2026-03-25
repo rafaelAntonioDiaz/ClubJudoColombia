@@ -71,23 +71,31 @@ public class SenseiLayout extends AppLayout {
     }
 
     private void createHeader() {
-        // Obtenemos el título traducido o usamos fallback
         String tituloApp = getTexto("app.nombre", "Club Judo");
-
         H1 logo = new H1(tituloApp);
         logo.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.MEDIUM);
 
-        String username = securityService.getAuthenticatedUserDetails().isPresent()
-                ? securityService.getAuthenticatedUserDetails().get().getUsername() : "Sensei";
+        // Obtener perfil del sensei
+        var profile = securityService.getAuthenticatedSenseiProfile();
+        String nombreCompleto = profile.fullName();
+        String fotoUrl = profile.avatarUrl();
 
-        // Saludo personalizado (Opcional, igual que en JudokaLayout)
-        Span saludo = new Span(getTexto("dashboard.welcome", "Hola") + " " + username);
+        // Obtener club name (adicional)
+        String clubName = securityService.getAuthenticatedSensei()
+                .map(Sensei::getNombreClub)
+                .orElse("");
+
+        // Saludo personalizado
+        Span saludo = new Span(getTexto("dashboard.welcome", "Hola") + " " + nombreCompleto);
         saludo.addClassName("layout-welcome-text");
         saludo.getStyle().set("font-size", "0.9rem").set("margin-right", "15px");
-        Optional<Sensei> senseiOpt = securityService.getAuthenticatedSensei();
-        String nombreCompleto = senseiOpt.map(s ->
-                s.getUsuario().getNombre() + " " + s.getUsuario().getApellido()).orElse("Sensei");
-        String fotoUrl = senseiOpt.map(Sensei::getUrlFotoPerfil).orElse(null);
+
+        // Mostrar club name si existe
+        if (!clubName.isEmpty()) {
+            Span clubSpan = new Span("(" + clubName + ")");
+            clubSpan.addClassNames(LumoUtility.TextColor.SECONDARY, LumoUtility.FontSize.SMALL);
+            saludo.add(clubSpan);
+        }
 
         Avatar avatar = new Avatar();
         avatar.setName(nombreCompleto);

@@ -4,6 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -25,4 +26,6 @@ public interface SenseiRepository extends JpaRepository<Sensei, Long> {
     @Query("SELECT DISTINCT s FROM Sensei s LEFT JOIN FETCH s.usuario")
     List<Sensei> findAllWithUsuario();
     List<Sensei> findBySaldoWalletGreaterThan(BigDecimal saldo);
+    @Query("SELECT s FROM Sensei s LEFT JOIN FETCH s.usuario WHERE s.id = :id")
+    Optional<Sensei> findByIdWithUsuario(@Param("id") Long id);
 }

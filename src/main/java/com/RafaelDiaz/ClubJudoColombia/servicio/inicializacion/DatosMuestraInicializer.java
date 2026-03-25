@@ -165,12 +165,10 @@ public class DatosMuestraInicializer {
 
     private GrupoEntrenamiento crearGrupoUnificado(Sensei sensei, List<Judoka> judokas) {
         String nombreGrupo = "Grupo de Demostración";
-        // Opcional: evitar duplicados
         Optional<GrupoEntrenamiento> existente = grupoRepository.findBySenseiAndNombre(sensei, nombreGrupo);
         if (existente.isPresent()) {
             System.out.println(">>> Grupo '" + nombreGrupo + "' ya existe. Reutilizando.");
             GrupoEntrenamiento grupo = existente.get();
-            // Asegurar que los judokas estén en el grupo
             for (Judoka j : judokas) {
                 j.setGrupo(grupo);
                 judokaRepo.save(j);
@@ -178,19 +176,15 @@ public class DatosMuestraInicializer {
             return grupo;
         }
 
-        GrupoEntrenamiento grupo = new GrupoEntrenamiento();
-        grupo.setNombre(nombreGrupo);
-        grupo.setDescripcion("Grupo unificado para pruebas (incluye María y Julián)");
-        grupo.setSensei(sensei);
-
-        // ✅ Asignar valores financieros desde configuración
-        grupo.setTarifaMensual(configService.getGrupoTarifaDefault());
-        grupo.setComisionSensei(configService.getGrupoComisionDefault());
-        grupo.setIncluyeMatricula(configService.isGrupoIncluyeMatriculaDefault());
-        grupo.setMontoMatricula(configService.getGrupoMontoMatriculaDefault());
-        grupo.setDiasGracia(configService.getGrupoDiasGraciaDefault());
-
-        grupo = grupoRepository.save(grupo);
+        GrupoEntrenamiento grupo = grupoService.crearGrupo(
+                sensei,
+                nombreGrupo,
+                "Grupo unificado para pruebas (incluye María y Julián)",
+                configService.getGrupoTarifaDefault(),
+                configService.isGrupoIncluyeMatriculaDefault(),
+                configService.getGrupoMontoMatriculaDefault(),
+                configService.getGrupoDiasGraciaDefault()
+        );
 
         for (Judoka j : judokas) {
             j.setGrupo(grupo);
@@ -290,9 +284,10 @@ public class DatosMuestraInicializer {
         s.setUsuario(u);
         s.setGrado(grado);
         s.setAnosPractica(25);
+        s.setNombreClub("Dojo " + u.getNombre()); // nombre de club por defecto
+        s.setComisionPorcentaje(BigDecimal.valueOf(20.0)); // valor por defecto, puedes ajustar según el sensei
         return senseiRepo.save(s);
     }
-
     private Judoka crearMaria(Sensei sensei) {
         String username = "maria.lopez";
         Usuario u = usuarioRepo.findByUsername(username).orElse(null);
@@ -599,7 +594,6 @@ public class DatosMuestraInicializer {
                 "Selección Mayores",
                 "Grupo de competencia",
                 configService.getGrupoTarifaDefault(),
-                configService.getGrupoComisionDefault(),
                 configService.isGrupoIncluyeMatriculaDefault(),
                 configService.getGrupoMontoMatriculaDefault(),
                 configService.getGrupoDiasGraciaDefault()
@@ -1023,7 +1017,6 @@ public class DatosMuestraInicializer {
                 "Jóvenes Girón - V8",
                 "Grupo para la familia Jaimes",
                 configService.getGrupoTarifaDefault(),
-                configService.getGrupoComisionDefault(),
                 configService.isGrupoIncluyeMatriculaDefault(),
                 configService.getGrupoMontoMatriculaDefault(),
                 configService.getGrupoDiasGraciaDefault()
@@ -1126,7 +1119,6 @@ public class DatosMuestraInicializer {
                 "Grupo Principiantes",
                 "Para niños que inician",
                 config.getGrupoTarifaDefault(),
-                config.getGrupoComisionDefault(),
                 config.isGrupoIncluyeMatriculaDefault(),
                 config.getGrupoMontoMatriculaDefault(),
                 config.getGrupoDiasGraciaDefault());
@@ -1136,7 +1128,6 @@ public class DatosMuestraInicializer {
                 "Grupo Avanzados",
                 "Competidores",
                 new BigDecimal("30000"),
-                new BigDecimal("8000"),
                 true,
                 new BigDecimal("50000"),
                 3);

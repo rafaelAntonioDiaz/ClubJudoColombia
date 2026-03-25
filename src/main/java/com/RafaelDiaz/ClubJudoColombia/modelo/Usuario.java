@@ -82,6 +82,10 @@ public class Usuario implements Serializable {
     @Column(name = "activo", nullable = false)
     private boolean activo = true; // Valor por defecto
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sensei_invitador")
+    private Sensei senseiInvitador;
+
     @OneToOne(mappedBy = "usuario", fetch = FetchType.LAZY)
     private Sensei sensei;
 
@@ -211,6 +215,29 @@ public class Usuario implements Serializable {
         this.perfilMecenas = perfilMecenas;
     }
 
+    public Sensei getSenseiInvitador() {
+        return senseiInvitador;
+    }
+
+    public void setSenseiInvitador(Sensei senseiInvitador) {
+        this.senseiInvitador = senseiInvitador;
+    }
+
+    public Sensei getSensei() {
+        return sensei;
+    }
+
+    public void setSensei(Sensei sensei) {
+        this.sensei = sensei;
+    }
+
+    public List<Judoka> getJudokas() {
+        return judokas;
+    }
+
+    public void setJudokas(List<Judoka> judokas) {
+        this.judokas = judokas;
+    }
 
     @Override
     public int hashCode() {

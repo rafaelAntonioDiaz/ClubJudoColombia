@@ -58,6 +58,13 @@ public class Sensei implements Serializable {
     @Lob
     @Column(name = "biografia", columnDefinition = "TEXT")
     private String biografia;
+
+    @Column(name = "nombre_club", length = 150)
+    private String nombreClub;
+
+    @Column(name = "comision_porcentaje", precision = 5, scale = 2)
+    private BigDecimal comisionPorcentaje = BigDecimal.ZERO;
+
     @Column(name = "saldo_wallet")
     private BigDecimal saldoWallet = BigDecimal.ZERO; // Aquí acumulamos los 5.000 COP
 
@@ -172,6 +179,22 @@ public class Sensei implements Serializable {
 
     public void setBiografia(String biografia) {
         this.biografia = biografia;
+    }
+
+    public BigDecimal getComisionPorcentaje() {
+        return comisionPorcentaje;
+    }
+
+    public void setComisionPorcentaje(BigDecimal comisionPorcentaje) {
+        this.comisionPorcentaje = comisionPorcentaje;
+    }
+
+    public String getNombreClub() {
+        return nombreClub;
+    }
+
+    public void setNombreClub(String nombreClub) {
+        this.nombreClub = nombreClub;
     }
 
     public void abonarComision(BigDecimal monto) {

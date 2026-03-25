@@ -53,6 +53,7 @@ public class AdministracionView extends VerticalLayout {
     private NumberField mensualidadMaster;
     private NumberField alquilerJudogi;
     private NumberField matriculaAnual;
+    private NumberField precioMinimoMensual;
 
     // Campos de fechas de cobro
     private NumberField diaCobro;
@@ -112,6 +113,12 @@ public class AdministracionView extends VerticalLayout {
         email = new EmailField();
         moneda = new TextField();
         urlLogo = new TextField();
+
+        precioMinimoMensual = new NumberField();
+        precioMinimoMensual.setLabel("Precio mínimo mensual por judoka");
+        precioMinimoMensual.setSuffixComponent(new Span("COP"));
+        precioMinimoMensual.setMin(0);
+        precioMinimoMensual.setStep(1000);
 
         canonSaaS = new NumberField();
         comisionClub = new NumberField();
@@ -193,8 +200,7 @@ public class AdministracionView extends VerticalLayout {
         diaVencimiento.setMax(28);
         diaVencimiento.setStep(1);
         diaVencimiento.setHelperText(traduccionService.get("config.fin.dia_vencimiento.helper"));
-
-        form.add(canonSaaS, comisionClub, comisionSensei, mensualidadMaster, alquilerJudogi, matriculaAnual,
+        form.add(canonSaaS, comisionClub, precioMinimoMensual, comisionSensei, mensualidadMaster, alquilerJudogi, matriculaAnual,
                 diaCobro, diaVencimiento);
         return form;
     }
@@ -230,7 +236,7 @@ public class AdministracionView extends VerticalLayout {
         mensualidadMaster.setValue(config.getFIN_SENSEI_MASTER_MENSUALIDAD().doubleValue());
         alquilerJudogi.setValue(config.getFIN_ALQUILER_JUDOGI_ANUAL().doubleValue());
         matriculaAnual.setValue(config.getFIN_MATRICULA_ANUAL().doubleValue());
-
+        precioMinimoMensual.setValue(config.getPrecioMinimoMensual().doubleValue());
         diaCobro.setValue(config.getFIN_DIA_COBRO_MENSUAL().doubleValue());
         diaVencimiento.setValue(config.getFIN_DIA_VENCIMIENTO().doubleValue());
 
@@ -259,7 +265,7 @@ public class AdministracionView extends VerticalLayout {
             config.setFIN_DIA_VENCIMIENTO(BigDecimal.valueOf(diaVencimiento.getValue()));
 
             config.setSEC_TOKEN_EXPIRACION_HS(BigDecimal.valueOf(tokenExpiracionHoras.getValue()));
-
+            config.setPrecioMinimoMensual(BigDecimal.valueOf(precioMinimoMensual.getValue()));
             configuracionService.guardarConfiguracion(config);
 
             Notification.show(traduccionService.get("msg.success.config_saved"))

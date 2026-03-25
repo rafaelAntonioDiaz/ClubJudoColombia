@@ -22,20 +22,19 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.StreamResource;
 import com.vaadin.flow.server.VaadinServletRequest;
-import com.vaadin.flow.server.streams.DownloadHandler;
-import com.vaadin.flow.server.streams.DownloadResponse;
 import jakarta.annotation.security.RolesAllowed;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -47,6 +46,7 @@ public class GestorInvitacionesView extends VerticalLayout {
 
     private final AdmisionesService admisionesService;
     private final SecurityService securityService;
+    private final GrupoEntrenamientoService grupoService;
 
     // --- Componentes del Formulario Base ---
     private final ComboBox<OpcionRol> comboRoles = new ComboBox<>("¿A quién deseas invitar?");
@@ -56,14 +56,19 @@ public class GestorInvitacionesView extends VerticalLayout {
     private final TextField celularField = new TextField("Celular / WhatsApp");
     private final EmailField emailField = new EmailField("Email (Será su Usuario)");
     private final Button btnGenerar = new Button("Generar Enlace", VaadinIcon.MAGIC.create());
-    private ComboBox<GrupoEntrenamiento> comboGrupos = new ComboBox<>("Grupo de entrenamiento");
-    private final GrupoEntrenamientoService grupoService;
+
+    // Campos condicionales
+    private final ComboBox<GrupoEntrenamiento> comboTarifas = new ComboBox<>("Grupo tarifario");
+    private final NumberField porcentajeComision = new NumberField("Porcentaje de comisión para el sensei (%)");
+
     // --- Componentes del Panel de Resultados ---
     private final VerticalLayout panelResultado = new VerticalLayout();
     private final TextArea mensajeWhatsApp = new TextArea("Mensaje listo para WhatsApp");
     private final Button btnNuevaInvitacion = new Button("Invitar a otro contacto", VaadinIcon.REFRESH.create());
 
-    public GestorInvitacionesView(AdmisionesService admisionesService, SecurityService securityService, GrupoEntrenamientoService grupoService) {
+    public GestorInvitacionesView(AdmisionesService admisionesService,
+                                  SecurityService securityService,
+                                  GrupoEntrenamientoService grupoService) {
         this.admisionesService = admisionesService;
         this.securityService = securityService;
         this.grupoService = grupoService;
@@ -74,6 +79,9 @@ public class GestorInvitacionesView extends VerticalLayout {
         configurarSelectorRoles();
         configurarFormulario();
         configurarPanelResultado();
+
+        // Asegurar visibilidad inicial correcta
+        actualizarVisibilidadSegunRol();
     }
 
     private void configurarSelectorRoles() {
@@ -84,53 +92,53 @@ public class GestorInvitacionesView extends VerticalLayout {
                 .orElse(false);
 
         if (isMaster) {
-            // Con control total.
             opciones.add(new OpcionRol("Profesor de Judo (Nuevo Dojo)", "ROLE_SENSEI"));
-            opciones.add(new OpcionRol("Deportista Adulto (mayor de edad)", "ROLE_JUDOKA_ADULTO"));            opciones.add(new OpcionRol("Padre de Familia / Acudiente", "ROLE_ACUDIENTE"));
+            opciones.add(new OpcionRol("Deportista Adulto (mayor de edad)", "ROLE_JUDOKA_ADULTO"));
+            opciones.add(new OpcionRol("Padre de Familia / Acudiente", "ROLE_ACUDIENTE"));
             opciones.add(new OpcionRol("Deportista (Judoka)", "ROLE_JUDOKA"));
             opciones.add(new OpcionRol("Mecenas / Patrocinador", "ROLE_MECENAS"));
         } else {
-            // EL PROFESOR INVITADO: Solo puede invitar a sus alumnos.
-            // Eliminamos la opción de invitar a otros profes o padres (si así lo prefieres para simplificar)
             opciones.add(new OpcionRol("Deportista (Judoka)", "ROLE_JUDOKA"));
         }
 
         comboRoles.setItems(opciones);
         comboRoles.setItemLabelGenerator(OpcionRol::nombreVisible);
         comboRoles.setValue(opciones.get(0));
-
-        // Si no es master, deshabilitamos el combo para que no intente "hackear" el rol
         comboRoles.setEnabled(isMaster);
         comboRoles.setWidthFull();
+
         comboTipoSensei.setItems("Club Propio", "Externo (SaaS)");
-        comboTipoSensei.setValue("Externo (SaaS)"); // valor por defecto
+        comboTipoSensei.setValue("Externo (SaaS)");
         comboTipoSensei.setVisible(false);
-        comboRoles.addValueChangeListener(e -> {
-            boolean isSensei = e.getValue() != null && "ROLE_SENSEI".equals(e.getValue().rolDb());
-            comboTipoSensei.setVisible(isSensei);
-        });
-        comboRoles.addValueChangeListener(e -> {
-            boolean isJudoka = e.getValue() != null && "ROLE_JUDOKA".equals(e.getValue().rolDb());
-            comboGrupos.setVisible(isJudoka);
-            if (isJudoka) {
-                cargarGruposSensei();
-            }
-        });
+
+        // Listener para cambiar visibilidad
+        comboRoles.addValueChangeListener(e -> actualizarVisibilidadSegunRol());
     }
-    private void cargarGruposSensei() {
-        securityService.getAuthenticatedSensei().ifPresent(sensei -> {
-            List<GrupoEntrenamiento> grupos = grupoService.findBySensei(sensei);
-            comboGrupos.setItems(grupos);
-            comboGrupos.setItemLabelGenerator(g -> g.getNombre() + " - $" + g.getTarifaMensual());
-        });
+
+    private void actualizarVisibilidadSegunRol() {
+        OpcionRol selected = comboRoles.getValue();
+        if (selected == null) return;
+        String rol = selected.rolDb();
+
+        // Visibilidad del tipo de sensei (solo para invitación de sensei)
+        boolean isSensei = "ROLE_SENSEI".equals(rol);
+        comboTipoSensei.setVisible(isSensei);
+        porcentajeComision.setVisible(isSensei);
+
+        // Visibilidad del grupo tarifario (solo para acudiente o judoka adulto)
+        boolean requiereGrupo = "ROLE_ACUDIENTE".equals(rol) || "ROLE_JUDOKA_ADULTO".equals(rol);
+        comboTarifas.setVisible(requiereGrupo);
+
+        // Cargar grupos si es necesario
+        if (requiereGrupo) {
+            securityService.getAuthenticatedSensei().ifPresent(sensei -> {
+                comboTarifas.setItems(grupoService.findBySensei(sensei));
+                comboTarifas.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
+            });
+        }
     }
 
     private void configurarFormulario() {
-        VerticalLayout cardForm = new VerticalLayout();
-        cardForm.addClassName("card-blanca"); // Usa tu estilo existente
-        cardForm.setMaxWidth("600px");
-        cardForm.setPadding(true);
-
         H2 titulo = new H2("Centro de Invitaciones");
         Paragraph subtitulo = new Paragraph("Genera un acceso seguro y compártelo por WhatsApp.");
 
@@ -138,35 +146,49 @@ public class GestorInvitacionesView extends VerticalLayout {
         apellidoField.setRequired(true);
         celularField.setRequired(true);
         emailField.setRequiredIndicatorVisible(true);
-        comboGrupos.setVisible(false);
-        comboGrupos.setRequired(true);
+
+        // Configurar campo de porcentaje
+        porcentajeComision.setStep(0.01);
+        porcentajeComision.setMin(0);
+        porcentajeComision.setMax(100);
+        porcentajeComision.setValue(0.0);
+        porcentajeComision.setVisible(false); // inicialmente oculto
+
+        // Configurar grupo tarifario
+        comboTarifas.setVisible(false);
+        comboTarifas.setWidthFull();
+        comboTarifas.setRequired(true);
+
         btnGenerar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         btnGenerar.setWidthFull();
         btnGenerar.addClickListener(e -> procesarInvitacion());
 
         FormLayout form = new FormLayout();
         form.add(nombreField, apellidoField, celularField, emailField);
-        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1), new FormLayout.ResponsiveStep("400px", 2));
+        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("400px", 2));
 
-        cardForm.add(titulo, subtitulo, comboRoles, comboTipoSensei, comboGrupos, form, btnGenerar);
+        VerticalLayout cardForm = new VerticalLayout();
+        cardForm.addClassName("card-blanca");
+        cardForm.setMaxWidth("600px");
+        cardForm.setPadding(true);
+        cardForm.add(titulo, subtitulo, comboRoles, comboTipoSensei, comboTarifas, porcentajeComision, form, btnGenerar);
         add(cardForm);
     }
 
     private void configurarPanelResultado() {
         panelResultado.setMaxWidth("600px");
         panelResultado.addClassName("card-blanca");
-        panelResultado.setVisible(false); // Oculto hasta que se genere un enlace
+        panelResultado.setVisible(false);
 
         mensajeWhatsApp.setWidthFull();
         mensajeWhatsApp.setReadOnly(true);
         mensajeWhatsApp.setMinHeight("150px");
 
-        // Botón que usa JavaScript nativo para copiar al portapapeles
         Button btnCopiar = new Button("Copiar Mensaje", VaadinIcon.COPY.create());
         btnCopiar.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_PRIMARY);
         btnCopiar.setWidthFull();
         btnCopiar.addClickListener(e -> {
-            // Ejecuta script en el navegador para copiar al clipboard
             getUI().ifPresent(ui -> ui.getPage().executeJs(
                     "navigator.clipboard.writeText($0).then(function() { " +
                             "  $1.$server.notificarCopia(); " +
@@ -178,14 +200,14 @@ public class GestorInvitacionesView extends VerticalLayout {
         btnVerQR.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
         btnVerQR.setWidthFull();
         btnVerQR.addClickListener(e -> {
-            String link = mensajeWhatsApp.getValue().split("👉 ")[1].trim(); // Extrae el link del mensaje
+            String link = mensajeWhatsApp.getValue().split("👉 ")[1].trim();
             mostrarDialogoQR(link);
         });
 
         btnNuevaInvitacion.setWidthFull();
         btnNuevaInvitacion.addClickListener(e -> reiniciarParaLote());
-        panelResultado.add(new H2("¡Enlace Generado!"), mensajeWhatsApp, btnCopiar, btnVerQR, btnNuevaInvitacion);
 
+        panelResultado.add(new H2("¡Enlace Generado!"), mensajeWhatsApp, btnCopiar, btnVerQR, btnNuevaInvitacion);
         add(panelResultado);
     }
 
@@ -194,10 +216,28 @@ public class GestorInvitacionesView extends VerticalLayout {
             NotificationHelper.error("Por favor completa todos los campos.");
             return;
         }
+
         try {
             String rolElegido = comboRoles.getValue().rolDb();
+            boolean esClubPropio = "Club Propio".equals(comboTipoSensei.getValue());
 
-            boolean esClubPropio = "Club Propio".equals(comboTipoSensei.getValue()); // <-- DECLARAR AQUÍ
+            Long grupoId = null;
+            BigDecimal comisionPorcentaje = null;
+
+            if ("ROLE_ACUDIENTE".equals(rolElegido) || "ROLE_JUDOKA_ADULTO".equals(rolElegido)) {
+                if (comboTarifas.getValue() == null) {
+                    NotificationHelper.error("Debes seleccionar un grupo tarifario.");
+                    return;
+                }
+                grupoId = comboTarifas.getValue().getId();
+            } else if ("ROLE_SENSEI".equals(rolElegido)) {
+                Double valor = porcentajeComision.getValue();
+                if (valor == null || valor <= 0) {
+                    NotificationHelper.error("Debes ingresar un porcentaje de comisión válido (>0).");
+                    return;
+                }
+                comisionPorcentaje = BigDecimal.valueOf(valor);
+            }
 
             String tokenGenerado = admisionesService.generarInvitacion(
                     nombreField.getValue().trim(),
@@ -206,18 +246,19 @@ public class GestorInvitacionesView extends VerticalLayout {
                     celularField.getValue().trim(),
                     rolElegido,
                     obtenerBaseUrl(),
-                    "Club Propio".equals(comboTipoSensei.getValue()), // para sensei
-                    comboGrupos.isVisible() ? comboGrupos.getValue().getId() : null
+                    esClubPropio,
+                    grupoId,
+                    comisionPorcentaje
             );
 
             String linkFinal = obtenerBaseUrl() + "/acceso/" + tokenGenerado;
+
             boolean isMaster = securityService.getAuthenticatedUserDetails()
                     .map(u -> u.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MASTER")))
                     .orElse(false);
             String msj = redactarMensajeInteligente(isMaster, nombreField.getValue(), linkFinal, rolElegido);
             mensajeWhatsApp.setValue(msj);
 
-            // Transición de UI
             btnGenerar.getParent().ifPresent(parent -> ((VerticalLayout) parent).setVisible(false));
             panelResultado.setVisible(true);
 
@@ -228,10 +269,9 @@ public class GestorInvitacionesView extends VerticalLayout {
             ex.printStackTrace();
         }
     }
+
     private String redactarMensajeInteligente(boolean isMaster, String nombreInvitado, String link, String rol) {
         String remitente = isMaster ? "el Profesor Rafael" : "tu Profesor de Judo";
-
-        // Usamos \n\n para forzar párrafos en WhatsApp y aislar el enlace
         String base = "¡Hola " + nombreInvitado + "! Soy " + remitente + ".\n\n";
 
         if (rol.equals("ROLE_MECENAS")) {
@@ -239,27 +279,21 @@ public class GestorInvitacionesView extends VerticalLayout {
         } else if (rol.equals("ROLE_SENSEI")) {
             base = "¡Hola " + nombreInvitado + "!\n\nBienvenido a la plataforma Club Judo. Usa el siguiente enlace para registrar tu Dojo y tu grado actual:\n\n";
         } else if (rol.equals("ROLE_ACUDIENTE")) {
-            // NUEVO MENSAJE PARA PADRES DE FAMILIA
             base += "Te invito a unirte a nuestro portal deportivo como Acudiente. Haz clic en este enlace seguro para registrar a tus hijos, subir la documentación requerida (Waiver/EPS) y gestionar la mensualidad:\n\n";
         } else {
             base += "Te invito a unirte a nuestro portal deportivo. Haz clic en este enlace seguro para completar tu perfil y acceder a tu carnet digital:\n\n";
         }
 
-        // El emoji y el salto de línea garantizan que WhatsApp lo vuelva Hipertexto azul
         return base + "👉 " + link;
     }
+
     private void reiniciarParaLote() {
-        // Limpiamos campos de texto
         nombreField.clear();
         apellidoField.clear();
         celularField.clear();
         emailField.clear();
-
-        // Restauramos UI
         panelResultado.setVisible(false);
         btnGenerar.getParent().ifPresent(parent -> ((VerticalLayout) parent).setVisible(true));
-
-        // Foco automático para escribir rápido
         nombreField.focus();
     }
 
@@ -275,6 +309,7 @@ public class GestorInvitacionesView extends VerticalLayout {
             return scheme + "://" + serverName + ":" + serverPort;
         }
     }
+
     private void mostrarDialogoQR(String link) {
         try {
             byte[] imageBytes = generarQRBytes(link, 300, 300);
@@ -292,6 +327,7 @@ public class GestorInvitacionesView extends VerticalLayout {
             Notification.show("Error al generar QR: " + ex.getMessage());
         }
     }
+
     private byte[] generarQRBytes(String texto, int ancho, int alto) throws WriterException, IOException {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
         var bitMatrix = qrCodeWriter.encode(texto, BarcodeFormat.QR_CODE, ancho, alto);
@@ -299,7 +335,7 @@ public class GestorInvitacionesView extends VerticalLayout {
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
         return pngOutputStream.toByteArray();
     }
-    // Helper Record para el ComboBox
+
     public record OpcionRol(String nombreVisible, String rolDb) {}
 
     public String generarQRBase64(String texto, int ancho, int alto) throws WriterException, IOException {
@@ -310,5 +346,4 @@ public class GestorInvitacionesView extends VerticalLayout {
         byte[] pngData = pngOutputStream.toByteArray();
         return Base64.getEncoder().encodeToString(pngData);
     }
-
 }

@@ -219,30 +219,30 @@ public class JudokaService {
     }
 
     @Transactional
-    public Judoka crearJudokaPorAcudiente(Usuario acudiente, String nombre, String apellido, LocalDate fechaNacimiento) {
-        // Validar rol
+    public Judoka crearJudokaPorAcudiente(Usuario acudiente, String nombre, String apellido,
+                                          LocalDate fechaNacimiento, GrupoEntrenamiento grupo) {
+        // Validar
         if (acudiente.getRoles().stream().noneMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
             throw new RuntimeException("El usuario no tiene permisos para agregar deportistas.");
         }
 
-        // Determinar sensei sugerido: si el acudiente ya tiene hijos, usar el sensei del primero
-        Sensei sensei = null;
-        List<Judoka> existing = judokaRepository.findByAcudiente(acudiente);
-        if (!existing.isEmpty()) {
-            sensei = existing.get(0).getSensei();
-        }
-
-        // Crear judoka
+        Sensei sensei = grupo.getSensei();
         Judoka judoka = new Judoka();
         judoka.setNombre(nombre);
         judoka.setApellido(apellido);
         judoka.setAcudiente(acudiente);
         judoka.setFechaNacimiento(fechaNacimiento);
-        judoka.setEstado(EstadoJudoka.PENDIENTE);          // Pendiente de revisión
-        judoka.setSensei(sensei);                         // Puede ser null
-        judoka.setGrupoFacturacion(null);                 // Sin grupo aún
+        judoka.setEstado(EstadoJudoka.EN_REVISION);
+        judoka.setSensei(sensei);
+        judoka.setGrupoFacturacion(grupo);
+        judoka.setGrupo(grupo);
         judoka.setGrado(GradoCinturon.BLANCO);
 
-        return judokaRepository.save(judoka);
-        // No se generan cargos ni se asigna a ningún grupo
-    }}
+        judoka = judokaRepository.save(judoka);
+
+        // Generar cobros
+        finanzasService.generarCobroBienvenida(judoka);
+
+        return judoka;
+    }
+    }

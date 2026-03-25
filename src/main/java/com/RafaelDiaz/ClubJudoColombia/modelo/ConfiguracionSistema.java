@@ -51,6 +51,9 @@ public class ConfiguracionSistema {
     @Column(name = "grupo_dias_gracia_default")
     private int grupoDiasGraciaDefault = 5;
 
+    @Column(name = "precio_minimo_mensual", precision = 10, scale = 2)
+    private BigDecimal precioMinimoMensual = BigDecimal.valueOf(20000);
+
     // URL del logo para recibos y cabecera
     private String urlLogo;
 
@@ -212,4 +215,11 @@ public class ConfiguracionSistema {
         this.grupoDiasGraciaDefault = grupoDiasGraciaDefault;
     }
 
+    public BigDecimal getPrecioMinimoMensual() {
+        return precioMinimoMensual;
+    }
+
+    public void setPrecioMinimoMensual(BigDecimal precioMinimoMensual) {
+        this.precioMinimoMensual = precioMinimoMensual;
+    }
 }

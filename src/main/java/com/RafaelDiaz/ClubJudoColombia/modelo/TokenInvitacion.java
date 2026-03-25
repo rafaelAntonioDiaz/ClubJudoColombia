@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -48,6 +49,8 @@ public class TokenInvitacion implements Serializable {
     @JoinColumn(name = "id_grupo")
     private GrupoEntrenamiento grupo;
 
+    @Column(name = "porcentaje_comision", precision = 5, scale = 2)
+    private BigDecimal porcentajeComision;
     public TokenInvitacion() {}
 
     public TokenInvitacion(Judoka judoka, int horasValidez) {
@@ -143,6 +146,14 @@ public class TokenInvitacion implements Serializable {
 
     public void setGrupo(GrupoEntrenamiento grupo) {
         this.grupo = grupo;
+    }
+
+    public BigDecimal getPorcentajeComision() {
+        return porcentajeComision;
+    }
+
+    public void setPorcentajeComision(BigDecimal porcentajeComision) {
+        this.porcentajeComision = porcentajeComision;
     }
 
     public LocalDateTime getFechaCreacion() {

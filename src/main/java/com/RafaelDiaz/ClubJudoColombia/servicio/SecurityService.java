@@ -8,6 +8,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.SenseiRepository;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
 import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.spring.security.AuthenticationContext; // <--- IMPORTANTE
+import org.hibernate.Hibernate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,14 @@ public class SecurityService {
     @Transactional(readOnly = true)
     public Optional<Usuario> getAuthenticatedUsuario() {
         return getAuthenticatedUserDetails()
-                .flatMap(userDetails -> usuarioRepository.findByUsername(userDetails.getUsername()));
+                .map(UserDetails::getUsername)
+                .flatMap(usuarioRepository::findByUsernameWithRoles)
+                .map(usuario -> {
+                    // Forzar inicialización de cualquier proxy restante
+                    Hibernate.initialize(usuario);
+                    Hibernate.initialize(usuario.getRoles());
+                    return usuario;
+                });
     }
 
     /**
@@ -61,11 +69,12 @@ public class SecurityService {
      */
     @Transactional(readOnly = true)
     public Optional<Sensei> getAuthenticatedSensei() {
-        Optional<Usuario> usuarioOpt = getAuthenticatedUsuario();
-        if (usuarioOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        return senseiRepository.findByUsuario(usuarioOpt.get());
+        return getAuthenticatedUserDetails()
+                .flatMap(user -> senseiRepository.findByUsuarioUsername(user.getUsername()))
+                .map(sensei -> {
+                    Hibernate.initialize(sensei.getUsuario());
+                    return sensei;
+                });
     }
 
     @Transactional(readOnly = true)
@@ -164,11 +173,49 @@ public class SecurityService {
         // Si no es un Sensei (ej. es solo ROLE_JUDOKA) o no está logueado
         return null;
     }
-
+    @Transactional(readOnly = true)
+    public String getAuthenticatedNombreCompleto() {
+        return getAuthenticatedUserDetails()
+                .map(UserDetails::getUsername)
+                .flatMap(usuarioRepository::findByUsernameWithRoles)
+                .map(u -> u.getNombre() + " " + u.getApellido())
+                .orElse("Usuario");
+    }
     /**
      * Cierra la sesión del usuario actual.
      */
     public void logout() {
         authenticationContext.logout();
+    }
+
+    /**
+     * Record simple para los datos del sensei que se muestran en la UI.
+     */
+    public record SenseiProfile(String fullName, String avatarUrl, String clubName) {}
+
+    @Transactional(readOnly = true)
+    public SenseiProfile getAuthenticatedSenseiProfile() {
+        return getAuthenticatedSensei()
+                .map(sensei -> {
+                    Usuario usuario = sensei.getUsuario();
+                    String fullName = usuario.getNombre() + " " + usuario.getApellido();
+                    String avatarUrl = sensei.getUrlFotoPerfil();
+                    String clubName = sensei.getNombreClub() != null ? sensei.getNombreClub() : "";
+                    return new SenseiProfile(fullName, avatarUrl, clubName);
+                })
+                .orElse(new SenseiProfile("Sensei", null, ""));
+    }
+
+    public record JudokaProfile(String fullName, String avatarUrl) {}
+
+    @Transactional(readOnly = true)
+    public JudokaProfile getAuthenticatedJudokaProfile() {
+        return getAuthenticatedJudoka()
+                .map(judoka -> {
+                    String fullName = judoka.getNombre() + " " + judoka.getApellido();
+                    String avatarUrl = judoka.getUrlFotoPerfil();
+                    return new JudokaProfile(fullName, avatarUrl);
+                })
+                .orElse(new JudokaProfile("Judoka", null));
     }
 }

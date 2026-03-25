@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
+import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
@@ -202,10 +203,32 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
     private void guardarGrupo(BaseForm.SaveEvent<GrupoEntrenamiento> event) {
         try {
             GrupoEntrenamiento grupo = event.getData();
+            Sensei sensei = securityService.getAuthenticatedSensei()
+                    .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));
 
-            securityService.getAuthenticatedSensei().ifPresent(grupo::setSensei);
-
-            grupoService.save(grupo);
+            if (grupo.getId() == null) {
+                // Crear nuevo grupo con los valores del formulario
+                grupoService.crearGrupo(
+                        sensei,
+                        grupo.getNombre(),
+                        grupo.getDescripcion(),
+                        grupo.getTarifaMensual(),
+                        grupo.isIncluyeMatricula(),
+                        grupo.getMontoMatricula(),
+                        grupo.getDiasGracia()
+                );
+            } else {
+                // Actualizar grupo existente
+                grupoService.actualizarGrupo(
+                        grupo.getId(),
+                        grupo.getNombre(),
+                        grupo.getDescripcion(),
+                        grupo.getTarifaMensual(),
+                        grupo.isIncluyeMatricula(),
+                        grupo.getMontoMatricula(),
+                        grupo.getDiasGracia()
+                );
+            }
 
             NotificationHelper.success(traduccionService.get("msg.success.saved") + ": " + grupo.getNombre());
             cerrarFormulario();

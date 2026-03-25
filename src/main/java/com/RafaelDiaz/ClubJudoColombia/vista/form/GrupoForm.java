@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista.form;
 import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
@@ -12,6 +13,7 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.timepicker.TimePicker;
 import com.vaadin.flow.data.binder.Binder;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.format.TextStyle;
@@ -21,10 +23,9 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
 
     private final TraduccionService traduccionService;
 
+    // Campos existentes
     private final TextField nombre;
     private final TextArea descripcion;
-
-    // --- NUEVOS CAMPOS DE LOGÍSTICA ---
     private final TextField lugarPractica;
     private final NumberField latitud;
     private final NumberField longitud;
@@ -33,10 +34,16 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
     private final TimePicker horaInicio;
     private final TimePicker horaFin;
 
+    // NUEVOS CAMPOS FINANCIEROS
+    private final NumberField tarifaMensual;
+    private final Checkbox incluyeMatricula;
+    private final NumberField montoMatricula;
+    private final IntegerField diasGracia;
+
     public GrupoForm(TraduccionService traduccionService) {
         this.traduccionService = traduccionService;
 
-        // Inicializamos los componentes usando las claves de traducción
+        // Inicialización de componentes
         this.nombre = new TextField(traduccionService.get("grupos.form.nombre"));
         this.descripcion = new TextArea(traduccionService.get("grupos.form.descripcion"));
         this.lugarPractica = new TextField(traduccionService.get("grupos.form.lugar"));
@@ -47,20 +54,31 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
         this.longitud = new NumberField(traduccionService.get("grupos.form.longitud"));
         this.radioPermitidoMetros = new IntegerField(traduccionService.get("grupos.form.radio"));
 
-        configureFields();
+        // Campos financieros
+        this.tarifaMensual = new NumberField(traduccionService.get("grupos.form.tarifa_mensual"));
+        this.incluyeMatricula = new Checkbox(traduccionService.get("grupos.form.incluye_matricula"));
+        this.montoMatricula = new NumberField(traduccionService.get("grupos.form.monto_matricula"));
+        this.diasGracia = new IntegerField(traduccionService.get("grupos.form.dias_gracia"));
 
-        // Agrupamos las horas en una sola fila para ahorrar espacio visual
+        configureFields();
+        configureFinancialFields();
+
+        // Layout de horas y GPS (igual que antes)
         FormLayout layoutHoras = new FormLayout(horaInicio, horaFin);
         layoutHoras.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
 
-        // Agregamos todos los campos al lienzo del BaseForm
         FormLayout layoutGps = new FormLayout(latitud, longitud, radioPermitidoMetros);
         layoutGps.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 3));
 
-        add(nombre, descripcion, lugarPractica, layoutGps, diasSemana, layoutHoras);
+        // Layout financiero (tarifa, matrícula, días gracia)
+        FormLayout layoutFinanciero = new FormLayout(tarifaMensual, incluyeMatricula, montoMatricula, diasGracia);
+        layoutFinanciero.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
+
+        add(nombre, descripcion, lugarPractica, layoutGps, diasSemana, layoutHoras, layoutFinanciero);
     }
 
     private void configureFields() {
+        // Configuraciones existentes...
         nombre.setRequiredIndicatorVisible(true);
         descripcion.setMaxLength(255);
         lugarPractica.setPlaceholder(traduccionService.get("grupos.form.lugar.placeholder"));
@@ -68,37 +86,55 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
         latitud.setPlaceholder("Ej: 4.7110");
         latitud.setMin(-90);
         latitud.setMax(90);
-
         longitud.setStep(0.000001);
         longitud.setPlaceholder("Ej: -74.0721");
         longitud.setMin(-180);
         longitud.setMax(180);
-
         radioPermitidoMetros.setStepButtonsVisible(true);
         radioPermitidoMetros.setMin(10);
         radioPermitidoMetros.setMax(1000);
         radioPermitidoMetros.setValue(100);
-        // Configuración de los Días de la Semana
-        diasSemana.setItems(DayOfWeek.values());
 
-        // i18n Dinámico: Detecta el idioma del navegador o usa ES_CO por defecto
+        // Días de la semana
+        diasSemana.setItems(DayOfWeek.values());
         Locale localeUsuario = UI.getCurrent() != null && UI.getCurrent().getLocale() != null
                 ? UI.getCurrent().getLocale()
                 : new Locale("es", "CO");
-
         diasSemana.setItemLabelGenerator(dia ->
-                dia.getDisplayName(TextStyle.FULL, localeUsuario).toUpperCase()
-        );
+                dia.getDisplayName(TextStyle.FULL, localeUsuario).toUpperCase());
 
-        // Configuración de los Relojes (Saltos de 15 en 15 minutos)
         horaInicio.setStep(Duration.ofMinutes(15));
         horaFin.setStep(Duration.ofMinutes(15));
+    }
+
+    private void configureFinancialFields() {
+        tarifaMensual.setRequiredIndicatorVisible(true);
+        tarifaMensual.setStep(1000);
+        tarifaMensual.setMin(0);
+        tarifaMensual.setPlaceholder("Ej: 35000");
+
+        incluyeMatricula.addValueChangeListener(e -> {
+            montoMatricula.setVisible(e.getValue());
+            if (!e.getValue()) {
+                montoMatricula.clear();
+            }
+        });
+        montoMatricula.setVisible(false);
+        montoMatricula.setStep(1000);
+        montoMatricula.setMin(0);
+
+        diasGracia.setRequiredIndicatorVisible(true);
+        diasGracia.setMin(0);
+        diasGracia.setMax(30);
+        diasGracia.setStepButtonsVisible(true);
+        diasGracia.setValue(5); // valor por defecto
     }
 
     @Override
     protected Binder<GrupoEntrenamiento> createBinder() {
         Binder<GrupoEntrenamiento> binder = new Binder<>(GrupoEntrenamiento.class);
 
+        // Campos existentes...
         binder.forField(nombre)
                 .asRequired(traduccionService.get("grupos.form.error.nombre_requerido"))
                 .bind(GrupoEntrenamiento::getNombre, GrupoEntrenamiento::setNombre);
@@ -108,6 +144,7 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
 
         binder.forField(lugarPractica)
                 .bind(GrupoEntrenamiento::getLugarPractica, GrupoEntrenamiento::setLugarPractica);
+
         binder.forField(latitud)
                 .withNullRepresentation(null)
                 .bind(GrupoEntrenamiento::getLatitud, GrupoEntrenamiento::setLatitud);
@@ -128,6 +165,29 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
 
         binder.forField(diasSemana)
                 .bind(GrupoEntrenamiento::getDiasSemana, GrupoEntrenamiento::setDiasSemana);
+
+        // Nuevos campos financieros
+        binder.forField(tarifaMensual)
+                .asRequired(traduccionService.get("grupos.form.error.tarifa_requerida"))
+                .withConverter(
+                        value -> value != null ? BigDecimal.valueOf(value) : null,
+                        bd -> bd != null ? bd.doubleValue() : null
+                )
+                .bind(GrupoEntrenamiento::getTarifaMensual, GrupoEntrenamiento::setTarifaMensual);
+
+        binder.forField(incluyeMatricula)
+                .bind(GrupoEntrenamiento::isIncluyeMatricula, GrupoEntrenamiento::setIncluyeMatricula);
+
+        binder.forField(montoMatricula)
+                .withConverter(
+                        value -> value != null ? BigDecimal.valueOf(value) : null,
+                        bd -> bd != null ? bd.doubleValue() : null
+                )
+                .bind(GrupoEntrenamiento::getMontoMatricula, GrupoEntrenamiento::setMontoMatricula);
+
+        binder.forField(diasGracia)
+                .asRequired(traduccionService.get("grupos.form.error.dias_gracia_requeridos"))
+                .bind(GrupoEntrenamiento::getDiasGracia, GrupoEntrenamiento::setDiasGracia);
 
         return binder;
     }
