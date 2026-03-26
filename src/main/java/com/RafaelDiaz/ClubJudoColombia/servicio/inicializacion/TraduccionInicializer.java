@@ -974,6 +974,26 @@ public class TraduccionInicializer {
                 "Reflection saved in your mind.",
                 "Reflexão salva em sua mente.");
 
+        agregarSiNoExiste(lista, clavesExistentes, "vista.registro.titulo",
+                "Completa tu registro",
+                "Complete your registration",
+                "Complete seu registro");
+        agregarSiNoExiste(lista, clavesExistentes, "vista.registro.descripcion",
+                "Completa el formulario. ¡Enhorabuena!","Complete form. Welcome !",
+                "Complete o formulário. Bem-vindo !");
+        agregarSiNoExiste(lista, clavesExistentes, "label.contrasena",
+                "Contraseña",
+                "Password","Contraseña");
+        agregarSiNoExiste(lista, clavesExistentes, "label.confirmar_contrasena","Confirmar Contraseña","Confirm password","Confirmar Contraseña");
+        agregarSiNoExiste(lista, clavesExistentes, "boton.activar_cuenta","Activar tu cuenta","Activate","Activar tu cuenta");
+        agregarSiNoExiste(lista, clavesExistentes, "error.campos_incompletos","Error al registrar. Por favor completa todos los campos.",
+                "Error please fill all the blanks",
+                "Error por favor complete todos os campos");
+        agregarSiNoExiste(lista, clavesExistentes, "error.activacion","Error al activar. Por favor intenta de nuevo.","Error please try again",
+                "Erro por favor tente novamente");
+        agregarSiNoExiste(lista, clavesExistentes, "error.titulo_ops","ups! algo falló ... trata de nuevo por fa...",
+                "Ops please try again",
+                "Ups algo falhou... por favor tente novamente");
         if (!lista.isEmpty()) {
             traduccionRepo.saveAll(lista);
             System.out.println(">>> TRADUCCIONES INICIALIZADAS: " + lista.size() + " registros nuevos.");

@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.controlador;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.SenseiRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AccesoDojoService;
@@ -73,20 +74,6 @@ public class AccesoController {
             e.printStackTrace();
             response.sendRedirect("/login?error=error-interno");
         }
-    }
-
-    private String determinarRedireccion(Usuario usuario, String token) {
-        // Si el usuario tiene rol sensei y aún no tiene perfil de sensei, va a completar perfil
-        boolean esSensei = usuario.getRoles().stream()
-                .anyMatch(r -> r.getNombre().equals("ROLE_SENSEI"));
-        if (esSensei) {
-            boolean tienePerfil = senseiRepository.findByUsuario(usuario).isPresent();
-            if (!tienePerfil) {
-                return "/completar-perfil-sensei/" + token;
-            }
-        }
-        // Para otros roles o sensei ya con perfil, van al home
-        return "/";
     }
 
     private void autenticarYRedirigir(UserDetails userDetails,

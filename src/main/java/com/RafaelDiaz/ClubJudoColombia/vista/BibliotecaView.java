@@ -16,6 +16,7 @@ import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
@@ -23,6 +24,8 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -39,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -93,7 +97,10 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
         buildLayout();
 
         categoriaEjercicio = null;
+        loadSensei();
     }
+
+
 
     private void buildLayout() {
         setSizeFull();
@@ -243,8 +250,14 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
     }
 
     private void loadSensei() {
-        this.senseiActual = securityService.getAuthenticatedSensei()
-                .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));
+        Optional<Sensei> senseiOpt = securityService.getAuthenticatedSensei();
+        if (senseiOpt.isEmpty()) {
+            Notification.show("Debes completar tu perfil antes de acceder.")
+                    .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            UI.getCurrent().navigate("completar-perfil-sensei");
+            return;
+        }
+        senseiActual = senseiOpt.get();
     }
 
     // --- LÓGICA DE FORMULARIOS ---

@@ -21,18 +21,20 @@ public class CalendarioUnificadoService {
     private final JudokaRepository judokaRepository;
     private final AsistenciaRepository asistenciaRepo;
     private final GrupoEntrenamientoRepository grupoRepo;
+    private final SenseiRepository senseiRepository;
 
     public CalendarioUnificadoService(SesionProgramadaRepository sesionRepo,
                                       MicrocicloService microcicloService,
                                       EjecucionTareaRepository ejecucionRepo, JudokaRepository judokaRepository,
                                       AsistenciaRepository asistenciaRepo,
-                                      GrupoEntrenamientoRepository grupoRepo) {
+                                      GrupoEntrenamientoRepository grupoRepo, SenseiRepository senseiRepository) {
         this.sesionRepo = sesionRepo;
         this.microcicloService = microcicloService;
         this.ejecucionRepo = ejecucionRepo;
         this.judokaRepository = judokaRepository;
         this.asistenciaRepo = asistenciaRepo;
         this.grupoRepo = grupoRepo;
+        this.senseiRepository = senseiRepository;
     }
 
     @Transactional(readOnly = true)
@@ -84,28 +86,35 @@ public class CalendarioUnificadoService {
 
     @Transactional(readOnly = true)
     public List<ItemCalendario> obtenerItemsPorSenseiYMes(Sensei sensei, YearMonth mes) {
+        // Recargar el sensei con su usuario dentro de la transacción
+        Sensei managedSensei = senseiRepository.findById(sensei.getId())
+                .orElseThrow(() -> new RuntimeException("Sensei no encontrado"));
+
+        // Inicializar el usuario (si es necesario, pero la consulta debería traerlo)
+        Hibernate.initialize(managedSensei.getUsuario());
+
         LocalDateTime inicioMes = mes.atDay(1).atStartOfDay();
         LocalDateTime finMes = mes.atEndOfMonth().atTime(23, 59, 59);
 
         List<ItemCalendario> items = new ArrayList<>();
 
-        // 1. Obtener todos los grupos del sensei (usando el nuevo método del repositorio)
-        List<GrupoEntrenamiento> grupos = grupoRepo.findBySensei(sensei);
+        // Obtener grupos del sensei (usando el managedSensei)
+        List<GrupoEntrenamiento> grupos = grupoRepo.findBySensei(managedSensei);
         if (grupos != null && !grupos.isEmpty()) {
             grupos.forEach(g -> Hibernate.initialize(g));
 
-            // 2. Sesiones de esos grupos
+            // Sesiones de esos grupos
             List<SesionProgramada> sesiones = sesionRepo.findByGrupoInAndFechaHoraInicioBetween(
                     grupos, inicioMes, finMes);
             for (SesionProgramada s : sesiones) {
                 items.add(mapearSesion(s, null));
             }
-
-            // 3. (Opcional) Tareas de judokas de esos grupos? Por ahora solo sesiones.
         }
-        System.out.println(">>> Items para sensei " + sensei.getUsuario().getNombre() + " en mes " + mes + ": " + items.size());
+
+        System.out.println(">>> Items para sensei " + managedSensei.getUsuario().getNombre() + " en mes " + mes + ": " + items.size());
         return items;
     }
+
 
     @Transactional(readOnly = true)
     public List<ItemCalendario> obtenerItemsPorGrupoYMes(GrupoEntrenamiento grupo, YearMonth mes) {

@@ -1,8 +1,12 @@
 package com.RafaelDiaz.ClubJudoColombia.vista;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.ComunidadComponent;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -25,12 +29,17 @@ public class ComunidadSenseiView extends VerticalLayout {
         setSizeFull();
         setPadding(false);
         setSpacing(false);
-        Long miSenseiId = securityService.getSenseiIdActual();
-        if (miSenseiId == null) {
-            add(new H3("Error: No tienes un perfil de Sensei activo."));
+
+        Sensei senseiActual = securityService.getAuthenticatedSensei()
+                .orElse(null);
+        if (senseiActual == null) {
+            Notification.show("Debes completar tu perfil antes de acceder aquí.")
+                    .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            UI.getCurrent().navigate("completar-perfil-sensei");
             return;
         }
-        ComunidadComponent comunidad = new ComunidadComponent(miSenseiId,
+
+        ComunidadComponent comunidad = new ComunidadComponent(senseiActual.getId(),
                         securityService, traduccionService, fileStorageService, publicacionService, fotoPerfilService, chatService);
 
         add(comunidad);

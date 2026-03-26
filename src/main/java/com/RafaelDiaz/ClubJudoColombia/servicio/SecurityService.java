@@ -69,10 +69,21 @@ public class SecurityService {
      */
     @Transactional(readOnly = true)
     public Optional<Sensei> getAuthenticatedSensei() {
-        return getAuthenticatedUserDetails()
-                .flatMap(user -> senseiRepository.findByUsuarioUsername(user.getUsername()))
+        VaadinSession session = VaadinSession.getCurrent();
+        if (session != null) {
+            Long senseiId = (Long) session.getAttribute(SENSEI_ID_SESSION_KEY);
+            if (senseiId != null) {
+                return senseiRepository.findById(senseiId)
+                        .map(sensei -> {
+                            Hibernate.initialize(sensei.getUsuario()); // Forzar carga
+                            return sensei;
+                        });
+            }
+        }
+        return getAuthenticatedUsuario()
+                .flatMap(senseiRepository::findByUsuario)
                 .map(sensei -> {
-                    Hibernate.initialize(sensei.getUsuario());
+                    Hibernate.initialize(sensei.getUsuario()); // Forzar carga
                     return sensei;
                 });
     }

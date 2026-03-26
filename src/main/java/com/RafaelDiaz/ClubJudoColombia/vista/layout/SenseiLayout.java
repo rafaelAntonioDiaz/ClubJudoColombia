@@ -71,19 +71,19 @@ public class SenseiLayout extends AppLayout {
     }
 
     private void createHeader() {
-        String tituloApp = getTexto("app.nombre", "Club Judo");
-        H1 logo = new H1(tituloApp);
+        // Obtener el nombre del club del sensei autenticado
+        String clubName = securityService.getAuthenticatedSensei()
+                .map(Sensei::getNombreClub)
+                .filter(name -> name != null && !name.trim().isEmpty())
+                .orElse(getTexto("app.nombre", "Club Judo"));
+
+        H1 logo = new H1(clubName);
         logo.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.MEDIUM);
 
         // Obtener perfil del sensei
         var profile = securityService.getAuthenticatedSenseiProfile();
         String nombreCompleto = profile.fullName();
         String fotoUrl = profile.avatarUrl();
-
-        // Obtener club name (adicional)
-        String clubName = securityService.getAuthenticatedSensei()
-                .map(Sensei::getNombreClub)
-                .orElse("");
 
         // Saludo personalizado
         Span saludo = new Span(getTexto("dashboard.welcome", "Hola") + " " + nombreCompleto);

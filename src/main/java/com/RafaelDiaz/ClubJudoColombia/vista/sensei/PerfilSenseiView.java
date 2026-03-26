@@ -6,6 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SenseiService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -21,6 +22,8 @@ import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+
+import java.util.Optional;
 
 @Route(value = "perfil-sensei", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_SENSEI")
@@ -48,8 +51,16 @@ public class PerfilSenseiView extends VerticalLayout {
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
 
-        senseiActual = securityService.getAuthenticatedSensei()
-                .orElseThrow(() -> new RuntimeException("Sensei no autenticado"));
+        // Verificar si el sensei existe; si no, redirigir a completar perfil
+        Optional<Sensei> senseiOpt = securityService.getAuthenticatedSensei();
+        if (senseiOpt.isEmpty()) {
+            // Podría ser que el usuario aún no haya completado el perfil
+            Notification.show("Debes completar tu perfil antes de acceder aquí.")
+                    .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            UI.getCurrent().navigate("completar-perfil-sensei");
+            return;
+        }
+        senseiActual = senseiOpt.get();
 
         construirUI();
     }
@@ -100,7 +111,6 @@ public class PerfilSenseiView extends VerticalLayout {
                     Notification.show(traduccionService.get("msg.foto.actualizada"), 2000, Notification.Position.BOTTOM_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                     upload.clearFileList();
-                    // Recargar la página para actualizar el layout
                     ui.getPage().executeJs("setTimeout(function() { location.reload(); }, 1500);");
                 }));
             } catch (Exception e) {

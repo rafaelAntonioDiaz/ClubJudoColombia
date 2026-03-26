@@ -142,7 +142,8 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
 
     private String determinarRedireccion(Usuario usuario) {
         if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_SENSEI"))) {
-            return "/dashboard-sensei";
+            // Redirigir al formulario de completar perfil, pasando el token original
+            return "/completar-perfil-sensei/" + tokenActual.getToken();
         } else if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
             return "/mi-familia";
         } else if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_MECENAS"))) {
@@ -151,7 +152,6 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
             return "/";
         }
     }
-
     private void mostrarError(String mensaje) {
         removeAll();
         add(new H2(traduccionService.get("error.titulo_ops")));
