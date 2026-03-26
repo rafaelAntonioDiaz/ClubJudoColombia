@@ -17,25 +17,36 @@ import java.util.List;
  */
 public class PruebaEstandarForm extends BaseForm<PruebaEstandar> {
 
-    private final TextField nombrePersonalizado = new TextField("Nombre de la Evaluación");
-    private final ComboBox<CategoriaEjercicio> categoria = new ComboBox<>("Bloque Metodológico");
-    private final MultiSelectComboBox<Metrica> metricas = new MultiSelectComboBox<>("Unidades de Medida a Evaluar");
-    private final TextArea objetivoPersonalizado = new TextArea("Objetivo (¿Qué mide?)");
-    private final TextArea descripcionPersonalizada = new TextArea("Descripción (¿Cómo se ejecuta?)");
+    private final TextField nombrePersonalizado;
+    private final ComboBox<CategoriaEjercicio> categoria;
+    private final MultiSelectComboBox<Metrica> metricas;
+    private final TextArea objetivoPersonalizado;
+    private final TextArea descripcionPersonalizada;
+
+    private final TraduccionService traduccionService;
 
     public PruebaEstandarForm(List<Metrica> metricasDisponibles, TraduccionService traduccionService) {
-        configureFields(metricasDisponibles, traduccionService);
-        // Los botones guardar/cancelar ya vienen del BaseForm
+        super(traduccionService); // BaseForm se encarga de los botones traducidos
+        this.traduccionService = traduccionService;
+
+        // Inicializar componentes con etiquetas traducidas
+        nombrePersonalizado = new TextField(traduccionService.get("prueba.estandar.nombre"));
+        categoria = new ComboBox<>(traduccionService.get("prueba.estandar.categoria"));
+        metricas = new MultiSelectComboBox<>(traduccionService.get("prueba.estandar.metricas"));
+        objetivoPersonalizado = new TextArea(traduccionService.get("prueba.estandar.objetivo"));
+        descripcionPersonalizada = new TextArea(traduccionService.get("prueba.estandar.descripcion"));
+
+        configureFields(metricasDisponibles);
         add(nombrePersonalizado, categoria, metricas, objetivoPersonalizado, descripcionPersonalizada);
     }
 
-    private void configureFields(List<Metrica> metricasDisponibles, TraduccionService traduccionService) {
-        // Selector de Bloque (CAAV)
+    private void configureFields(List<Metrica> metricasDisponibles) {
+        // Bloque metodológico (CAAV) con opciones traducidas
         categoria.setItems(CategoriaEjercicio.values());
-        categoria.setItemLabelGenerator(CategoriaEjercicio::getDescripcion);
+        categoria.setItemLabelGenerator(c -> traduccionService.get("categoria." + c.name()));
         categoria.setRequiredIndicatorVisible(true);
 
-        // Selector Múltiple de Metrología
+        // Métricas con traducción de nombre y unidad
         metricas.setItems(metricasDisponibles);
         metricas.setItemLabelGenerator(m ->
                 traduccionService.get(m.getNombreKey()) + " (" + m.getUnidad() + ")"
@@ -43,7 +54,6 @@ public class PruebaEstandarForm extends BaseForm<PruebaEstandar> {
         metricas.setRequiredIndicatorVisible(true);
 
         nombrePersonalizado.setRequiredIndicatorVisible(true);
-
         objetivoPersonalizado.setMaxLength(500);
         descripcionPersonalizada.setMaxLength(1000);
         descripcionPersonalizada.setHeight("120px");
@@ -54,15 +64,15 @@ public class PruebaEstandarForm extends BaseForm<PruebaEstandar> {
         Binder<PruebaEstandar> binder = new Binder<>(PruebaEstandar.class);
 
         binder.forField(nombrePersonalizado)
-                .asRequired("El nombre es obligatorio")
+                .asRequired(traduccionService.get("prueba.estandar.error.nombre_requerido"))
                 .bind(PruebaEstandar::getNombrePersonalizado, PruebaEstandar::setNombrePersonalizado);
 
         binder.forField(categoria)
-                .asRequired("El bloque metodológico es obligatorio")
+                .asRequired(traduccionService.get("prueba.estandar.error.categoria_requerida"))
                 .bind(PruebaEstandar::getCategoria, PruebaEstandar::setCategoria);
 
         binder.forField(metricas)
-                .asRequired("Debe seleccionar al menos una unidad de medida")
+                .asRequired(traduccionService.get("prueba.estandar.error.metricas_requeridas"))
                 .bind(PruebaEstandar::getMetricas, PruebaEstandar::setMetricas);
 
         binder.forField(objetivoPersonalizado)

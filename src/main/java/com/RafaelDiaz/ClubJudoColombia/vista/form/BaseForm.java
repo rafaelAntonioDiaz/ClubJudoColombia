@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.form;
 
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.ComponentEvent;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.button.Button;
@@ -41,25 +42,35 @@ public abstract class BaseForm<T> extends FormLayout {
     protected final Button btnGuardar = new Button("Guardar", new Icon(VaadinIcon.CHECK));
     protected final Button btnCancelar = new Button("Cancelar", new Icon(VaadinIcon.CLOSE));
     protected final HorizontalLayout buttonLayout = new HorizontalLayout(btnGuardar, btnCancelar);
+    private final TraduccionService traduccionService;
 
     protected Binder<T> binder;
     protected T currentBean;
 
+    // Constructor sin servicio (para compatibilidad)
     protected BaseForm() {
+        this(null);
+    }
+    protected BaseForm(TraduccionService traduccionService) {
+        this.traduccionService = traduccionService;
         configureButtons();
         configureButtonLayout();
         addListeners();
     }
-
     /**
      * Configura los estilos y variantes de los botones.
      */
     private void configureButtons() {
+        // Si tenemos el servicio, usar textos traducidos
+        if (traduccionService != null) {
+            btnGuardar.setText(traduccionService.get("btn.guardar", "Guardar"));
+            btnCancelar.setText(traduccionService.get("btn.cancelar", "Cancelar"));
+        } else {
+            btnGuardar.setText("Guardar");
+            btnCancelar.setText("Cancelar");
+        }
         btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        btnGuardar.addClassName("base-form-save");
-
         btnCancelar.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        btnCancelar.addClassName("base-form-cancel");
     }
 
     /**

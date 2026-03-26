@@ -85,17 +85,19 @@ public class SenseiLayout extends AppLayout {
         String nombreCompleto = profile.fullName();
         String fotoUrl = profile.avatarUrl();
 
-        // Saludo personalizado
-        Span saludo = new Span(getTexto("dashboard.welcome", "Hola") + " " + nombreCompleto);
+        // Saludo personalizado con traducción y reemplazo de placeholder
+        String saludoTexto = getTexto("dashboard.welcome", "Hola {0}");
+        if (saludoTexto.contains("{0}")) {
+            saludoTexto = saludoTexto.replace("{0}", nombreCompleto);
+        } else {
+            // Si no hay placeholder, concatenar (fallback)
+            saludoTexto = saludoTexto + " " + nombreCompleto;
+        }
+        Span saludo = new Span(saludoTexto);
         saludo.addClassName("layout-welcome-text");
         saludo.getStyle().set("font-size", "0.9rem").set("margin-right", "15px");
 
-        // Mostrar club name si existe
-        if (!clubName.isEmpty()) {
-            Span clubSpan = new Span("(" + clubName + ")");
-            clubSpan.addClassNames(LumoUtility.TextColor.SECONDARY, LumoUtility.FontSize.SMALL);
-            saludo.add(clubSpan);
-        }
+        // No se añade el clubSpan
 
         Avatar avatar = new Avatar();
         avatar.setName(nombreCompleto);
@@ -112,7 +114,6 @@ public class SenseiLayout extends AppLayout {
 
         addToNavbar(header);
     }
-
     private void createDrawer() {
         Tabs tabs = new Tabs();
         tabs.setOrientation(Tabs.Orientation.VERTICAL);
@@ -142,7 +143,7 @@ public class SenseiLayout extends AppLayout {
         //agregarTab(tabs, getTexto("campos.titulo", "Campos"), VaadinIcon.MEDAL, SenseiCamposView.class);
 
         // --- 4. MÓDULO GPS ---
-        agregarTab(tabs, getTexto("agenda.titulo", "Agenda GPS"), VaadinIcon.MAP_MARKER, SenseiAgendaView.class);
+        agregarTab(tabs, getTexto("menu.agenda", "Agenda GPS"), VaadinIcon.MAP_MARKER, SenseiAgendaView.class);
 
         // --- 5. MÓDULO FINANCIERO (Solo si es CLUB) ---
         if (configuracionService.esClub()) {
@@ -155,7 +156,7 @@ public class SenseiLayout extends AppLayout {
         // --- 7. ADMINISTRACIÓN ---
         agregarTab(tabs, getTexto("menu.mi.perfil", "Perfil"), VaadinIcon.COGS, PerfilSenseiView.class);
 
-        agregarTab(tabs, getTexto("menu.senseis", "Senseis"), VaadinIcon.COGS, GestionSenseisView.class);
+        agregarTab(tabs, getTexto("menu.senseis", "Profesores"), VaadinIcon.COGS, GestionSenseisView.class);
 
         agregarTab(tabs, getTexto("menu.backup", "Back up"), VaadinIcon.COGS, BackupView.class);
         agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);

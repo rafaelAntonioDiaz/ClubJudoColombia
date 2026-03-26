@@ -43,23 +43,21 @@ public class ResultadoPruebaForm extends VerticalLayout { // Cambiado a Vertical
     private TextArea notasJudoka = new TextArea("Notas (opcional)"); // Notas del Sensei sobre el Judoka
     private Button btnGuardar = new Button("Guardar Resultados");
     private Button btnCancelar = new Button("Cancelar");
-    // (infoGps eliminado)
 
     // --- Estado ---
     private EjercicioPlanificado ejercicioPlanificadoActual;
     private Judoka judokaActual;
     private List<NumberField> camposDeMetricas = new ArrayList<>();
-    // (latitud y longitud eliminados)
 
     public ResultadoPruebaForm(TraduccionService traduccionService, MetricaRepository metricaRepository) {
+
         this.traduccionService = traduccionService;
         this.metricaRepository = metricaRepository;
 
         setWidth("100%");
-        // --- Layout Actualizado (sin infoGps) ---
+        // --- Layout Actualizado  ---
         add(tituloPrueba, notasSenseiOriginales, formLayout, notasJudoka, new HorizontalLayout(btnGuardar, btnCancelar));
 
-        // (obtenerUbicacion() eliminado)
 
         btnGuardar.addClickListener(event -> validarYGuardar());
         btnCancelar.addClickListener(event -> fireEvent(new CancelEvent(this)));

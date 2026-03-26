@@ -336,3 +336,7 @@ insert into configuracion_sistema (comision_sensei_mensualidad,fin_alquiler_judo
 org.h2.jdbc.JdbcSQLTimeoutException: Tiempo vencido intentando trabar (lock) la tabla {0}
 Timeout trying to lock table {0}; SQL statement:
 insert into configuracion_sistema (comision_sensei_mensualidad,fin_alquiler_judogi_anual,fin_dia_cobro_mensual,fin_dia_vencimiento,fin_matricula_anual,fin_saas_canon_fijo,fin_saas_comision_club,fin_sensei_master_mensualidad,sec_token_expiracion_hs,email_soporte,grupo_comision_default,grupo_dias_gracia_default,grupo_incluye_matricula_default,grupo_monto_matricula_default,grupo_tarifa_default,moneda,nivel,nombre_organizacion,precio_minimo_mensual,tarifa_minima_global,telefono_contacto,url_logo,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) [50200-232]
+2026-03-26 14:42:23.457699-05:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLTimeoutException: Tiempo vencido intentando trabar (lock) la tabla {0}
+Timeout trying to lock table {0}; SQL statement:
+insert into configuracion_sistema (comision_sensei_mensualidad,fin_alquiler_judogi_anual,fin_dia_cobro_mensual,fin_dia_vencimiento,fin_matricula_anual,fin_saas_canon_fijo,fin_saas_comision_club,fin_sensei_master_mensualidad,sec_token_expiracion_hs,email_soporte,grupo_comision_default,grupo_dias_gracia_default,grupo_incluye_matricula_default,grupo_monto_matricula_default,grupo_tarifa_default,moneda,nivel,nombre_organizacion,precio_minimo_mensual,tarifa_minima_global,telefono_contacto,url_logo,id) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) [50200-232]

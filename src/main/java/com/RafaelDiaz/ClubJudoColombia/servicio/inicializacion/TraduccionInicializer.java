@@ -822,12 +822,10 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "view.sensei.microciclo.titulo", "Microciclo", "Microcycle", "Microciclo");
         agregarSiNoExiste(lista, clavesExistentes, "view.sensei.macrociclo", "Macrociclo", "Macrocycle", "Macrociclo");
 
-        agregarSiNoExiste(lista, clavesExistentes, "agenda.titulo", "Agenda", "Agenda", "Agenda");
         agregarSiNoExiste(lista, clavesExistentes, "finanzas.titulo", "Finanzas", "Finance", "Finanças");
         agregarSiNoExiste(lista, clavesExistentes, "admin.titulo", "Configuración del SaaS", "SaaS Configuration", "Admin");
         agregarSiNoExiste(lista, clavesExistentes, "admin.descripcion", "Parametrice su escenario", "Parameterize your setting", "Parametrize seu cenário");
         agregarSiNoExiste(lista, clavesExistentes, "menu.backup", "Respaldo BD", "Database Backup", "Backup de BD");
-        agregarSiNoExiste(lista, clavesExistentes, "menu.senseis", "Senses", "Senseis", "Senses");
         // =========================================================
         // 2. BIBLIOTECA DE SABIDURÍA (CITAS DE MAESTROS)
         // =========================================================
@@ -994,6 +992,148 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "error.titulo_ops","ups! algo falló ... trata de nuevo por fa...",
                 "Ops please try again",
                 "Ups algo falhou... por favor tente novamente");
+
+//  --- sensei layout
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.welcome",
+                "¡Bienvenido a tu panel de Entrenador!",
+                "Welcome to your Coach dashboard!",
+                "Bem-vindo ao seu painel de Treinador!");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.comunidad", "Comunidad", "Community", "Comunidade");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.reglas_gamificacion", "Premiación", "Gamification", "Premiação");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.invitar", "Invitar", "Invite", "Convidar");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.biblioteca", "Biblioteca", "Library", "Biblioteca");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.tatami", "Práctica", "Training", "Treino");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.historial", "Historial de Microciclos", "Microcycles History", "Histórico de Microciclos");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.agenda", "Agenda", "Agenda", "Agenda");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.mi.perfil", "Mi Perfil", "My Profile", "Meu Perfil");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.senseis", "Profesores", "Coaches", "Treinadores");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.admisiones", "Admisiones", "Admissions", "Admissões");
+
+// Filtro layout
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.nombre","Nombre","Name", "Nome");
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.buscar_por_nombre","buscar por nombre...","Search by name","Buscar por nome");
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.sexo","Sexo","Sex","Sex");
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.grado","Grado","Grade","Grado");
+
+// Administración de los grupos de entrenamiento
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.nombre",
+                "Nombre del Grupo",
+                "Group Name",
+                "Nome do Grupo");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.descripcion",
+                "Descripción del Grupo",
+                "Group Description",
+                "Descrição do Grupo");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.lugar",
+        "Sitio de práctica",
+        "Practice location",
+        "Sítio de prática");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.dias",
+                "Dias", "Days","Dia");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.hora_inicio","Hora de inicio", "Start hour",
+                        "Hora de início");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.hora_fin","Hora finalización","End hour","Hora de término");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.latitud","Latitud","Latitude", "Latitude");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.longitud", "Longitud", "Longitude", "Longitude");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.radio", "Radio", "Radious", "Rádio");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.tarifa_mensual", "Mensualidad", "Monthly Fee", "Mensualidade");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.incluye_matricula", "Matrícula incluida", "Scholarship Included", "Inscrição incluída");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.monto_matricula", "Matrícula", "Scholarship", "Inscrição");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.dias_gracia", "Dias de gracia", "Grace days", "Dias de graça");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.lugar.placeholder", "Lugar de práctica", "Practice location", "Local de prática");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.error.nombre_requerido", "Debe registrar el nombre del grupo", "You must fill Group name", "Você deve inserir o Nome do grupo");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.error.tarifa_requerida", "Debe registrar una tarifa mensual...", "You must fill monthly fee", "Você deve inserir o valor mensal...");
+        agregarSiNoExiste(lista, clavesExistentes, "grupos.form.error.dias_gracia_requeridos", "Debe registrar el dia de suspensión del servicio por no pago...", "You must define how many days to shut down service after payment is due...", "Você deve registrar o dia em que o serviço for suspenso por falta de pagamento.");
+
+        // Bloque form
+        agregarSiNoExiste(lista, clavesExistentes, "btn.guardar", "Guardar", "Save", "Salvar");
+        agregarSiNoExiste(lista, clavesExistentes, "btn.cancelar", "Cancelar", "Cancel", "Cancelar");
+
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.nombre", "Nombre de la Evaluación", "Evaluation Name", "Nome da Avaliação");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.categoria", "Bloque Metodológico", "Methodological Block", "Bloco Metodológico");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.metricas", "Unidades de Medida a Evaluar", "Units of Measurement to Evaluate", "Unidades de Medida a Avaliar");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.objetivo", "Objetivo (¿Qué mide?)", "Objective (What does it measure?)", "Objetivo (O que mede?)");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.descripcion", "Descripción (¿Cómo se ejecuta?)", "Description (How is it performed?)", "Descrição (Como é executado?)");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.error.nombre_requerido", "El nombre es obligatorio", "The name is required", "O nome é obrigatório");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.error.categoria_requerida", "El bloque metodológico es obligatorio", "The methodological block is required", "O bloco metodológico é obrigatório");
+        agregarSiNoExiste(lista, clavesExistentes, "prueba.estandar.error.metricas_requeridas", "Debe seleccionar al menos una unidad de medida", "You must select at least one unit of measurement", "Você deve selecionar pelo menos uma unidade de medida");
+
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.TECNICA", "Técnico-Coordinativo", "Technical-Coordinative", "Técnico-Coordenativo");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.AGILIDAD", "Agilidad", "Agility", "Agilidade");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.ANTICIPACION", "Anticipación", "Anticipation", "Antecipação");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.POTENCIA", "Potencia", "Power", "Potência");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.VELOCIDAD", "Velocidad", "Speed", "Velocidade");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.RESISTENCIA_DINAMICA", "Resistencia Dinámica", "Dynamic Endurance", "Resistência Dinâmica");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.RESISTENCIA_ISOMETRICA", "Resistencia Isométrica", "Isometric Endurance", "Resistência Isométrica");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.RESISTENCIA_MUSCULAR_LOCALIZADA", "Resistencia Muscular Localizada", "Local Muscular Endurance", "Resistência Muscular Localizada");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.APTITUD_ANAEROBICA", "Aptitud Anaeróbica", "Anaerobic Fitness", "Aptidão Anaeróbica");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.APTITUD_AEROBICA", "Aptitud Aeróbica", "Aerobic Fitness", "Aptidão Aeróbica");
+        agregarSiNoExiste(lista, clavesExistentes, "categoria.FLEXIBILIDAD", "Flexibilidad", "Flexibility", "Flexibilidade");
+
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.buscar_por_nombre", "Buscar por nombre", "Search by name", "Pesquisar por nome");
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.nombre", "Nombre", "Name", "Nome");
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.sexo", "Sexo", "Gender", "Sexo");
+        agregarSiNoExiste(lista, clavesExistentes, "filtro.grado", "Grado", "Rank", "Grau");
+
+        agregarSiNoExiste(lista, clavesExistentes, "sexo.MASCULINO", "Masculino", "Male", "Masculino");
+        agregarSiNoExiste(lista, clavesExistentes, "sexo.FEMENINO", "Femenino", "Female", "Feminino");
+
+        agregarSiNoExiste(lista, clavesExistentes, "grado.BLANCO", "Blanco", "White", "Branco");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.AMARILLO", "Amarillo", "Yellow", "Amarelo");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NARANJA", "Naranja", "Orange", "Laranja");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.VERDE", "Verde", "Green", "Verde");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.AZUL", "Azul", "Blue", "Azul");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.MARRON", "Marrón", "Brown", "Marrom");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_1_DAN", "Negro 1.er Dan", "Black 1st Dan", "Preto 1º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_2_DAN", "Negro 2.do Dan", "Black 2nd Dan", "Preto 2º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_3_DAN", "Negro 3.er Dan", "Black 3rd Dan", "Preto 3º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_4_DAN", "Negro 4.to Dan", "Black 4th Dan", "Preto 4º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_5_DAN", "Negro 5.to Dan", "Black 5th Dan", "Preto 5º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_6_DAN", "Negro 6.to Dan", "Black 6th Dan", "Preto 6º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_7_DAN", "Negro 7.mo Dan", "Black 7th Dan", "Preto 7º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_8_DAN", "Negro 8.vo Dan", "Black 8th Dan", "Preto 8º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_9_DAN", "Negro 9.no Dan", "Black 9th Dan", "Preto 9º Dan");
+        agregarSiNoExiste(lista, clavesExistentes, "grado.NEGRO_10_DAN", "Negro 10.mo Dan", "Black 10th Dan", "Preto 10º Dan");
+// Invitar
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.titulo", "Centro de Invitaciones", "Invitation Center", "Centro de Convites");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.subtitulo", "Genera un acceso seguro y compártelo por WhatsApp.", "Generate a secure access and share it via WhatsApp.", "Gere um acesso seguro e compartilhe via WhatsApp.");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.rol.pregunta", "¿A quién deseas invitar?", "Who do you want to invite?", "Quem você deseja convidar?");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.rol.sensei", "Profesor (Nuevo Dojo)", "Teacher (New Dojo)", "Professor (Novo Dojo)");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.rol.judoka_adulto", "Deportista Adulto (mayor de edad)", "Adult Athlete (of legal age)", "Atleta Adulto (maior de idade)");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.rol.acudiente", "Padre de Familia / Acudiente", "Parent / Guardian", "Pai de Família / Responsável");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.rol.judoka", "Deportista", "Athlete", "Atleta");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.rol.mecenas", "Mecenas / Patrocinador", "Sponsor / Patron", "Mecenas / Patrocinador");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.tipo_sensei", "Tipo de Profesor", "Teacher Type", "Tipo de Professor");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.tipo_sensei.club_propio", "Club Propio", "Own Club", "Clube Próprio");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.tipo_sensei.externo", "Externo (SaaS)", "External (SaaS)", "Externo (SaaS)");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.campo.nombre", "Nombre", "Name", "Nome");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.campo.apellido", "Apellido", "Last Name", "Sobrenome");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.campo.celular", "Celular / WhatsApp", "Mobile / WhatsApp", "Celular / WhatsApp");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.campo.email", "Email (Será su Usuario)", "Email (Will be your Username)", "Email (Será seu Usuário)");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.btn.generar", "Generar Enlace", "Generate Link", "Gerar Link");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.campo.grupo_tarifario", "Grupo tarifario", "Pricing Group", "Grupo Tarifário");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.campo.porcentaje_comision", "Porcentaje de comisión para el profesor (%)", "Commission percentage for the teacher (%)", "Porcentagem de comissão para o professor (%)");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.panel.mensaje_whatsapp", "Mensaje listo para WhatsApp", "Message ready for WhatsApp", "Mensagem pronta para WhatsApp");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.btn.copiar_mensaje", "Copiar Mensaje", "Copy Message", "Copiar Mensagem");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.btn.ver_qr", "Ver QR", "View QR", "Ver QR");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.btn.nueva_invitacion", "Invitar a otro contacto", "Invite another contact", "Convidar outro contato");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.panel.titulo_enlace", "¡Enlace Generado!", "Link Generated!", "Link Gerado!");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.error.campos_incompletos", "Por favor completa todos los campos.", "Please fill in all fields.", "Por favor, preencha todos os campos.");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.error.seleccionar_grupo", "Debes seleccionar un grupo tarifario.", "You must select a pricing group.", "Você deve selecionar um grupo tarifário.");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.error.porcentaje_invalido", "Debes ingresar un porcentaje de comisión válido (>0).", "You must enter a valid commission percentage (>0).", "Você deve inserir uma porcentagem de comissão válida (>0).");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.success.registro", "Invitación registrada en el sistema.", "Invitation registered in the system.", "Convite registrado no sistema.");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.error.generar", "Error al generar: ", "Error generating: ", "Erro ao gerar: ");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.qr.titulo", "Código QR", "QR Code", "Código QR");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.qr.cerrar", "Cerrar", "Close", "Fechar");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.remitente.master", "el Profesor Rafael", "Professor Rafael", "o Professor Rafael");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.remitente.sensei", "tu Profesor", "your Teacher", "seu Professor");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.saludo", "¡Hola {0}! Soy {1}.\n\n", "Hello {0}! I am {1}.\n\n", "Olá {0}! Eu sou {1}.\n\n");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.cuerpo.mecenas", "Te invito a unirte a nuestra plataforma como Patrocinador para apoyar una mejor sociedad. Haz clic en el siguiente enlace para configurar tu perfil y ver tu impacto:", "I invite you to join our platform as a Sponsor to support a better society. Click the link below to set up your profile and see your impact:", "Convido você a se juntar à nossa plataforma como Patrocinador para apoiar uma sociedade melhor. Clique no link abaixo para configurar seu perfil e ver seu impacto:");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.cuerpo.sensei", "Bienvenido a la plataforma del club. Usa el siguiente enlace para registrar tu Dojo:", "Welcome to the Club platform. Use the following link to register your Dojo:", "Bem-vindo à plataforma Club. Use o link abaixo para registrar seu Dojo e sua graduação atual:");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.cuerpo.acudiente", "Te invito a unirte a nuestro portal deportivo como Acudiente. Haz clic en este enlace seguro para registrar a tus hijos, subir la documentación requerida (Waiver/EPS) y gestionar la mensualidad:", "I invite you to join our sports portal as a Guardian. Click this secure link to register your children, upload required documents (Waiver/EPS), and manage the monthly fee:", "Convido você a se juntar ao nosso portal esportivo como Responsável. Clique neste link seguro para registrar seus filhos, enviar a documentação necessária (Waiver/EPS) e gerenciar a mensalidade:");
+        agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.cuerpo.otros", "Te invito a unirte a nuestro portal deportivo. Haz clic en este enlace seguro para completar tu perfil y acceder a tu carnet digital:", "I invite you to join our sports portal. Click this secure link to complete your profile and access your digital card:", "Convido você a se juntar ao nosso portal esportivo. Clique neste link seguro para completar seu perfil e acessar seu cartão digital:");
+
+
         if (!lista.isEmpty()) {
             traduccionRepo.saveAll(lista);
             System.out.println(">>> TRADUCCIONES INICIALIZADAS: " + lista.size() + " registros nuevos.");
@@ -1011,7 +1151,7 @@ public class TraduccionInicializer {
             nuevas.add(new Traduccion(clave, "es", es));
             nuevas.add(new Traduccion(clave, "en", en));
             nuevas.add(new Traduccion(clave, "pt", pt));
-            clavesExistentes.add(clave); // Evita duplicados en la misma iteración
+            clavesExistentes.add(clave);
         }
     }
 }

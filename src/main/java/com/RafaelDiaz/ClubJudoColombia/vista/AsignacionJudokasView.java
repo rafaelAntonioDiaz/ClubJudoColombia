@@ -76,10 +76,10 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
 
         // Al filtrar, también usamos inyección directa
         this.filtrosDisponibles = new FiltroJudokaLayout(
-                (FiltroJudokaLayout.SearchParams searchParams) -> actualizarAmbosGrids()
+                (FiltroJudokaLayout.SearchParams searchParams) -> actualizarAmbosGrids(), traduccionService
         );
         this.filtrosAsignados = new FiltroJudokaLayout(
-                (FiltroJudokaLayout.SearchParams searchParams) -> actualizarAmbosGrids()
+                (FiltroJudokaLayout.SearchParams searchParams) -> actualizarAmbosGrids(), traduccionService
         );
 
         buildLayout();

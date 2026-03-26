@@ -41,6 +41,7 @@ public class GrupoForm extends BaseForm<GrupoEntrenamiento> {
     private final IntegerField diasGracia;
 
     public GrupoForm(TraduccionService traduccionService) {
+        super(traduccionService);
         this.traduccionService = traduccionService;
 
         // Inicialización de componentes

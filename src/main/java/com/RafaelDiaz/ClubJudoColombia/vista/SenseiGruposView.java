@@ -77,7 +77,7 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
                 searchParams -> {
                     this.currentFilter = searchParams; // 1. Guardamos lo que el usuario escribió
                     gruposGrid.getDataProvider().refreshAll(); // 2. Disparamos la búsqueda
-                }
+                }, traduccionService
         );
 
         configureForm();

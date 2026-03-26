@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista.component;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.HasValue;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -43,7 +44,7 @@ import java.util.function.Consumer;
 public class FiltroJudokaLayout extends HorizontalLayout {
 
     private static final Logger logger = LoggerFactory.getLogger(FiltroJudokaLayout.class);
-
+    private final TraduccionService traduccionService;
     private final TextField searchNombre = new TextField();
     private final ComboBox<Sexo> filterSexo = new ComboBox<>();
     private final ComboBox<GradoCinturon> filterGrado = new ComboBox<>();
@@ -53,7 +54,8 @@ public class FiltroJudokaLayout extends HorizontalLayout {
      *
      * @param onSearchChange Callback que se ejecuta al cambiar cualquier filtro
      */
-    public FiltroJudokaLayout(SerializableConsumer<SearchParams> onSearchChange) {
+    public FiltroJudokaLayout(SerializableConsumer<SearchParams> onSearchChange, TraduccionService traduccionService) {
+        this.traduccionService = traduccionService;
         configureComponents();
         configureLayout((SerializableConsumer<SearchParams>) onSearchChange);
     }
@@ -63,7 +65,8 @@ public class FiltroJudokaLayout extends HorizontalLayout {
      */
     private void configureComponents() {
         // Campo de búsqueda por nombre
-        searchNombre.setPlaceholder("Buscar por nombre...");
+        searchNombre.setPlaceholder(traduccionService.get("filtro.buscar_por_nombre"));
+        searchNombre.setLabel(traduccionService.get("filtro.nombre"));
         searchNombre.setClearButtonVisible(true);
         searchNombre.setPrefixComponent(new Icon(VaadinIcon.SEARCH));
         searchNombre.setValueChangeMode(ValueChangeMode.LAZY); // Debounce de 500ms
@@ -71,15 +74,17 @@ public class FiltroJudokaLayout extends HorizontalLayout {
         searchNombre.addClassName("filtro-judoka-nombre");
 
         // Combo de Sexo
-        filterSexo.setPlaceholder("Sexo");
+        filterSexo.setLabel(traduccionService.get("filtro.sexo"));
         filterSexo.setItems(Sexo.values());
+        filterSexo.setItemLabelGenerator(sexo -> traduccionService.get("sexo." + sexo.name()));
         filterSexo.setClearButtonVisible(true);
         filterSexo.setWidth("150px");
         filterSexo.addClassName("filtro-judoka-sexo");
 
         // Combo de Grado
-        filterGrado.setPlaceholder("Grado");
+        filterGrado.setLabel(traduccionService.get("filtro.grado"));
         filterGrado.setItems(GradoCinturon.values());
+        filterGrado.setItemLabelGenerator(grado -> traduccionService.get("grado." + grado.name()));
         filterGrado.setClearButtonVisible(true);
         filterGrado.setWidth("180px");
         filterGrado.addClassName("filtro-judoka-grado");

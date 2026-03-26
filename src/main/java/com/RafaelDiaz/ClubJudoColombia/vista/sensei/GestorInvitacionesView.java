@@ -4,6 +4,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.GrupoEntrenamiento;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.GrupoEntrenamientoService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
 import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.google.zxing.BarcodeFormat;
@@ -47,31 +48,50 @@ public class GestorInvitacionesView extends VerticalLayout {
     private final AdmisionesService admisionesService;
     private final SecurityService securityService;
     private final GrupoEntrenamientoService grupoService;
+    private final TraduccionService traduccionService;
 
     // --- Componentes del Formulario Base ---
-    private final ComboBox<OpcionRol> comboRoles = new ComboBox<>("¿A quién deseas invitar?");
-    private final ComboBox<String> comboTipoSensei = new ComboBox<>("Tipo de Sensei");
-    private final TextField nombreField = new TextField("Nombre");
-    private final TextField apellidoField = new TextField("Apellido");
-    private final TextField celularField = new TextField("Celular / WhatsApp");
-    private final EmailField emailField = new EmailField("Email (Será su Usuario)");
-    private final Button btnGenerar = new Button("Generar Enlace", VaadinIcon.MAGIC.create());
+    private final ComboBox<OpcionRol> comboRoles;
+    private final ComboBox<String> comboTipoSensei;
+    private final TextField nombreField;
+    private final TextField apellidoField;
+    private final TextField celularField;
+    private final EmailField emailField;
+    private final Button btnGenerar;
 
     // Campos condicionales
-    private final ComboBox<GrupoEntrenamiento> comboTarifas = new ComboBox<>("Grupo tarifario");
-    private final NumberField porcentajeComision = new NumberField("Porcentaje de comisión para el sensei (%)");
+    private final ComboBox<GrupoEntrenamiento> comboTarifas;
+    private final NumberField porcentajeComision;
 
     // --- Componentes del Panel de Resultados ---
-    private final VerticalLayout panelResultado = new VerticalLayout();
-    private final TextArea mensajeWhatsApp = new TextArea("Mensaje listo para WhatsApp");
-    private final Button btnNuevaInvitacion = new Button("Invitar a otro contacto", VaadinIcon.REFRESH.create());
+    private final VerticalLayout panelResultado;
+    private final TextArea mensajeWhatsApp;
+    private final Button btnNuevaInvitacion;
 
     public GestorInvitacionesView(AdmisionesService admisionesService,
                                   SecurityService securityService,
-                                  GrupoEntrenamientoService grupoService) {
+                                  GrupoEntrenamientoService grupoService,
+                                  TraduccionService traduccionService) {
         this.admisionesService = admisionesService;
         this.securityService = securityService;
         this.grupoService = grupoService;
+        this.traduccionService = traduccionService;
+
+        // Inicializar componentes con textos traducidos
+        comboRoles = new ComboBox<>(traduccionService.get("invitaciones.rol.pregunta"));
+        comboTipoSensei = new ComboBox<>(traduccionService.get("invitaciones.tipo_sensei"));
+        nombreField = new TextField(traduccionService.get("invitaciones.campo.nombre"));
+        apellidoField = new TextField(traduccionService.get("invitaciones.campo.apellido"));
+        celularField = new TextField(traduccionService.get("invitaciones.campo.celular"));
+        emailField = new EmailField(traduccionService.get("invitaciones.campo.email"));
+        btnGenerar = new Button(traduccionService.get("invitaciones.btn.generar"), VaadinIcon.MAGIC.create());
+
+        comboTarifas = new ComboBox<>(traduccionService.get("invitaciones.campo.grupo_tarifario"));
+        porcentajeComision = new NumberField(traduccionService.get("invitaciones.campo.porcentaje_comision"));
+
+        panelResultado = new VerticalLayout();
+        mensajeWhatsApp = new TextArea(traduccionService.get("invitaciones.panel.mensaje_whatsapp"));
+        btnNuevaInvitacion = new Button(traduccionService.get("invitaciones.btn.nueva_invitacion"), VaadinIcon.REFRESH.create());
 
         setSizeFull();
         setAlignItems(Alignment.CENTER);
@@ -92,13 +112,13 @@ public class GestorInvitacionesView extends VerticalLayout {
                 .orElse(false);
 
         if (isMaster) {
-            opciones.add(new OpcionRol("Profesor de Judo (Nuevo Dojo)", "ROLE_SENSEI"));
-            opciones.add(new OpcionRol("Deportista Adulto (mayor de edad)", "ROLE_JUDOKA_ADULTO"));
-            opciones.add(new OpcionRol("Padre de Familia / Acudiente", "ROLE_ACUDIENTE"));
-            opciones.add(new OpcionRol("Deportista (Judoka)", "ROLE_JUDOKA"));
-            opciones.add(new OpcionRol("Mecenas / Patrocinador", "ROLE_MECENAS"));
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.sensei"), "ROLE_SENSEI"));
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka_adulto"), "ROLE_JUDOKA_ADULTO"));
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.acudiente"), "ROLE_ACUDIENTE"));
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka"), "ROLE_JUDOKA"));
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.mecenas"), "ROLE_MECENAS"));
         } else {
-            opciones.add(new OpcionRol("Deportista (Judoka)", "ROLE_JUDOKA"));
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka"), "ROLE_JUDOKA"));
         }
 
         comboRoles.setItems(opciones);
@@ -107,8 +127,11 @@ public class GestorInvitacionesView extends VerticalLayout {
         comboRoles.setEnabled(isMaster);
         comboRoles.setWidthFull();
 
-        comboTipoSensei.setItems("Club Propio", "Externo (SaaS)");
-        comboTipoSensei.setValue("Externo (SaaS)");
+        comboTipoSensei.setItems(
+                traduccionService.get("invitaciones.tipo_sensei.club_propio"),
+                traduccionService.get("invitaciones.tipo_sensei.externo")
+        );
+        comboTipoSensei.setValue(traduccionService.get("invitaciones.tipo_sensei.externo"));
         comboTipoSensei.setVisible(false);
 
         // Listener para cambiar visibilidad
@@ -139,8 +162,8 @@ public class GestorInvitacionesView extends VerticalLayout {
     }
 
     private void configurarFormulario() {
-        H2 titulo = new H2("Centro de Invitaciones");
-        Paragraph subtitulo = new Paragraph("Genera un acceso seguro y compártelo por WhatsApp.");
+        H2 titulo = new H2(traduccionService.get("invitaciones.titulo"));
+        Paragraph subtitulo = new Paragraph(traduccionService.get("invitaciones.subtitulo"));
 
         nombreField.setRequired(true);
         apellidoField.setRequired(true);
@@ -185,7 +208,7 @@ public class GestorInvitacionesView extends VerticalLayout {
         mensajeWhatsApp.setReadOnly(true);
         mensajeWhatsApp.setMinHeight("150px");
 
-        Button btnCopiar = new Button("Copiar Mensaje", VaadinIcon.COPY.create());
+        Button btnCopiar = new Button(traduccionService.get("invitaciones.btn.copiar_mensaje"), VaadinIcon.COPY.create());
         btnCopiar.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_PRIMARY);
         btnCopiar.setWidthFull();
         btnCopiar.addClickListener(e -> {
@@ -196,7 +219,7 @@ public class GestorInvitacionesView extends VerticalLayout {
             ));
         });
 
-        Button btnVerQR = new Button("Ver QR", VaadinIcon.QRCODE.create());
+        Button btnVerQR = new Button(traduccionService.get("invitaciones.btn.ver_qr"), VaadinIcon.QRCODE.create());
         btnVerQR.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
         btnVerQR.setWidthFull();
         btnVerQR.addClickListener(e -> {
@@ -207,33 +230,33 @@ public class GestorInvitacionesView extends VerticalLayout {
         btnNuevaInvitacion.setWidthFull();
         btnNuevaInvitacion.addClickListener(e -> reiniciarParaLote());
 
-        panelResultado.add(new H2("¡Enlace Generado!"), mensajeWhatsApp, btnCopiar, btnVerQR, btnNuevaInvitacion);
+        panelResultado.add(new H2(traduccionService.get("invitaciones.panel.titulo_enlace")), mensajeWhatsApp, btnCopiar, btnVerQR, btnNuevaInvitacion);
         add(panelResultado);
     }
 
     private void procesarInvitacion() {
         if (nombreField.isEmpty() || apellidoField.isEmpty() || emailField.isEmpty() || celularField.isEmpty()) {
-            NotificationHelper.error("Por favor completa todos los campos.");
+            NotificationHelper.error(traduccionService.get("invitaciones.error.campos_incompletos"));
             return;
         }
 
         try {
             String rolElegido = comboRoles.getValue().rolDb();
-            boolean esClubPropio = "Club Propio".equals(comboTipoSensei.getValue());
+            boolean esClubPropio = traduccionService.get("invitaciones.tipo_sensei.club_propio").equals(comboTipoSensei.getValue());
 
             Long grupoId = null;
             BigDecimal comisionPorcentaje = null;
 
             if ("ROLE_ACUDIENTE".equals(rolElegido) || "ROLE_JUDOKA_ADULTO".equals(rolElegido)) {
                 if (comboTarifas.getValue() == null) {
-                    NotificationHelper.error("Debes seleccionar un grupo tarifario.");
+                    NotificationHelper.error(traduccionService.get("invitaciones.error.seleccionar_grupo"));
                     return;
                 }
                 grupoId = comboTarifas.getValue().getId();
             } else if ("ROLE_SENSEI".equals(rolElegido)) {
                 Double valor = porcentajeComision.getValue();
                 if (valor == null || valor <= 0) {
-                    NotificationHelper.error("Debes ingresar un porcentaje de comisión válido (>0).");
+                    NotificationHelper.error(traduccionService.get("invitaciones.error.porcentaje_invalido"));
                     return;
                 }
                 comisionPorcentaje = BigDecimal.valueOf(valor);
@@ -262,29 +285,33 @@ public class GestorInvitacionesView extends VerticalLayout {
             btnGenerar.getParent().ifPresent(parent -> ((VerticalLayout) parent).setVisible(false));
             panelResultado.setVisible(true);
 
-            NotificationHelper.success("Invitación registrada en el sistema.");
+            NotificationHelper.success(traduccionService.get("invitaciones.success.registro"));
 
         } catch (Exception ex) {
-            NotificationHelper.error("Error al generar: " + ex.getMessage());
+            NotificationHelper.error(traduccionService.get("invitaciones.error.generar") + ex.getMessage());
             ex.printStackTrace();
         }
     }
 
     private String redactarMensajeInteligente(boolean isMaster, String nombreInvitado, String link, String rol) {
-        String remitente = isMaster ? "el Profesor Rafael" : "tu Profesor de Judo";
-        String base = "¡Hola " + nombreInvitado + "! Soy " + remitente + ".\n\n";
+        String remitente = isMaster ?
+                traduccionService.get("invitaciones.mensaje.remitente.master") :
+                traduccionService.get("invitaciones.mensaje.remitente.sensei");
 
+        String saludo = traduccionService.get("invitaciones.mensaje.saludo", nombreInvitado, remitente);
+
+        String cuerpo;
         if (rol.equals("ROLE_MECENAS")) {
-            base += "Te invito a unirte a nuestra plataforma como Patrocinador para apoyar una mejor sociedad. Haz clic en el siguiente enlace para configurar tu perfil y ver tu impacto:\n\n";
+            cuerpo = traduccionService.get("invitaciones.mensaje.cuerpo.mecenas");
         } else if (rol.equals("ROLE_SENSEI")) {
-            base = "¡Hola " + nombreInvitado + "!\n\nBienvenido a la plataforma Club Judo. Usa el siguiente enlace para registrar tu Dojo y tu grado actual:\n\n";
+            cuerpo = traduccionService.get("invitaciones.mensaje.cuerpo.sensei");
         } else if (rol.equals("ROLE_ACUDIENTE")) {
-            base += "Te invito a unirte a nuestro portal deportivo como Acudiente. Haz clic en este enlace seguro para registrar a tus hijos, subir la documentación requerida (Waiver/EPS) y gestionar la mensualidad:\n\n";
+            cuerpo = traduccionService.get("invitaciones.mensaje.cuerpo.acudiente");
         } else {
-            base += "Te invito a unirte a nuestro portal deportivo. Haz clic en este enlace seguro para completar tu perfil y acceder a tu carnet digital:\n\n";
+            cuerpo = traduccionService.get("invitaciones.mensaje.cuerpo.otros");
         }
 
-        return base + "👉 " + link;
+        return saludo + cuerpo + "\n\n👉 " + link;
     }
 
     private void reiniciarParaLote() {
@@ -316,15 +343,15 @@ public class GestorInvitacionesView extends VerticalLayout {
             StreamResource resource = new StreamResource("qr.png", () -> new ByteArrayInputStream(imageBytes));
             resource.setContentType("image/png");
 
-            Image qrImage = new Image(resource, "Código QR");
+            Image qrImage = new Image(resource, traduccionService.get("invitaciones.qr.titulo"));
             qrImage.setWidth("300px");
             qrImage.setHeight("300px");
 
             Dialog dialog = new Dialog();
-            dialog.add(new VerticalLayout(qrImage, new Button("Cerrar", e -> dialog.close())));
+            dialog.add(new VerticalLayout(qrImage, new Button(traduccionService.get("invitaciones.qr.cerrar"), e -> dialog.close())));
             dialog.open();
         } catch (Exception ex) {
-            Notification.show("Error al generar QR: " + ex.getMessage());
+            Notification.show(traduccionService.get("invitaciones.error.generar") + ex.getMessage());
         }
     }
 
