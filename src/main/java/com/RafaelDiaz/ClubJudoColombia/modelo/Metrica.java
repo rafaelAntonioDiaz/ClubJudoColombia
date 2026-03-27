@@ -27,8 +27,10 @@ public class Metrica implements Serializable {
      */
     @Column(name = "unidad", nullable = false, length = 10)
     private String unidad;
+    @Column(name = "es_calculada", nullable = false)
+    private boolean esCalculada = false;
 
-    // --- Constructores ---
+
     public Metrica() {}
 
     public Metrica(String nombreKey, String unidad) {
@@ -36,15 +38,16 @@ public class Metrica implements Serializable {
         this.unidad = unidad;
     }
 
-    // --- Getters y Setters (Actualizados) ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNombreKey() { return nombreKey; }
     public void setNombreKey(String nombreKey) { this.nombreKey = nombreKey; }
     public String getUnidad() { return unidad; }
     public void setUnidad(String unidad) { this.unidad = unidad; }
+    public boolean isEsCalculada() { return esCalculada; }
+    public void setEsCalculada(boolean esCalculada) { this.esCalculada = esCalculada; }
 
-    // --- hashCode y equals (Actualizados) ---
+
     @Override
     public int hashCode() {
         return nombreKey != null ? nombreKey.hashCode() : 0;

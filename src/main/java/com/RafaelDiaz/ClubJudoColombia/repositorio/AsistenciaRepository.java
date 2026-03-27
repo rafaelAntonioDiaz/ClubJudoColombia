@@ -51,4 +51,9 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
     List<Asistencia> findHistorialByJudokaId(@Param("judokaId") Long judokaId);
     long countByJudokaAndEstado(Judoka judoka, EstadoAsistencia estado);
     List<Asistencia> findByJudokaAndSesion(Judoka judoka, SesionEjecutada sesion);
+    @Query("SELECT COUNT(a) FROM Asistencia a WHERE a.sesion.sensei.id = :senseiId AND a.sesion.fechaHoraEjecucion BETWEEN :start AND :end")
+    long countBySenseiAndDateBetween(@Param("senseiId") Long senseiId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(a) FROM Asistencia a WHERE a.sesion.sensei.id = :senseiId AND a.sesion.fechaHoraEjecucion BETWEEN :start AND :end AND a.estado = :estado")
+    long countBySenseiAndDateBetweenAndEstado(@Param("senseiId") Long senseiId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("estado") EstadoAsistencia estado);
 }

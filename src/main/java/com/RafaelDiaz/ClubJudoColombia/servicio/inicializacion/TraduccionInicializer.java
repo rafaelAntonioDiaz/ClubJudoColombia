@@ -1133,6 +1133,60 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.cuerpo.acudiente", "Te invito a unirte a nuestro portal deportivo como Acudiente. Haz clic en este enlace seguro para registrar a tus hijos, subir la documentación requerida (Waiver/EPS) y gestionar la mensualidad:", "I invite you to join our sports portal as a Guardian. Click this secure link to register your children, upload required documents (Waiver/EPS), and manage the monthly fee:", "Convido você a se juntar ao nosso portal esportivo como Responsável. Clique neste link seguro para registrar seus filhos, enviar a documentação necessária (Waiver/EPS) e gerenciar a mensalidade:");
         agregarSiNoExiste(lista, clavesExistentes, "invitaciones.mensaje.cuerpo.otros", "Te invito a unirte a nuestro portal deportivo. Haz clic en este enlace seguro para completar tu perfil y acceder a tu carnet digital:", "I invite you to join our sports portal. Click this secure link to complete your profile and access your digital card:", "Convido você a se juntar ao nosso portal esportivo. Clique neste link seguro para completar seu perfil e acessar seu cartão digital:");
 
+        // AsignacionJUdokasView
+        agregarSiNoExiste(lista, clavesExistentes, "msg.error.SinNombre", "Debe ingresar el nombre del judoka", "You must enter the judoka's name", "Você deve inserir o nome do judoca");
+        agregarSiNoExiste(lista, clavesExistentes, "col.nombre.completo", "Nombre Completo", "Full Name", "Nome Completo");
+        agregarSiNoExiste(lista, clavesExistentes, "col.grado", "Grado", "Rank", "Graduação");
+        agregarSiNoExiste(lista, clavesExistentes, "col.sexo", "Sexo", "Sex", "Sexo");
+        agregarSiNoExiste(lista, clavesExistentes, "col.edad", "Edad", "Age", "Idade");
+        agregarSiNoExiste(lista, clavesExistentes, "col.accion", "Acción", "Action", "Ação");
+        agregarSiNoExiste(lista, clavesExistentes, "lbl.sala.espera", "Sala de Espera", "Waiting Room", "Sala de Espera");
+        agregarSiNoExiste(lista, clavesExistentes, "lbl.judokas.disponibles", "Judokas Disponibles", "Available Judokas", "Judokas Disponíveis");
+
+        // judoka Dashboard
+
+        // --- HEADER Y TOOLTIPS ---
+        agregarSiNoExiste(lista, clavesExistentes, "help.poder_combate.titulo", "Poder de Combate", "Combat Power", "Poder de Combate");
+        agregarSiNoExiste(lista, clavesExistentes, "help.poder_combate.contenido", "El Poder de Combate es un indicador de tu nivel actual basado en tus pruebas físicas y técnicas.", "Combat Power is an indicator of your current level based on your physical and technical tests.", "O Poder de Combate é um indicador do seu nível atual com base em seus testes físicos e técnicos.");
+        agregarSiNoExiste(lista, clavesExistentes, "tooltip.trofeos", "Ver mis trofeos e insignias", "View my trophies and badges", "Ver meus troféus e emblemas");
+        agregarSiNoExiste(lista, clavesExistentes, "tooltip.palmares", "Ver mi palmarés", "View my track record", "Ver meu histórico");
+        agregarSiNoExiste(lista, clavesExistentes, "kpi.tareas_hoy", "Agenda de Hoy", "Today's Schedule", "Agenda de Hoje");
+
+// --- DASHBOARD GENERAL ---
+        agregarSiNoExiste(lista, clavesExistentes, "general.judoka", "Judoka", "Judoka", "Judoca");
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.welcome", "¡Hola, {0}!", "Hello, {0}!", "Olá, {0}!");
+        agregarSiNoExiste(lista, clavesExistentes, "sabiduria.titulo", "Sabiduría del Sensei", "Sensei's Wisdom", "Sabedoria do Sensei");
+
+// --- PODER INACTIVO ---
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.titulo", "¡Poder Inactivo! \uD83D\uDD12", "Inactive Power! \uD83D\uDD12", "Poder Inativo! \uD83D\uDD12");
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.subtitulo_joven", "No te preocupes, todo gran guerrero empieza así. Pídele a tu Sensei que te evalúe.", "Don't worry, every great warrior starts like this. Ask your Sensei to evaluate you.", "Não se preocupe, todo grande guerreiro começa assim. Peça ao seu Sensei para avaliá-lo.");
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.subtitulo_adulto", "Completa tu Bloque Definitorio para despertar tu potencial.", "Complete your Definitive Block to awaken your potential.", "Complete seu Bloco Definitório para despertar seu potencial.");
+
+// --- GRÁFICOS Y RADAR ---
+        agregarSiNoExiste(lista, clavesExistentes, "kpi.poder_combate", "Poder de Combate", "Combat Power", "Poder de Combate");
+        agregarSiNoExiste(lista, clavesExistentes, "chart.radar.serie", "Nivel Actual", "Current Level", "Nível Atual");
+        agregarSiNoExiste(lista, clavesExistentes, "chart.sin_datos", "Sin Datos", "No Data", "Sem Dados");
+        agregarSiNoExiste(lista, clavesExistentes, "msg.selecciona.categoria.para.comparar", "Selecciona una categoría arriba para ver tu progreso.", "Select a category above to view your progress.", "Selecione uma categoria acima para ver seu progresso.");
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.prueba_no_encontrada", "Prueba no encontrada", "Test not found", "Teste não encontrado");
+
+// --- INFO DEL GRÁFICO (CON PARÁMETROS) ---
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.grafico.info_completa", "Bloque: {0} | Último: {1} {2} | Meta: {3} {4}", "Block: {0} | Last: {1} {2} | Goal: {3} {4}", "Bloco: {0} | Último: {1} {2} | Meta: {3} {4}");
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.grafico.info_bloque", "Bloque: {0}", "Block: {0}", "Bloco: {0}");
+        agregarSiNoExiste(lista, clavesExistentes, "chart.tu_progreso", "Tu Progreso", "Your Progress", "Seu Progresso");
+        agregarSiNoExiste(lista, clavesExistentes, "chart.tu_motivador", "Tu Motivador \uD83C\uDFAF", "Your Motivator \uD83C\uDFAF", "Seu Motivador \uD83C\uDFAF");
+
+// --- ESTADOS VACÍOS Y BOTONES ---
+        agregarSiNoExiste(lista, clavesExistentes, "btn.cerrar", "Cerrar", "Close", "Fechar");
+        agregarSiNoExiste(lista, clavesExistentes, "badge.estado.sin_datos", "Sin Datos", "No Data", "Sem Dados");
+        agregarSiNoExiste(lista, clavesExistentes, "empty.desc.realiza_pruebas", "Realiza pruebas para ver tu evolución aquí.", "Take tests to see your evolution here.", "Faça testes para ver sua evolução aqui.");
+
+// --- UNIDADES DE MEDIDA ---
+        agregarSiNoExiste(lista, clavesExistentes, "unidad.tiempo", "Tiempo (s)", "Time (s)", "Tempo (s)");
+        agregarSiNoExiste(lista, clavesExistentes, "unidad.distancia", "Distancia (cm)", "Distance (cm)", "Distância (cm)");
+        agregarSiNoExiste(lista, clavesExistentes, "unidad.repeticiones", "Repeticiones", "Reps", "Repetições");
+        agregarSiNoExiste(lista, clavesExistentes, "unidad.indice", "Índice", "Index", "Índice");
+        agregarSiNoExiste(lista, clavesExistentes, "unidad.valor", "Valor", "Value", "Valor");
+
 
         if (!lista.isEmpty()) {
             traduccionRepo.saveAll(lista);

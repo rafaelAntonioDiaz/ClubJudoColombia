@@ -92,7 +92,7 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         } else if (j.getUsuario() != null) {
             return j.getUsuario().getNombre() + " " + j.getUsuario().getApellido();
         }
-        return "Sin Nombre";
+        return traduccionService.get("msg.error.SinNombre");
     }
 
     private void configureGrupoCombo() {
@@ -166,7 +166,7 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
         H2 titulo = new H2(traduccionService.get("view.asignacion.titulo"));
 
         VerticalLayout panelDisponibles = new VerticalLayout(
-                new Span(traduccionService.get("lbl.judokas.disponibles") + " (Sala de Espera)"),
+                new Span(traduccionService.get("lbl.judokas.disponibles") + " (" + traduccionService.get("lbl.sala.espera") + ")"),
                 filtrosDisponibles,
                 gridDisponibles
         );
@@ -240,7 +240,7 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
 
     private void asignarJudoka(Judoka judoka) {
         if (grupoSeleccionado == null) {
-            NotificationHelper.error("Debes seleccionar o crear un grupo primero.");
+            NotificationHelper.error(traduccionService.get("msg.error.sinGrupo"));
             return;
         }
         try {

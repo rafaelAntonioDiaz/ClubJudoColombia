@@ -163,7 +163,7 @@ public class CombatRadarWidget extends VerticalLayout {
                 .withYaxis(yaxis)
                 .build();
     }
-    public void mostrarModoIncognito(String titulo, String subtitulo) {
+    public void mostrarModoIncognito(String titulo, String subtitulo, List<String> etiquetas) {
         // 1. Limpiamos cualquier gráfico o componente que haya actualmente en el Widget
         this.removeAll();
 
@@ -185,8 +185,10 @@ public class CombatRadarWidget extends VerticalLayout {
                 .withTitle(titleObj)
                 .withSubtitle(subObj)
                 .withSeries(new com.github.appreciated.apexcharts.helper.Series<>("Poder Oculto", 0.0, 0.0, 0.0, 0.0, 0.0))
-                // NOTA: Ajusta estas etiquetas a los nombres reales de tus 5 ejes si lo deseas
-                .withLabels("Definitorio", "Sustento", "Eficiencia", "Protección", "Técnico-Coordinativo")
+
+                // ¡AQUÍ ESTÁ LA MAGIA! Pasamos la lista dinámica convertida en Array
+                .withLabels(etiquetas.toArray(new String[0]))
+
                 .withColors("#9E9E9E") // Color Gris (Bloqueado)
                 .withYaxis(com.github.appreciated.apexcharts.config.builder.YAxisBuilder.get()
                         .withShow(false)
@@ -201,5 +203,4 @@ public class CombatRadarWidget extends VerticalLayout {
 
         // 5. Lo añadimos a la vista
         this.add(radarIncognito);
-    }
-}
+    }}

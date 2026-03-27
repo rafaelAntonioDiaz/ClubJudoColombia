@@ -6,6 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MesocicloATC;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import com.RafaelDiaz.ClubJudoColombia.servicio.MicrocicloService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.PruebaEstandarService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.TraduccionService;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
@@ -46,6 +47,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
 
     private final MicrocicloService planService;
     private final TraduccionService traduccionService;
+    private final PruebaEstandarService pruebaService;
     private final SecurityService securityService;
     private final GrupoEntrenamientoRepository grupoRepo;
     private final PruebaEstandarRepository pruebaRepo;
@@ -84,7 +86,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
                                  GrupoEntrenamientoRepository grupoRepo,
                                  PruebaEstandarRepository pruebaRepo,
                                  TareaDiariaRepository tareaRepo,
-                                 TraduccionService traduccionService,
+                                 TraduccionService traduccionService, PruebaEstandarService pruebaService,
                                  SecurityService securityService,
                                  MacrocicloRepository macrocicloRepo, JudokaRepository judokaRepository) {
         this.planService = planService;
@@ -92,6 +94,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
         this.pruebaRepo = pruebaRepo;
         this.tareaRepo = tareaRepo;
         this.traduccionService = traduccionService;
+        this.pruebaService = pruebaService;
         this.securityService = securityService;
 
         this.senseiActual = securityService.getAuthenticatedSensei()
@@ -152,6 +155,17 @@ public class SenseiMicrociclosView extends VerticalLayout {
         gridHistorial.addComponentColumn(plan -> crearBadgeATC(plan.getMesocicloATC())).setHeader("Fase (ATC)").setAutoWidth(true);
         gridHistorial.addColumn(plan -> plan.getTipoMicrociclo() != null ? plan.getTipoMicrociclo().getDescripcion() : "").setHeader("Tipo");
 
+        // --- NUEVO: COLUMNA DE INDICADOR DE EVALUACIONES ---
+        gridHistorial.addComponentColumn(plan -> {
+            if (plan.getPruebas() != null && !plan.getPruebas().isEmpty()) {
+                Icon icon = new Icon(VaadinIcon.CLIPBOARD_CHECK);
+                icon.setColor("var(--lumo-success-text-color)");
+                icon.setTooltipText("Contiene evaluaciones");
+                return icon;
+            }
+            return new Span(); // Vacío si no tiene pruebas
+        }).setHeader("Eval.").setAutoWidth(true);
+
         gridHistorial.addComponentColumn(plan -> {
             Button btnEditar = new Button(new Icon(VaadinIcon.EDIT));
             btnEditar.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
@@ -161,7 +175,6 @@ public class SenseiMicrociclosView extends VerticalLayout {
 
         layoutDashboard.add(cabecera, gridHistorial);
     }
-
     private Span crearBadgeATC(MesocicloATC fase) {
         if (fase == null) return new Span("");
         Span badge = new Span(fase.getDescripcion());
@@ -214,11 +227,14 @@ public class SenseiMicrociclosView extends VerticalLayout {
         macrocicloCombo.setItemLabelGenerator(Macrociclo::getNombre);
         macrocicloCombo.setClearButtonVisible(true);
 
+
+
         cabeceraPlan.add(macrocicloCombo, nombrePlanField, gruposCombo,
                 fechaInicioPicker, fechaFinPicker, duracionField, intensidadGlobalLabel,
                 faseAtcCombo, tipoMicrocicloCombo);
-        cabeceraPlan.setResponsiveSteps(
-                new FormLayout.ResponsiveStep("0", 4));
+
+        cabeceraPlan.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 4));
+
         // 2. ZONA B: Biblioteca (Izquierda)
         VerticalLayout panelIzquierdo = new VerticalLayout();
         panelIzquierdo.setWidth("35%");
@@ -429,9 +445,20 @@ public class SenseiMicrociclosView extends VerticalLayout {
         planActual.setMesocicloATC(faseAtcCombo.getValue());
         planActual.setTipoMicrociclo(tipoMicrocicloCombo.getValue());
         planActual.setMacrociclo(macrocicloCombo.getValue());
-        // Sincronizamos la lista de ejercicios a la entidad
+
+        // Sincronizamos la lista de TODOS los ejercicios al Microciclo
         planActual.getEjerciciosPlanificados().clear();
         planActual.getEjerciciosPlanificados().addAll(ejerciciosDelPlan);
+
+        // --- MAGIA: EXTRAER LAS PRUEBAS AUTOMÁTICAMENTE ---
+        // Filtramos de la lista del lienzo (gridPlan) todos los que sean tipo Prueba,
+        // los extraemos y los metemos en el Set de pruebas del Microciclo
+        Set<PruebaEstandar> pruebasDelPlan = ejerciciosDelPlan.stream()
+                .filter(ej -> ej.getPruebaEstandar() != null)
+                .map(EjercicioPlanificado::getPruebaEstandar)
+                .collect(Collectors.toSet());
+
+        planActual.setPruebas(pruebasDelPlan);
 
         try {
             planService.guardarPlan(planActual);
@@ -441,7 +468,6 @@ public class SenseiMicrociclosView extends VerticalLayout {
             NotificationHelper.error("Error al guardar: " + e.getMessage());
         }
     }
-
     // =================================================================================
     // NAVEGACIÓN (MÁQUINA DE ESTADOS)
     // =================================================================================
@@ -454,8 +480,9 @@ public class SenseiMicrociclosView extends VerticalLayout {
     private void mostrarEditor(Microciclo plan) {
         layoutDashboard.setVisible(false);
         layoutEditor.setVisible(true);
-        // Llena el combo con los macrociclos del Sensei cada vez que se abre el editor
+        // Llena el combo con los macrociclos del Sensei
         macrocicloCombo.setItems(macrocicloRepo.findBySenseiOrderByFechaInicioDesc(senseiActual));
+
         if (plan == null) {
             planActual = new Microciclo();
             planActual.setSensei(senseiActual);
@@ -468,7 +495,7 @@ public class SenseiMicrociclosView extends VerticalLayout {
             fechaFinPicker.clear();
             faseAtcCombo.clear();
             tipoMicrocicloCombo.clear();
-            macrocicloCombo.clear(); // Limpiarlo por si acaso
+            macrocicloCombo.clear();
         } else {
             // Modo Edición
             planActual = plan;
@@ -490,12 +517,12 @@ public class SenseiMicrociclosView extends VerticalLayout {
             // Cargamos los ejercicios y los ordenamos por su atributo 'orden'
             ejerciciosDelPlan = new ArrayList<>(plan.getEjerciciosPlanificados());
             ejerciciosDelPlan.sort(Comparator.comparing(e -> e.getOrden() != null ? e.getOrden() : 99));
-            macrocicloCombo.setValue(plan.getMacrociclo()); // Carga el que ya tenía guardado
+            macrocicloCombo.setValue(plan.getMacrociclo());
         }
+
         gridPlan.setItems(ejerciciosDelPlan);
         actualizarIntensidadGlobal(intensidadGlobalLabel, ejerciciosDelPlan);
         actualizarBarraProgresoTiempo();
-
     }
 
     private void actualizarBarraProgresoTiempo() {

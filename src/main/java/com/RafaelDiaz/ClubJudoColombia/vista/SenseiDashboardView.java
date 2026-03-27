@@ -29,6 +29,9 @@ import jakarta.annotation.security.RolesAllowed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
@@ -163,11 +166,19 @@ public class SenseiDashboardView extends VerticalLayout {
 
     private ApexCharts crearGraficoAsistenciaMensual() {
         List<Double> datos = dashboardService.getAsistenciaUltimos30Dias();
+        LocalDate today = LocalDate.now();
+        List<String> fechas = new ArrayList<>();
+        for (int i = 29; i >= 0; i--) {
+            fechas.add(today.minusDays(i).format(DateTimeFormatter.ofPattern("dd/MM")));
+        }
 
         return ApexChartsBuilder.get()
                 .withChart(ChartBuilder.get().withType(Type.LINE).build())
                 .withTitle(TitleSubtitleBuilder.get()
                         .withText(traduccionService.get("dashboard.grafico.asistencia_30dias_titulo"))
+                        .build())
+                .withXaxis(XAxisBuilder.get()
+                        .withCategories(fechas.toArray(new String[0]))
                         .build())
                 .withSeries(new Series<>(
                         traduccionService.get("dashboard.grafico.asistencia_porcentaje"),
@@ -175,6 +186,7 @@ public class SenseiDashboardView extends VerticalLayout {
                 ))
                 .build();
     }
+
     private com.vaadin.flow.component.Component construirEncabezadoPersonalizado() {
         // 1. Intentamos obtener el perfil del Sensei logueado
         Optional<Sensei> senseiOpt = securityService.getAuthenticatedSensei();

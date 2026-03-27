@@ -6,7 +6,9 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.BloqueAgudelo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.ClasificacionRendimiento;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.FormulaCalculo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
+import com.RafaelDiaz.ClubJudoColombia.servicio.calculadores.CalculadorIndice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,13 +34,13 @@ public class ResultadoPruebaService {
     private final EjecucionTareaRepository ejecucionTareaRepository;
     private final GamificationService gamificationService;
     private final MapeoBloquesService mapeoBloquesService;
-
+    private final List<CalculadorIndice> calculadores;
     public ResultadoPruebaService(ResultadoPruebaRepository resultadoPruebaRepository,
                                   NormaEvaluacionRepository normaRepository,
                                   PruebaEstandarRepository pruebaEstandarRepository,
                                   TraduccionService traduccionService,
                                   MicrocicloRepository microcicloRepository,
-                                  EjecucionTareaRepository ejecucionTareaRepository, GamificationService gamificationService, MapeoBloquesService mapeoBloquesService) {
+                                  EjecucionTareaRepository ejecucionTareaRepository, GamificationService gamificationService, MapeoBloquesService mapeoBloquesService, List<CalculadorIndice> calculadores) {
         this.resultadoPruebaRepository = resultadoPruebaRepository;
         this.normaRepository = normaRepository;
         this.pruebaEstandarRepository = pruebaEstandarRepository;
@@ -47,6 +49,7 @@ public class ResultadoPruebaService {
         this.ejecucionTareaRepository = ejecucionTareaRepository;
         this.gamificationService = gamificationService;
         this.mapeoBloquesService = mapeoBloquesService;
+        this.calculadores = calculadores;
     }
 
     @Transactional
@@ -330,5 +333,143 @@ public class ResultadoPruebaService {
             case REGULAR, RAZONABLE -> 2.0;
             default -> 1.0;
         };
+    }
+    // Añade esto a las inyecciones de tu clase:
+    // private final List<CalculadorIndice> calculadores; (Inyéctalo en el constructor)
+
+    @Transactional
+    public List<String> guardarResultadosTatami(Judoka judoka, EjercicioPlanificado ejercicio,
+                                                PruebaEstandar prueba, Map<Metrica, Double> valoresIngresados) {
+
+        List<String> resultadosVisuales = new ArrayList<>();
+
+        // --- 1. FALLBACK INTELIGENTE (Para SBCG si falta el peso) ---
+        if (prueba.getFormulaCalculo() == FormulaCalculo.SBCG) {
+            Metrica metricaPeso = prueba.getMetricas().stream()
+                    .filter(m -> m.getNombreKey().toLowerCase().contains("peso") || m.getNombreKey().toLowerCase().contains("masa"))
+                    .findFirst().orElse(null);
+
+            if (metricaPeso != null && !valoresIngresados.containsKey(metricaPeso)) {
+                Double pesoReciente = obtenerUltimoResultado(judoka, metricaPeso.getNombreKey());
+                if (pesoReciente != null) {
+                    valoresIngresados.put(metricaPeso, pesoReciente);
+                } else {
+                    throw new RuntimeException("No hay un peso histórico registrado para realizar el cálculo.");
+                }
+            }
+        }
+
+        // --- 2. GUARDAR DATOS CRUDOS ---
+        List<ResultadoPrueba> resultadosGuardados = new ArrayList<>();
+        for (Map.Entry<Metrica, Double> entry : valoresIngresados.entrySet()) {
+            Metrica metrica = entry.getKey();
+            Double valor = entry.getValue();
+
+            ResultadoPrueba rp = new ResultadoPrueba();
+            rp.setJudoka(judoka);
+            rp.setEjercicioPlanificado(ejercicio);
+            rp.setMetrica(metrica);
+            rp.setValor(valor);
+            resultadoPruebaRepository.save(rp);
+            resultadosGuardados.add(rp);
+        }
+
+        // --- 3. CALCULAR Y CLASIFICAR (MAGIA PURA) ---
+        if (prueba.getFormulaCalculo() != FormulaCalculo.NINGUNA) {
+            for (CalculadorIndice calculador : calculadores) {
+                if (calculador.aplicaPara(prueba.getFormulaCalculo())) {
+
+                    // ¡Cálculo 100% exacto usando las métricas reales!
+                    Map<Metrica, Double> metricasCalculadas = calculador.calcular(valoresIngresados, prueba);
+
+                    for (Map.Entry<Metrica, Double> calcEntry : metricasCalculadas.entrySet()) {
+                        Metrica metricaDestino = calcEntry.getKey();
+                        Double valorCalculado = calcEntry.getValue();
+
+                        ResultadoPrueba rpCalculado = new ResultadoPrueba();
+                        rpCalculado.setJudoka(judoka);
+                        rpCalculado.setEjercicioPlanificado(ejercicio);
+                        rpCalculado.setMetrica(metricaDestino);
+                        rpCalculado.setValor(valorCalculado);
+                        resultadoPruebaRepository.save(rpCalculado);
+
+                        // Evaluamos el índice calculado contra las normas
+                        String clasificacion = evaluarClasificacionDirecta(judoka, metricaDestino, valorCalculado);
+                        resultadosVisuales.add(traduccionService.get(metricaDestino.getNombreKey()) + ": " + valorCalculado + " " + clasificacion);
+                    }
+                    break;
+                }
+            }
+        } else {
+            // --- 4. PRUEBAS SIMPLES (Sit and reach, Salto, etc.) ---
+            for (ResultadoPrueba rp : resultadosGuardados) {
+                if (!rp.getMetrica().getNombreKey().toLowerCase().contains("peso") &&
+                        !rp.getMetrica().getNombreKey().toLowerCase().contains("masa")) {
+
+                    // Evaluamos el dato crudo contra las normas
+                    String clasificacion = evaluarClasificacionDirecta(judoka, rp.getMetrica(), rp.getValor());
+                    resultadosVisuales.add(traduccionService.get(rp.getMetrica().getNombreKey()) + ": " + rp.getValor() + " " + clasificacion);
+                }
+            }
+        }
+
+        return resultadosVisuales;
+    }
+
+    // --- NUEVO MÉTODO ROBUSTO: Evaluador a prueba de fallos ---
+    private String evaluarClasificacionDirecta(Judoka judoka, Metrica metrica, Double valor) {
+        if (valor == null || judoka.getFechaNacimiento() == null) return "";
+
+        int edad = java.time.Period.between(judoka.getFechaNacimiento(), java.time.LocalDate.now()).getYears();
+
+        // Buscamos directamente en el repositorio todas las normas.
+        // Es una operación rapidísima en memoria y evita excepciones de Query.
+        List<NormaEvaluacion> todasLasNormas = normaRepository.findAll();
+
+        for (NormaEvaluacion norma : todasLasNormas) {
+            if (norma.getMetrica().getId().equals(metrica.getId()) &&
+                    norma.getSexo() == judoka.getSexo() &&
+                    norma.getEdadMin() <= edad && norma.getEdadMax() >= edad) {
+
+                boolean encaja = false;
+                Double min = norma.getValorMin();
+                Double max = norma.getValorMax();
+
+                if (min != null && max != null) {
+                    encaja = (valor >= min && valor <= max);
+                } else if (min != null) {
+                    encaja = (valor >= min);
+                } else if (max != null) {
+                    encaja = (valor <= max);
+                }
+
+                if (encaja) {
+                    // Si encuentra la norma, retorna el texto traducido: "[Excelente]"
+                    return "[" + traduccionService.get(norma.getClasificacion().name()) + "]";
+                }
+            }
+        }
+        return ""; // Si la prueba no tiene norma (ej. WHtR), solo no imprime la categoría
+    }
+
+    // --- NUEVO: Método Auxiliar para extraer el texto de la Norma ---
+    private String obtenerClasificacionTexto(ResultadoPrueba rp) {
+        Optional<ClasificacionRendimiento> clasifOpt = getClasificacionParaResultado(rp);
+        if (clasifOpt.isPresent()) {
+            // Usamos el nombre del Enum para buscar su traducción (Ej. "EXCELENTE" -> "Excelente")
+            return "[" + traduccionService.get(clasifOpt.get().name()) + "]";
+        }
+        return ""; // Si esta prueba no tiene normas cargadas, simplemente no mostramos categoría
+    }
+
+    // Método auxiliar para buscar el peso más reciente
+    private Double obtenerUltimoResultado(Judoka judoka, String metricaKey) {
+        List<ResultadoPrueba> resultados = resultadoPruebaRepository
+                .findTopByJudokaAndMetrica_NombreKeyOrderByFechaRegistroDesc(judoka, metricaKey);
+
+        return resultados.stream()
+                .findFirst() // Tomamos el más reciente de la lista
+                .map(ResultadoPrueba::getValor)
+                .orElse(null);
     }
 }

@@ -6,16 +6,18 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
 import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.RafaelDiaz.ClubJudoColombia.vista.component.TabataComponent;
 import com.RafaelDiaz.ClubJudoColombia.vista.layout.SenseiLayout;
+import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.accordion.Accordion;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.html.Anchor;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H4;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
@@ -24,12 +26,12 @@ import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Route(value = "tatami", layout = SenseiLayout.class)
 @RolesAllowed({"ROLE_MASTER", "ROLE_SENSEI"})
@@ -37,12 +39,13 @@ public class SenseiTatamiView extends VerticalLayout {
 
     private final MicrocicloService microcicloService;
     private final SesionEjecutadaService sesionEjecutadaService;
+    private final GrupoEntrenamientoService grupoService;
+    private final ResultadoPruebaService resultadoPruebaService;
     private final TraduccionService traduccionService;
     private final Sensei senseiActual;
     private final JudokaRepository judokaRepository;
     private ComboBox<Microciclo> selectorPlan;
     private VerticalLayout contenedorEjercicios;
-    private final GrupoEntrenamientoService grupoService;
     private ComboBox<GrupoEntrenamiento> selectorGrupo;
     // Cambiado a FlexLayout para envolver las tarjetas de asistencia
     private FlexLayout contenedorAsistencia;
@@ -55,12 +58,13 @@ public class SenseiTatamiView extends VerticalLayout {
     private int minutosCompletados = 0;
 
     public SenseiTatamiView(MicrocicloService microcicloService,
-                            SesionEjecutadaService sesionEjecutadaService, TraduccionService traduccionService,
+                            SesionEjecutadaService sesionEjecutadaService, ResultadoPruebaService resultadoPruebaService, TraduccionService traduccionService,
                             SecurityService securityService,
                             JudokaRepository judokaRepository,
                             GrupoEntrenamientoService grupoService, GamificationService gamificationService) {
         this.microcicloService = microcicloService;
         this.sesionEjecutadaService = sesionEjecutadaService;
+        this.resultadoPruebaService = resultadoPruebaService;
         this.traduccionService = traduccionService;
         this.senseiActual = securityService.getAuthenticatedSensei().orElseThrow();
         this.judokaRepository = judokaRepository;
@@ -133,7 +137,7 @@ public class SenseiTatamiView extends VerticalLayout {
         selectorGrupo.setWidthFull();
 
         // --- 2. SELECTOR DE MICROCICLO ---
-        selectorPlan = new ComboBox<>("2. Seleccionar Plan (Microciclo)");
+        selectorPlan = new ComboBox<>("2. Seleccionar Microciclo (Plan)");
         selectorPlan.setItemLabelGenerator(Microciclo::getNombre);
         selectorPlan.setItems(microcicloService.obtenerHistorialDelSensei(senseiActual));
         selectorPlan.setWidthFull();
@@ -195,68 +199,90 @@ public class SenseiTatamiView extends VerticalLayout {
         progresoClase.setValue(0);
         labelProgreso.setText("Progreso: 0%");
 
-        Span tituloEjercicios = new Span("Ejercicios del Plan");
-        tituloEjercicios.getStyle().set("font-weight", "bold");
-        contenedorEjercicios.add(tituloEjercicios);
+        // 1. EVALUAR SI EL MICROCICLO ES DE PRUEBAS
+        if (plan.getPruebas() != null && !plan.getPruebas().isEmpty()) {
 
-        for (EjercicioPlanificado ej : plan.getEjerciciosPlanificados()) {
-            int duracion = ej.getDuracionMinutos() != null ? ej.getDuracionMinutos() : 0;
-            minutosTotalesPlan += duracion;
+            // Filtramos solo a los alumnos que asistieron a la clase
+            List<Judoka> judokasPresentes = asistenciasActuales.stream()
+                    .filter(a -> a.getEstado() == EstadoAsistencia.PRESENTE)
+                    .map(Asistencia::getJudoka)
+                    .collect(java.util.stream.Collectors.toList());
 
-            VerticalLayout card = new VerticalLayout();
-            card.getStyle().set("border", "1px solid var(--lumo-contrast-20pct)");
-            card.getStyle().set("border-radius", "8px");
-            card.getStyle().set("padding", "15px");
-            card.getStyle().set("margin-bottom", "10px");
-            card.getStyle().set("transition", "all 0.3s ease");
-            card.setSpacing(true);
+            // Invocamos el panel que tienes al final de la clase
+            Component panelPruebas = crearPanelRegistroPruebas(plan, judokasPresentes);
+            contenedorEjercicios.add(panelPruebas);
 
-            Span textoTarea = new Span(ej.getTareaDiaria().getNombre() + " (" + duracion + " min)");
-            textoTarea.getStyle().set("font-weight", "bold");
-            textoTarea.getStyle().set("font-size", "var(--lumo-font-size-l)");
-
-            Span dosis = new Span(ej.getNotaAjuste() != null ? ej.getNotaAjuste() : "");
-            dosis.getStyle().set("font-size", "var(--lumo-font-size-s)");
-            dosis.getStyle().set("color", "var(--lumo-secondary-text-color)");
-
-            Checkbox chkCompletado = new Checkbox("Hecho");
-            chkCompletado.addValueChangeListener(event -> {
-                if (event.getValue()) {
-                    minutosCompletados += duracion;
-                    textoTarea.getStyle().set("text-decoration", "line-through");
-                    textoTarea.getStyle().set("color", "var(--lumo-disabled-text-color)");
-                    card.getStyle().set("background-color", "var(--lumo-success-color-10pct)");
-                    card.getStyle().set("border-color", "var(--lumo-success-color)");
-                } else {
-                    minutosCompletados -= duracion;
-                    textoTarea.getStyle().remove("text-decoration");
-                    textoTarea.getStyle().set("color", "var(--lumo-body-text-color)");
-                    card.getStyle().remove("background-color");
-                    card.getStyle().set("border-color", "var(--lumo-contrast-20pct)");
-                }
-                actualizarBarraProgreso();
-            });
-
-            HorizontalLayout filaSuperior = new HorizontalLayout(textoTarea, chkCompletado);
-            filaSuperior.setWidthFull();
-            filaSuperior.setJustifyContentMode(JustifyContentMode.BETWEEN);
-            filaSuperior.setAlignItems(Alignment.CENTER);
-
-            card.add(filaSuperior, dosis);
-
-            String nombreTareaStr = ej.getTareaDiaria().getNombre().toLowerCase();
-            if (nombreTareaStr.contains("randori") || nombreTareaStr.contains("combate") || nombreTareaStr.contains("uchikomi")) {
-                Button btnLanzarTabataLocal = new Button("Iniciar Cronómetro", new Icon(VaadinIcon.PLAY));
-                btnLanzarTabataLocal.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
-                btnLanzarTabataLocal.addClickListener(ev -> abrirDialogoTabata());
-                card.add(btnLanzarTabataLocal);
-            }
-
-            contenedorEjercicios.add(card);
         }
+        // 2. EVALUAR SI EL MICROCICLO ES DE EJERCICIOS (Lógica que ya tenías)
+        else if (plan.getEjerciciosPlanificados() != null && !plan.getEjerciciosPlanificados().isEmpty()) {
 
+            Span tituloEjercicios = new Span("Ejercicios del Plan");
+            tituloEjercicios.getStyle().set("font-weight", "bold");
+            contenedorEjercicios.add(tituloEjercicios);
+
+            for (EjercicioPlanificado ej : plan.getEjerciciosPlanificados()) {
+                int duracion = ej.getDuracionMinutos() != null ? ej.getDuracionMinutos() : 0;
+                minutosTotalesPlan += duracion;
+
+                VerticalLayout card = new VerticalLayout();
+                card.getStyle().set("border", "1px solid var(--lumo-contrast-20pct)");
+                card.getStyle().set("border-radius", "8px");
+                card.getStyle().set("padding", "15px");
+                card.getStyle().set("margin-bottom", "10px");
+                card.getStyle().set("transition", "all 0.3s ease");
+                card.setSpacing(true);
+
+                Span textoTarea = new Span(ej.getTareaDiaria().getNombre() + " (" + duracion + " min)");
+                textoTarea.getStyle().set("font-weight", "bold");
+                textoTarea.getStyle().set("font-size", "var(--lumo-font-size-l)");
+
+                Span dosis = new Span(ej.getNotaAjuste() != null ? ej.getNotaAjuste() : "");
+                dosis.getStyle().set("font-size", "var(--lumo-font-size-s)");
+                dosis.getStyle().set("color", "var(--lumo-secondary-text-color)");
+
+                Checkbox chkCompletado = new Checkbox("Hecho");
+                chkCompletado.addValueChangeListener(event -> {
+                    if (event.getValue()) {
+                        minutosCompletados += duracion;
+                        textoTarea.getStyle().set("text-decoration", "line-through");
+                        textoTarea.getStyle().set("color", "var(--lumo-disabled-text-color)");
+                        card.getStyle().set("background-color", "var(--lumo-success-color-10pct)");
+                        card.getStyle().set("border-color", "var(--lumo-success-color)");
+                    } else {
+                        minutosCompletados -= duracion;
+                        textoTarea.getStyle().remove("text-decoration");
+                        textoTarea.getStyle().set("color", "var(--lumo-body-text-color)");
+                        card.getStyle().remove("background-color");
+                        card.getStyle().set("border-color", "var(--lumo-contrast-20pct)");
+                    }
+                    actualizarBarraProgreso();
+                });
+
+                HorizontalLayout filaSuperior = new HorizontalLayout(textoTarea, chkCompletado);
+                filaSuperior.setWidthFull();
+                filaSuperior.setJustifyContentMode(JustifyContentMode.BETWEEN);
+                filaSuperior.setAlignItems(Alignment.CENTER);
+
+                card.add(filaSuperior, dosis);
+
+                String nombreTareaStr = ej.getTareaDiaria().getNombre().toLowerCase();
+                if (nombreTareaStr.contains("randori") || nombreTareaStr.contains("combate") || nombreTareaStr.contains("uchikomi")) {
+                    Button btnLanzarTabataLocal = new Button("Iniciar Cronómetro", new Icon(VaadinIcon.PLAY));
+                    btnLanzarTabataLocal.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
+                    btnLanzarTabataLocal.addClickListener(ev -> abrirDialogoTabata());
+                    card.add(btnLanzarTabataLocal);
+                }
+
+                contenedorEjercicios.add(card);
+            }
+        }
+        // 3. MICROCICLO VACÍO
+        else {
+            Span sinContenido = new Span("Este microciclo no tiene ejercicios ni pruebas asignadas.");
+            sinContenido.getStyle().set("color", "var(--lumo-disabled-text-color)");
+            contenedorEjercicios.add(sinContenido);
+        }
     }
-
     private void actualizarBarraProgreso() {
         if (minutosTotalesPlan > 0) {
             double porcentaje = (double) minutosCompletados / minutosTotalesPlan * 100;
@@ -619,5 +645,123 @@ public class SenseiTatamiView extends VerticalLayout {
         botonesLayout.add(btnFalto, btnPresente);
 
         layoutPrincipal.add(card, botonesLayout);
+    }
+
+    private Component crearPanelRegistroPruebas(Microciclo microciclo, List<Judoka> judokasPresentes) {
+        VerticalLayout layoutPruebas = new VerticalLayout();
+        layoutPruebas.setWidthFull();
+
+        H3 titulo = new H3(traduccionService.get("tatami.registro_pruebas"));
+        layoutPruebas.add(titulo);
+
+        Accordion acordeonPruebas = new Accordion();
+        acordeonPruebas.setWidthFull();
+
+        for (PruebaEstandar prueba : microciclo.getPruebas()) {
+            Grid<Judoka> gridResultados = new Grid<>(Judoka.class, false);
+            gridResultados.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_ROW_STRIPES);
+
+            // Columna 1: Nombre del Judoka
+            gridResultados.addColumn(Judoka::getNombre)
+                    .setHeader(traduccionService.get("general.judoka"))
+                    .setFlexGrow(1);
+
+            // Columna 2: Inputs dinámicos y Resultados
+            gridResultados.addComponentColumn(judoka -> {
+                HorizontalLayout actionLayout = new HorizontalLayout();
+                actionLayout.setAlignItems(FlexComponent.Alignment.CENTER);
+
+                Map<Metrica, NumberField> camposMetricas = new LinkedHashMap<>();
+
+                if (prueba.getMetricas() != null && !prueba.getMetricas().isEmpty()) {
+                    for (Metrica metrica : prueba.getMetricas()) {
+
+                        if (metrica.isEsCalculada()) continue;
+
+                        NumberField campo = new NumberField();
+                        String nombreTraducido = traduccionService.get(metrica.getNombreKey());
+
+                        campo.setPlaceholder(nombreTraducido);
+                        campo.setTooltipText(nombreTraducido);
+                        campo.setWidth("120px");
+                        campo.setClearButtonVisible(true);
+
+                        // --- MAGIA UX 1: Mostrar la unidad (cm, kg, reps) dentro del campo ---
+                        Span unidadVisual = new Span(metrica.getUnidad());
+                        unidadVisual.getStyle().set("color", "var(--lumo-contrast-50pct)").set("font-size", "small");
+                        campo.setSuffixComponent(unidadVisual);
+
+                        if(metrica.getNombreKey().equals("metrica.peso")){
+                            campo.setPlaceholder(traduccionService.get("metrica.peso") + " (Opcional)");
+                        }
+
+                        camposMetricas.put(metrica, campo);
+                        actionLayout.add(campo);
+                    }
+                }
+
+                Button btnGuardar = new Button(new Icon(VaadinIcon.CHECK));
+                btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+
+                // --- MAGIA UX 2: El Badge de Resultado (Oculto inicialmente) ---
+                Span badgeResultado = new Span();
+                badgeResultado.getElement().getThemeList().add("badge success"); // Estilo de pastilla verde
+                badgeResultado.setVisible(false);
+                badgeResultado.getStyle().set("margin-left", "10px").set("font-weight", "bold");
+
+                btnGuardar.addClickListener(e -> {
+                    // Validar (Nota: asegurarnos de usar "metrica.peso.nombre" como llave correcta)
+                    boolean datosValidos = camposMetricas.entrySet().stream()
+                            .allMatch(entry -> entry.getValue().getValue() != null ||
+                                    entry.getKey().getNombreKey().equals("metrica.peso.nombre"));
+
+                    if (datosValidos) {
+                        Map<Metrica, Double> valoresCapturados = new HashMap<>();
+                        camposMetricas.forEach((metrica, campo) -> {
+                            if (campo.getValue() != null) {
+                                valoresCapturados.put(metrica, campo.getValue());
+                            }
+                        });
+
+                        try {
+                            EjercicioPlanificado ejercicioActual = microciclo.getEjerciciosPlanificados().isEmpty() ? null : microciclo.getEjerciciosPlanificados().get(0);
+
+                            // 1. RECIBIMOS LA LISTA DE TEXTOS CATEGORIZADOS DESDE EL BACKEND
+                            List<String> calculados = resultadoPruebaService.guardarResultadosTatami(judoka, ejercicioActual, prueba, valoresCapturados);
+
+                            // 2. ACTUALIZAMOS LA UI AL INSTANTE
+                            btnGuardar.setIcon(new Icon(VaadinIcon.CHECK));
+                            btnGuardar.setEnabled(false);
+                            camposMetricas.values().forEach(nf -> nf.setEnabled(false));
+
+                            // 3. MOSTRAR EL RESULTADO CON EMOCIÓN (Índice + Categoría)
+                            if (calculados != null && !calculados.isEmpty()) {
+                                String textoFinal = "🔥 " + String.join(" | ", calculados);
+                                badgeResultado.setText(textoFinal);
+                            } else {
+                                badgeResultado.setText("¡Registrado!"); // Fallback
+                            }
+
+                            badgeResultado.setVisible(true);
+                            NotificationHelper.success(traduccionService.get("msg.resultado_guardado", judoka.getNombre()));
+
+                        } catch (Exception ex) {
+                            NotificationHelper.error("Error: " + ex.getMessage());
+                        }
+
+                    } else {
+                        NotificationHelper.error(traduccionService.get("msg.error.campos_incompletos"));
+                    }
+                });
+                actionLayout.add(btnGuardar, badgeResultado);
+                return actionLayout;
+            }).setHeader(traduccionService.get("general.registrar")).setAutoWidth(true).setFlexGrow(2);
+
+            gridResultados.setItems(judokasPresentes);
+            acordeonPruebas.add(prueba.getNombreMostrar(traduccionService), gridResultados);
+        }
+
+        layoutPruebas.add(acordeonPruebas);
+        return layoutPruebas;
     }
 }

@@ -1,6 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.CategoriaEjercicio;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.FormulaCalculo;
 import jakarta.persistence.*;
 import java.io.Serializable;
 import java.util.HashSet;
@@ -61,9 +62,12 @@ public class PruebaEstandar implements Serializable {
     @JoinTable(
             name = "prueba_estandar_metricas", // Tabla de unión corregida
             joinColumns = @JoinColumn(name = "id_ejercicio"),
-            inverseJoinColumns = @JoinColumn(name = "id_metrica")
-    )
+            inverseJoinColumns = @JoinColumn(name = "id_metrica"))
     private Set<Metrica> metricas = new HashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "formula_calculo", nullable = false)
+    private FormulaCalculo formulaCalculo = FormulaCalculo.NINGUNA;
 
     public void setEsGlobal(boolean esGlobal) {
         this.esGlobal = esGlobal;
@@ -115,6 +119,14 @@ public class PruebaEstandar implements Serializable {
     public void setCategoria(CategoriaEjercicio categoria) { this.categoria = categoria; }
     public Set<Metrica> getMetricas() { return metricas; }
     public void setMetricas(Set<Metrica> metricas) { this.metricas = metricas; }
+
+    public FormulaCalculo getFormulaCalculo() {
+        return formulaCalculo;
+    }
+
+    public void setFormulaCalculo(FormulaCalculo formulaCalculo) {
+        this.formulaCalculo = formulaCalculo;
+    }
 
     public void setSenseiCreador(Sensei senseiCreador) {
         this.senseiCreador = senseiCreador;

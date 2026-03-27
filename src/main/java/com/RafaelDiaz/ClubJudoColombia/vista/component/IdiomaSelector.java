@@ -28,10 +28,16 @@ public class IdiomaSelector extends HorizontalLayout {
         add(es, en, pt);
     }
 
-    private void cambiarIdioma(String lang) {
-        UI.getCurrent().setLocale(new Locale(lang));
-        // Opcional: guardar preferencia en sesión
-        VaadinSession.getCurrent().setAttribute("locale", new Locale(lang));
-        UI.getCurrent().getPage().reload(); // Recarga para aplicar cambios
+    private void cambiarIdioma(String codigoIdioma) { // Ej: "en", "es", "pt"
+        Locale nuevoLocale = new Locale(codigoIdioma);
+
+        // 1. Guardar en la sesión (Sobrevive si el usuario navega a otra ruta)
+        VaadinSession.getCurrent().setLocale(nuevoLocale);
+
+        // 2. Guardar en el UI (Aplica el cambio a la vista actual al instante)
+        UI.getCurrent().setLocale(nuevoLocale);
+
+        // NOTA: NO uses UI.getCurrent().getPage().reload() aquí.
+        // Gracias a LocaleChangeObserver, la vista se actualizará sola sin parpadear.
     }
 }

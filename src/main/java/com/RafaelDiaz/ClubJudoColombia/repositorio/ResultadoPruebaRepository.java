@@ -40,6 +40,10 @@ public interface ResultadoPruebaRepository extends JpaRepository<ResultadoPrueba
     // Busca el récord mínimo (Para pruebas donde MENOS es MEJOR, ej. Velocidad 20m)
     @Query("SELECT MIN(r.valor) FROM ResultadoPrueba r WHERE r.ejercicioPlanificado.pruebaEstandar = :prueba")
     Double findRecordMinimoDojo(@Param("prueba") PruebaEstandar prueba);
+
     List<ResultadoPrueba> findByJudokaOrderByFechaRegistroDesc(Judoka judoka);
+
     List<ResultadoPrueba> findByJudokaAndEjercicioPlanificado_PruebaEstandar(Judoka judoka, PruebaEstandar prueba);
+
+    List<ResultadoPrueba>  findTopByJudokaAndMetrica_NombreKeyOrderByFechaRegistroDesc(Judoka judoka, String metricaKey);
 }

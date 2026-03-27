@@ -35,41 +35,12 @@ public class NormaInicializer {
         System.out.println(">>> Cargando normas de evaluación (CBJ y PROESP)...");
         cargarNormasPROESP_Salud();
         cargarNormasPROESP_Rendimiento();
+        cargarNormasCBJ_Suspension();
+        cargarNormasCBJ_Uchikomi();
+        cargarNormasCBJ_SJFT();
+
     }
 
-    private void cargarNormasCBJ_Salto() {
-        PruebaEstandar saltoCBJ = pruebaRepo.findByNombreKey("ejercicio.salto_horizontal.nombre")
-                .orElseThrow(() -> new RuntimeException("Prueba no encontrada: salto_horizontal"));
-        Metrica distancia = metricaRepo.findByNombreKey("metrica.distancia.nombre").orElseThrow();
-
-        // Masculino Sub-18 (0-17 años)
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 17, ClasificacionRendimiento.EXCELENTE, 261.0, null);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 17, ClasificacionRendimiento.BUENO, 247.0, 260.0);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 17, ClasificacionRendimiento.REGULAR, 212.0, 246.0);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 17, ClasificacionRendimiento.DEBIL, 194.0, 211.0);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 17, ClasificacionRendimiento.MUY_DEBIL, null, 193.0);
-
-        // Masculino Sub-21 (0-20 años)
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 20, ClasificacionRendimiento.EXCELENTE, 267.0, null);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 20, ClasificacionRendimiento.BUENO, 259.0, 266.0);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 20, ClasificacionRendimiento.REGULAR, 218.0, 258.0);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 20, ClasificacionRendimiento.DEBIL, 199.0, 217.0);
-        crearNorma(saltoCBJ, distancia, Sexo.MASCULINO, 0, 20, ClasificacionRendimiento.MUY_DEBIL, null, 198.0);
-
-        // Femenino Sub-18 (0-17 años)
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 17, ClasificacionRendimiento.EXCELENTE, 228.0, null);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 17, ClasificacionRendimiento.BUENO, 214.0, 227.0);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 17, ClasificacionRendimiento.REGULAR, 188.0, 213.0);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 17, ClasificacionRendimiento.DEBIL, 169.0, 187.0);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 17, ClasificacionRendimiento.MUY_DEBIL, null, 168.0);
-
-        // Femenino Sub-21 (0-20 años)
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 20, ClasificacionRendimiento.EXCELENTE, 226.0, null);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 20, ClasificacionRendimiento.BUENO, 215.0, 225.0);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 20, ClasificacionRendimiento.REGULAR, 181.0, 214.0);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 20, ClasificacionRendimiento.DEBIL, 157.0, 180.0);
-        crearNorma(saltoCBJ, distancia, Sexo.FEMENINO, 0, 20, ClasificacionRendimiento.MUY_DEBIL, null, 156.0);
-    }
     private void cargarNormasCBJ_Suspension() {
         PruebaEstandar suspension = pruebaRepo.findByNombreKey("ejercicio.suspension_barra.nombre")
                 .orElseThrow(() -> new RuntimeException("Prueba no encontrada: suspension_barra"));
@@ -372,7 +343,7 @@ public class NormaInicializer {
         Metrica distanciaLanz = metricaRepo.findByNombreKey("metrica.lanzamiento_balon.nombre").orElseThrow();
         Metrica tiempo20m = metricaRepo.findByNombreKey("metrica.velocidad_20m.nombre").orElseThrow();
 
-        // ========== IMC (riesgo por encima del umbral) ==========
+        // ========== IMC ==========
         Map<Integer, Double> riesgoIMC_M = Map.ofEntries(
                 Map.entry(6, 17.7), Map.entry(7, 17.8), Map.entry(8, 19.2),
                 Map.entry(9, 19.3), Map.entry(10, 20.7), Map.entry(11, 22.1),
@@ -380,8 +351,13 @@ public class NormaInicializer {
                 Map.entry(15, 23.0), Map.entry(16, 24.0), Map.entry(17, 25.4)
         );
         for (Map.Entry<Integer, Double> e : riesgoIMC_M.entrySet()) {
+            // 1. Si es MAYOR o igual al umbral -> ZONA_DE_RIESGO (valorMin = umbral)
             crearNorma(antropo, imc, Sexo.MASCULINO, e.getKey(), e.getKey(),
                     ClasificacionRendimiento.ZONA_DE_RIESGO, e.getValue(), null);
+
+            // 2. Si es MENOR al umbral -> BUENO / SALUDABLE (valorMax = umbral - 0.01)
+            crearNorma(antropo, imc, Sexo.MASCULINO, e.getKey(), e.getKey(),
+                    ClasificacionRendimiento.BUENO, null, e.getValue() - 0.01);
         }
 
         Map<Integer, Double> riesgoIMC_F = Map.ofEntries(
@@ -391,15 +367,23 @@ public class NormaInicializer {
                 Map.entry(15, 22.4), Map.entry(16, 24.0), Map.entry(17, 24.0)
         );
         for (Map.Entry<Integer, Double> e : riesgoIMC_F.entrySet()) {
+            // Riesgo Femenino
             crearNorma(antropo, imc, Sexo.FEMENINO, e.getKey(), e.getKey(),
                     ClasificacionRendimiento.ZONA_DE_RIESGO, e.getValue(), null);
+
+            // Saludable Femenino
+            crearNorma(antropo, imc, Sexo.FEMENINO, e.getKey(), e.getKey(),
+                    ClasificacionRendimiento.BUENO, null, e.getValue() - 0.01);
         }
 
-        // ========== WHtR (riesgo si >= 0.5) ==========
-        crearNorma(antropo, whtr, Sexo.MASCULINO, 6, 17,
-                ClasificacionRendimiento.ZONA_DE_RIESGO, 0.5, null);
-        crearNorma(antropo, whtr, Sexo.FEMENINO, 6, 17,
-                ClasificacionRendimiento.ZONA_DE_RIESGO, 0.5, null);
+        // ========== WHtR (Relación Cintura/Estatura) ==========
+        // Riesgo (Mayor o igual a 0.5)
+        crearNorma(antropo, whtr, Sexo.MASCULINO, 6, 17, ClasificacionRendimiento.ZONA_DE_RIESGO, 0.5, null);
+        crearNorma(antropo, whtr, Sexo.FEMENINO, 6, 17, ClasificacionRendimiento.ZONA_DE_RIESGO, 0.5, null);
+
+        // Saludable (Menor a 0.5)
+        crearNorma(antropo, whtr, Sexo.MASCULINO, 6, 17, ClasificacionRendimiento.BUENO, null, 0.49);
+        crearNorma(antropo, whtr, Sexo.FEMENINO, 6, 17, ClasificacionRendimiento.BUENO, null, 0.49);
 
         // ========== Carrera 6 min (riesgo por debajo del umbral) ==========
         Map<Integer, Integer> riesgoC6M_M = Map.ofEntries(
@@ -694,6 +678,34 @@ public class NormaInicializer {
             crearNorma(prueba, metrica, Sexo.FEMENINO, edad, edad, ClasificacionRendimiento.MUY_BIEN, rF[5], rF[6]);
             crearNorma(prueba, metrica, Sexo.FEMENINO, edad, edad, ClasificacionRendimiento.EXCELENTE, rF[7], null);
         }
+        // Masculino Sub-18 (0-17 años)
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 15, 17, ClasificacionRendimiento.EXCELENTE, 261.0, null);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 15, 17, ClasificacionRendimiento.BUENO, 247.0, 260.0);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 15, 17, ClasificacionRendimiento.REGULAR, 212.0, 246.0);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 15, 17, ClasificacionRendimiento.DEBIL, 194.0, 211.0);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 15, 17, ClasificacionRendimiento.MUY_DEBIL, null, 193.0);
+
+        // Masculino Sub-21 (0-20 años)
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 18, 20, ClasificacionRendimiento.EXCELENTE, 267.0, null);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 18, 20, ClasificacionRendimiento.BUENO, 259.0, 266.0);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 18, 20, ClasificacionRendimiento.REGULAR, 218.0, 258.0);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 18, 20, ClasificacionRendimiento.DEBIL, 199.0, 217.0);
+        crearNorma(prueba, metrica, Sexo.MASCULINO, 18, 20, ClasificacionRendimiento.MUY_DEBIL, null, 198.0);
+
+        // Femenino Sub-18 (0-17 años)
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 15, 17, ClasificacionRendimiento.EXCELENTE, 228.0, null);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 15, 17, ClasificacionRendimiento.BUENO, 214.0, 227.0);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 15, 17, ClasificacionRendimiento.REGULAR, 188.0, 213.0);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 15, 17, ClasificacionRendimiento.DEBIL, 169.0, 187.0);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 15, 17, ClasificacionRendimiento.MUY_DEBIL, null, 168.0);
+
+        // Femenino Sub-21 (0-20 años)
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 18, 20, ClasificacionRendimiento.EXCELENTE, 226.0, null);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 18, 20, ClasificacionRendimiento.BUENO, 215.0, 225.0);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 18, 20, ClasificacionRendimiento.REGULAR, 181.0, 214.0);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 18, 20, ClasificacionRendimiento.DEBIL, 157.0, 180.0);
+        crearNorma(prueba, metrica, Sexo.FEMENINO, 18, 20, ClasificacionRendimiento.MUY_DEBIL, null, 156.0);
+
     }
     private void cargarNormasPROESP_Rendimiento_Agilidad() {
         PruebaEstandar prueba = pruebaRepo.findByNombreKey("ejercicio.agilidad_4x4.nombre")

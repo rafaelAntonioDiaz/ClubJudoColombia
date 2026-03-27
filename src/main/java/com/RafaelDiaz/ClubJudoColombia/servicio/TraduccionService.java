@@ -44,13 +44,22 @@ public class TraduccionService {
         return formatearClaveComoTexto(clave);
     }
 
-    /**
-     * Método principal para Strings: Detecta idioma del navegador.
-     */
-    public String get(String clave) {
-        return getTraduccion(clave, getIdiomaActual());
-    }
 
+    public String get(String clave) {
+        // 1. Obtener el idioma actual de la sesión de Vaadin
+        Locale locale = null;
+        if (UI.getCurrent() != null) {
+            locale = UI.getCurrent().getLocale();
+        } else if (VaadinSession.getCurrent() != null) {
+            locale = VaadinSession.getCurrent().getLocale();
+        }
+
+        // 2. Si por alguna razón no hay sesión, por defecto a español
+        String idioma = (locale != null) ? locale.getLanguage() : "es";
+
+        // 3. Llamar al método que va a la base de datos
+        return getTraduccion(clave, idioma);
+    }
     /**
      * --- NUEVO: Método Especializado para ENUMS ---
      * Permite llamar a traduccionService.get(EstadoJudoka.ACTIVO) directamente.

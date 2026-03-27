@@ -20,12 +20,14 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
@@ -212,6 +214,27 @@ public class BibliotecaView extends VerticalLayout implements Serializable {
                                         .collect(Collectors
                                             .joining(", ")))
                 .setHeader("Evalúa").setAutoWidth(true);
+        // Añadir la columna de Video en la Biblioteca
+
+        gridPruebas.addComponentColumn(prueba -> {
+            // Verificamos que la URL del video no sea nula o vacía
+            if (prueba.getVideoUrl() != null && !prueba.getVideoUrl().trim().isEmpty()) {
+                Anchor link = new Anchor(prueba.getVideoUrl(), traduccionService.get("general.ver_video"));
+                link.setTarget("_blank"); // Abre en una nueva pestaña
+                link.getStyle().set("color", "var(--lumo-primary-color)");
+
+                Icon icon = new Icon(VaadinIcon.PLAY_CIRCLE_O);
+                icon.getStyle().set("margin-right", "5px");
+
+                HorizontalLayout layout = new HorizontalLayout(icon, link);
+                layout.setAlignItems(FlexComponent.Alignment.CENTER);
+                return layout;
+            } else {
+                Span sinVideo = new Span(traduccionService.get("general.sin_video"));
+                sinVideo.getStyle().set("color", "var(--lumo-disabled-text-color)");
+                return sinVideo;
+            }
+        }).setHeader(traduccionService.get("general.video")).setAutoWidth(true);
 
         gridPruebas.addComponentColumn(prueba -> {
             // Si es global, NO se puede editar

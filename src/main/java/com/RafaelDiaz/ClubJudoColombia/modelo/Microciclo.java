@@ -58,10 +58,17 @@ public class Microciclo implements Serializable {
     private EstadoMicrociclo estado;
 
     // --- RELACIÓN CON LOS EJERCICIOS ---
-    // Nota el 'mappedBy = "microciclo"' que actualizaremos en el siguiente paso
     @OneToMany(mappedBy = "microciclo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EjercicioPlanificado> ejerciciosPlanificados = new ArrayList<>();
 
+    // --- RELACIÓN CON LAS PRUEBAS (EVALUACIONES) ---
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "microciclo_pruebas",
+            joinColumns = @JoinColumn(name = "id_microciclo"),
+            inverseJoinColumns = @JoinColumn(name = "id_prueba")
+    )
+    private Set<PruebaEstandar> pruebas = new HashSet<>();
     // --- RELACIÓN OPCIONAL HACIA EL MACROCICLO ---
     // Es nullable = true porque el Sensei puede crear un Microciclo suelto sin Macrociclo
     @ManyToOne(fetch = FetchType.LAZY)
@@ -111,6 +118,17 @@ public class Microciclo implements Serializable {
         this.macrociclo = macrociclo;
     }
 
+    public Set<PruebaEstandar> getPruebas() { return pruebas; }
+
+    public void setPruebas(Set<PruebaEstandar> pruebas) { this.pruebas = pruebas; }
+    // --- Métodos de Conveniencia Pruebas ---
+    public void addPrueba(PruebaEstandar prueba) {
+        pruebas.add(prueba);
+    }
+
+    public void removePrueba(PruebaEstandar prueba) {
+        pruebas.remove(prueba);
+    }
     @Override
     public int hashCode() { return id != null ? id.hashCode() : 0; }
     @Override
@@ -119,5 +137,10 @@ public class Microciclo implements Serializable {
         if (obj == null || getClass() != obj.getClass()) return false;
         Microciclo that = (Microciclo) obj;
         return id != null && id.equals(that.id);
+    }
+
+
+    public void clear() {
+
     }
 }

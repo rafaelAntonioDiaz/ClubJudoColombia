@@ -43,9 +43,7 @@ public class ResultadoPrueba implements Serializable {
     @Column(name = "fecha_registro", nullable = false)
     private LocalDateTime fechaRegistro;
 
-    // (Campos GPS eliminados)
 
-    // Constructores, Getters, Setters...
     public ResultadoPrueba() {
         this.fechaRegistro = LocalDateTime.now();
     }
@@ -66,5 +64,4 @@ public class ResultadoPrueba implements Serializable {
     public LocalDateTime getFechaRegistro() { return fechaRegistro; }
     public void setFechaRegistro(LocalDateTime fechaRegistro) { this.fechaRegistro = fechaRegistro; }
 
-    // (hashCode y equals)
 }
