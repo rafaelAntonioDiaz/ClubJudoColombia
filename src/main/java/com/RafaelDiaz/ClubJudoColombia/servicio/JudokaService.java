@@ -6,6 +6,7 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoMicrociclo;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -151,35 +152,43 @@ public class JudokaService {
                 : senseiRepository.findById(1L).orElse(null);
 
         if (senseiResponsable == null) {
-            // Log warning o fallback si no hay sensei 1
             System.err.println("ADVERTENCIA: No se pudo asignar Sensei al plan inicial.");
+            return;
         }
 
         // 2. Crear Grupo Personal
         GrupoEntrenamiento grupoPersonal = new GrupoEntrenamiento();
         grupoPersonal.setNombre("Individual - " + judoka.getUsuario().getNombre());
         grupoPersonal.setDescripcion("Grupo automático para evaluación individual.");
-        grupoPersonal.setSensei(judoka.getSensei());
+        grupoPersonal.setSensei(senseiResponsable); // Asignamos sensei
+
+        // --- Asignar valores por defecto para todos los campos NOT NULL ---
+        grupoPersonal.setComisionSensei(BigDecimal.ZERO);          // Comisión 0%
+        grupoPersonal.setTarifaMensual(BigDecimal.ZERO);           // Tarifa 0 (no se cobrará)
+        grupoPersonal.setMontoMatricula(BigDecimal.ZERO);          // Matrícula 0
+        grupoPersonal.setDiasGracia(5);                            // Días de gracia por defecto
+        grupoPersonal.setIncluyeMatricula(false);                  // No incluye matrícula
+        grupoPersonal.setLugarPractica("Sala de evaluación");      // Texto por defecto
+        grupoPersonal.setRadioPermitidoMetros(0);                  // Radio en metros
+        grupoPersonal.setHoraInicio(java.time.LocalTime.of(8, 0)); // 8:00 AM
+        grupoPersonal.setHoraFin(java.time.LocalTime.of(20, 0));   // 8:00 PM
+        grupoPersonal.setLatitud(0.0);
+        grupoPersonal.setLongitud(0.0);
+
+        // Relación muchos-a-muchos: agregar el judoka al grupo
         grupoPersonal.getJudokas().add(judoka);
-
-
         grupoRepository.save(grupoPersonal);
 
         // 3. Crear Plan de Evaluación
         Microciclo micro = new Microciclo();
         micro.setNombre("Evaluación Inicial 2026");
-
         micro.setSensei(senseiResponsable);
-
         micro.setEstado(EstadoMicrociclo.ACTIVO);
         micro.setTipoMicrociclo(TipoMicrociclo.CONTROL);
-
-        // CORRECCIÓN: Usamos getGruposAsignados en lugar de getGrupos
         micro.getGruposAsignados().add(grupoPersonal);
-
         micro = planRepository.save(micro);
 
-        // 4. Agregar Pruebas
+        // 4. Agregar Pruebas estándar al plan
         agregarPruebaAlPlan(micro, "ejercicio.abdominales_1min.nombre", 1);
         agregarPruebaAlPlan(micro, "ejercicio.carrera_20m.nombre", 2);
         agregarPruebaAlPlan(micro, "ejercicio.agilidad_4x4.nombre", 3);
@@ -194,7 +203,7 @@ public class JudokaService {
     }
     @Transactional(readOnly = true)
     public List<Judoka> findByAcudiente(Usuario acudiente) {
-        return judokaRepository.findByAcudienteWithMecenas(acudiente);
+        return judokaRepository.findByAcudienteWithDetails(acudiente);
     }
 
     private void agregarPruebaAlPlan(Microciclo micro, String keyPrueba, int orden) {
@@ -221,9 +230,26 @@ public class JudokaService {
     @Transactional
     public Judoka crearJudokaPorAcudiente(Usuario acudiente, String nombre, String apellido,
                                           LocalDate fechaNacimiento, GrupoEntrenamiento grupo) {
-        // Validar
+        // Validar que el usuario tenga rol de acudiente
         if (acudiente.getRoles().stream().noneMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
             throw new RuntimeException("El usuario no tiene permisos para agregar deportistas.");
+        }
+
+        // Si no se proporcionó grupo, tomar el que tenga el acudiente (si existe)
+        if (grupo == null) {
+            grupo = acudiente.getGrupoTarifario();
+            if (grupo == null) {
+                // Fallback: primer grupo del sensei que invitó al acudiente
+                Sensei senseiInvitador = acudiente.getSenseiInvitador();
+                if (senseiInvitador == null) {
+                    throw new RuntimeException("No se pudo determinar el sensei responsable. Contacte al administrador.");
+                }
+                List<GrupoEntrenamiento> gruposSensei = grupoService.findBySensei(senseiInvitador);
+                if (gruposSensei.isEmpty()) {
+                    throw new RuntimeException("El sensei responsable no tiene grupos configurados.");
+                }
+                grupo = gruposSensei.get(0);
+            }
         }
 
         Sensei sensei = grupo.getSensei();
@@ -240,9 +266,16 @@ public class JudokaService {
 
         judoka = judokaRepository.save(judoka);
 
-        // Generar cobros
+        // Generar cobros de bienvenida (matrícula + primera mensualidad)
         finanzasService.generarCobroBienvenida(judoka);
 
         return judoka;
     }
+    @Transactional(readOnly = true)
+    public Judoka findByIdWithDetails(Long id) {
+        // Usa un query con JOIN FETCH para evitar proxies
+        return judokaRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Judoka no encontrado con id: " + id));
     }
+
+}

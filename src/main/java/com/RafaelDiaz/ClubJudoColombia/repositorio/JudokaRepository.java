@@ -73,4 +73,5 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
     List<Judoka> findBySensei(Sensei sensei);
 
     List<Judoka> findByGrupoFacturacionAndEstado(GrupoEntrenamiento grupo, EstadoJudoka estadoJudoka);
+
 }

@@ -106,20 +106,23 @@ public class GestorInvitacionesView extends VerticalLayout {
 
     private void configurarSelectorRoles() {
         List<OpcionRol> opciones = new ArrayList<>();
-
         boolean isMaster = securityService.getAuthenticatedUserDetails()
                 .map(u -> u.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MASTER")))
                 .orElse(false);
-
         if (isMaster) {
             opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.sensei"), "ROLE_SENSEI"));
             opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka_adulto"), "ROLE_JUDOKA_ADULTO"));
             opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.acudiente"), "ROLE_ACUDIENTE"));
-            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka"), "ROLE_JUDOKA"));
             opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.mecenas"), "ROLE_MECENAS"));
         } else {
-            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka"), "ROLE_JUDOKA"));
+            // Sensei externo solo puede invitar a judoka adulto
+            opciones.add(new OpcionRol(traduccionService.get("invitaciones.rol.judoka_adulto"), "ROLE_JUDOKA_ADULTO"));
         }
+        comboRoles.setItems(opciones);
+        comboRoles.setItemLabelGenerator(OpcionRol::nombreVisible);
+        comboRoles.setValue(opciones.get(0));
+        comboRoles.setEnabled(isMaster); // Si no es master, el combo es solo lectura (solo una opción)
+        comboRoles.setWidthFull();
 
         comboRoles.setItems(opciones);
         comboRoles.setItemLabelGenerator(OpcionRol::nombreVisible);
@@ -143,21 +146,22 @@ public class GestorInvitacionesView extends VerticalLayout {
         if (selected == null) return;
         String rol = selected.rolDb();
 
-        // Visibilidad del tipo de sensei (solo para invitación de sensei)
         boolean isSensei = "ROLE_SENSEI".equals(rol);
         comboTipoSensei.setVisible(isSensei);
         porcentajeComision.setVisible(isSensei);
 
-        // Visibilidad del grupo tarifario (solo para acudiente o judoka adulto)
-        boolean requiereGrupo = "ROLE_ACUDIENTE".equals(rol) || "ROLE_JUDOKA_ADULTO".equals(rol);
+        boolean requiereGrupo = "ROLE_JUDOKA_ADULTO".equals(rol);
         comboTarifas.setVisible(requiereGrupo);
 
-        // Cargar grupos si es necesario
         if (requiereGrupo) {
             securityService.getAuthenticatedSensei().ifPresent(sensei -> {
-                comboTarifas.setItems(grupoService.findBySensei(sensei));
+                // 🔧 Cambio: cargar solo grupos tarifarios (esTarifario = true)
+                List<GrupoEntrenamiento> gruposTarifarios = grupoService.findBySenseiAndEsTarifario(sensei, true);
+                comboTarifas.setItems(gruposTarifarios);
                 comboTarifas.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
             });
+        } else {
+            comboTarifas.clear();
         }
     }
 
@@ -247,6 +251,7 @@ public class GestorInvitacionesView extends VerticalLayout {
             Long grupoId = null;
             BigDecimal comisionPorcentaje = null;
 
+            // Grupo tarifario para acudiente o judoka adulto
             if ("ROLE_ACUDIENTE".equals(rolElegido) || "ROLE_JUDOKA_ADULTO".equals(rolElegido)) {
                 if (comboTarifas.getValue() == null) {
                     NotificationHelper.error(traduccionService.get("invitaciones.error.seleccionar_grupo"));
@@ -261,7 +266,6 @@ public class GestorInvitacionesView extends VerticalLayout {
                 }
                 comisionPorcentaje = BigDecimal.valueOf(valor);
             }
-
             String tokenGenerado = admisionesService.generarInvitacion(
                     nombreField.getValue().trim(),
                     apellidoField.getValue().trim(),

@@ -88,13 +88,28 @@ public class JudokaLayout extends AppLayout {
         H2 tituloApp = new H2(traduccionService.get("app.nombre"));
         tituloApp.addClassName("app-title");
 
-        // Obtener judoka actual
-        var profile = securityService.getAuthenticatedJudokaProfile();
-        String nombreCompleto = profile.fullName();
-        String avatarUrl = profile.avatarUrl();
+        // Obtener judoka actual (puede ser null si aún no está activo)
+        Optional<Judoka> judokaOpt = obtenerJudokaActual();
+        String nombreCompleto = "Judoka";
+        String estadoMensaje = "";
 
-        // 2. Saludo personalizado
-        Span saludo = new Span(traduccionService.get("dashboard.welcome", nombreCompleto));
+        if (judokaOpt.isPresent()) {
+            Judoka judoka = judokaOpt.get();
+            nombreCompleto = judoka.getNombre() + " " + (judoka.getApellido() != null ? judoka.getApellido() : "");
+            if (judoka.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.EN_REVISION) {
+                estadoMensaje = " (Perfil en revisión)";
+            } else if (judoka.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.PENDIENTE) {
+                estadoMensaje = " (Pendiente de aprobación)";
+            }
+        } else {
+            // Si no hay judoka (acudiente o sensei), usamos el nombre del usuario
+            nombreCompleto = securityService.getAuthenticatedUsuario()
+                    .map(u -> u.getNombre() + " " + u.getApellido())
+                    .orElse("Usuario");
+        }
+
+        // 2. Saludo personalizado (con estado si aplica)
+        Span saludo = new Span(traduccionService.get("dashboard.welcome", nombreCompleto) + estadoMensaje);
         saludo.addClassName("layout-welcome-text");
         saludo.getStyle()
                 .set("font-size", "0.9rem")
@@ -105,13 +120,12 @@ public class JudokaLayout extends AppLayout {
         // 3. Avatar con foto (si existe)
         Avatar avatar = new Avatar();
         avatar.setName(nombreCompleto);
-        String urlFoto = avatarUrl;
+        String urlFoto = judokaOpt.isPresent() ? judokaOpt.get().getUrlFotoPerfil() : null;
         if (urlFoto != null && !urlFoto.isEmpty()) {
-            avatar.setImage(urlFoto); // Usa la URL directamente
+            avatar.setImage(urlFoto);
         } else {
-            avatar.setName(nombreCompleto);
+            avatar.setColorIndex(nombreCompleto.hashCode() % 10);
         }
-        avatar.setColorIndex(nombreCompleto.hashCode() % 10);
         avatar.addClassName("judoka-avatar");
 
         // 4. Menú de usuario (desplegable)
@@ -120,8 +134,11 @@ public class JudokaLayout extends AppLayout {
         var menuItem = menuUsuario.addItem(avatar);
         var subMenu = menuItem.getSubMenu();
 
-        subMenu.addItem(traduccionService.get("menu.mi.perfil"),
-                e -> getUI().ifPresent(ui -> ui.navigate("perfil-judoka")));
+        // Opciones del menú (siempre visibles)
+        if (judokaOpt.isPresent() && judokaOpt.get().getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.ACTIVO) {
+            subMenu.addItem(traduccionService.get("menu.mi.perfil"),
+                    e -> getUI().ifPresent(ui -> ui.navigate("perfil-judoka")));
+        }
 
         subMenu.addItem(traduccionService.get("btn.cerrar.sesion"), e -> logout());
 
@@ -141,21 +158,28 @@ public class JudokaLayout extends AppLayout {
         menuTabs.setOrientation(Tabs.Orientation.VERTICAL);
         menuTabs.addClassName("judoka-menu-tabs");
 
-        // 1. Dashboard (Siempre visible)
-        agregarTab(traduccionService.get("menu.dashboard"), VaadinIcon.DASHBOARD, JudokaDashboardView.class);
-
-        // 2. Mis Planes (Siempre visible)
-        agregarTab(traduccionService.get("menu.mis.microciclos"), VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
-
-        // 3. Comunidad (FILTRO: SOLO MAYORES DE 12 AÑOS) <--- CAMBIO CLAVE
         Optional<Judoka> judokaOpt = obtenerJudokaActual();
-        if (judokaOpt.isPresent()) {
+
+        // Mostrar opciones solo si el judoka existe y está ACTIVO
+        if (judokaOpt.isPresent() && judokaOpt.get().getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.ACTIVO) {
+            // 1. Dashboard
+            agregarTab(traduccionService.get("menu.dashboard"), VaadinIcon.DASHBOARD, JudokaDashboardView.class);
+
+            // 2. Mis Planes
+            agregarTab(traduccionService.get("menu.mis.microciclos"), VaadinIcon.CLIPBOARD_CHECK, JudokaPlanView.class);
+
+            // 3. Comunidad (solo mayores de 14)
             if (esMayorDe14(judokaOpt.get().getFechaNacimiento())) {
                 agregarTab(traduccionService.get("menu.comunidad"), VaadinIcon.USERS, ComunidadJudokaView.class);
             }
+        } else {
+            // Si no hay judoka activo, mostrar solo un mensaje informativo
+            Span mensajeEspera = new Span(traduccionService.get("menu.espera.autorizacion"));
+            mensajeEspera.addClassName("menu-espera");
+            menuTabs.add(new Tab(mensajeEspera));
         }
 
-        // 4. Logout (Limpiando sesión)
+        // Siempre mostrar el botón de cerrar sesión
         Tab logoutTab = new Tab(createLogoutLink());
         menuTabs.add(logoutTab);
 

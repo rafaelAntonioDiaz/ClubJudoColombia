@@ -104,7 +104,7 @@ public class RegistroAsistenciaView extends SenseiLayout {
         header.setAlignItems(FlexComponent.Alignment.BASELINE);
 
         grupoSelector = new ComboBox<>(traduccionService.get("asistencia.selector.grupo"));
-        grupoSelector.setItems(grupoService.findAll(0, 100, ""));
+        grupoSelector.setItems(grupoService.findAll(0, 100, "",false));
         grupoSelector.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
         grupoSelector.setWidth("300px");
         grupoSelector.setPlaceholder(traduccionService.get("asistencia.placeholder.grupo"));

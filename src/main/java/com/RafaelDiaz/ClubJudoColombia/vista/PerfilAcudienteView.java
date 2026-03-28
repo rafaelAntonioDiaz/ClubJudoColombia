@@ -431,28 +431,22 @@ public class PerfilAcudienteView extends VerticalLayout {
         TextField apellido = new TextField("Apellido");
         DatePicker fechaNacimiento = new DatePicker("Fecha de nacimiento");
 
-        Sensei senseiAcudiente = acudiente.getSenseiInvitador();
-        List<GrupoEntrenamiento> grupos = grupoService.findBySensei(senseiAcudiente);
-        ComboBox<GrupoEntrenamiento> grupoCombo = new ComboBox<>("Grupo de entrenamiento");
-        grupoCombo.setItems(grupos);
-        grupoCombo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
-        grupoCombo.setRequired(true);
-
-        form.add(nombre, apellido, fechaNacimiento, grupoCombo);
+        form.add(nombre, apellido, fechaNacimiento);
 
         Button btnGuardar = new Button("Guardar", e -> {
-            if (nombre.isEmpty() || apellido.isEmpty() || fechaNacimiento.isEmpty() || grupoCombo.isEmpty()) {
+            if (nombre.isEmpty() || apellido.isEmpty() || fechaNacimiento.isEmpty()) {
                 Notification.show("Todos los campos son obligatorios")
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
                 return;
             }
             try {
+                // Se pasa null como grupo; el servicio lo asignará automáticamente
                 judokaService.crearJudokaPorAcudiente(
                         acudiente,
                         nombre.getValue(),
                         apellido.getValue(),
                         fechaNacimiento.getValue(),
-                        grupoCombo.getValue()
+                        null
                 );
                 Notification.show("Deportista agregado correctamente")
                         .addThemeVariants(NotificationVariant.LUMO_SUCCESS);

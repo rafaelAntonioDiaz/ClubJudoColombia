@@ -31,4 +31,12 @@ public interface GrupoEntrenamientoRepository extends JpaRepository<GrupoEntrena
     List<GrupoEntrenamiento> findAllByJudokasContains(Judoka judoka);
 
     List<GrupoEntrenamiento> findByJudokas_Id(Long judokaId);
+    Page<GrupoEntrenamiento> findBySenseiIdAndEsTarifario(Long senseiId, boolean esTarifario, Pageable pageable);
+    Page<GrupoEntrenamiento> findBySenseiIdAndNombreContainingIgnoreCaseAndEsTarifario(
+            Long senseiId, String nombre, boolean esTarifario, Pageable pageable);
+    long countBySenseiIdAndEsTarifario(Long senseiId, boolean esTarifario);
+    long countBySenseiIdAndNombreContainingIgnoreCaseAndEsTarifario(
+            Long senseiId, String nombre, boolean esTarifario);
+    List<GrupoEntrenamiento> findBySenseiAndEsTarifario(Sensei sensei, boolean esTarifario);
+
 }

@@ -183,7 +183,7 @@ public class DatosMuestraInicializer {
                 configService.getGrupoTarifaDefault(),
                 configService.isGrupoIncluyeMatriculaDefault(),
                 configService.getGrupoMontoMatriculaDefault(),
-                configService.getGrupoDiasGraciaDefault()
+                configService.getGrupoDiasGraciaDefault(),false
         );
 
         for (Judoka j : judokas) {
@@ -596,7 +596,8 @@ public class DatosMuestraInicializer {
                 configService.getGrupoTarifaDefault(),
                 configService.isGrupoIncluyeMatriculaDefault(),
                 configService.getGrupoMontoMatriculaDefault(),
-                configService.getGrupoDiasGraciaDefault()
+                configService.getGrupoDiasGraciaDefault(),
+                false
         );
 
         System.out.println(">>> Creando microciclos para Sensei " + sensei.getUsuario().getNombre());
@@ -1019,7 +1020,8 @@ public class DatosMuestraInicializer {
                 configService.getGrupoTarifaDefault(),
                 configService.isGrupoIncluyeMatriculaDefault(),
                 configService.getGrupoMontoMatriculaDefault(),
-                configService.getGrupoDiasGraciaDefault()
+                configService.getGrupoDiasGraciaDefault(),
+                true
         );
         // 6. Crear judokas
         String[][] datosJudokas = {
@@ -1121,7 +1123,8 @@ public class DatosMuestraInicializer {
                 config.getGrupoTarifaDefault(),
                 config.isGrupoIncluyeMatriculaDefault(),
                 config.getGrupoMontoMatriculaDefault(),
-                config.getGrupoDiasGraciaDefault());
+                config.getGrupoDiasGraciaDefault(),
+                true);
 
         // Grupo 2 con valores personalizados
         grupoService.crearGrupo(sensei,
@@ -1130,6 +1133,6 @@ public class DatosMuestraInicializer {
                 new BigDecimal("30000"),
                 true,
                 new BigDecimal("50000"),
-                3);
+                3,true);
     }
 }

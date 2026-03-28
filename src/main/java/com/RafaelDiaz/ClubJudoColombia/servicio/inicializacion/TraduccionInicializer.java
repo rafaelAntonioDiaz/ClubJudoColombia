@@ -1186,6 +1186,13 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "unidad.repeticiones", "Repeticiones", "Reps", "Repetições");
         agregarSiNoExiste(lista, clavesExistentes, "unidad.indice", "Índice", "Index", "Índice");
         agregarSiNoExiste(lista, clavesExistentes, "unidad.valor", "Valor", "Value", "Valor");
+        agregarSiNoExiste(lista, clavesExistentes, "espera.titulo", "¡Perfil enviado para revisión!", "Profile submitted for review!", "Perfil enviado para revisão!");
+        agregarSiNoExiste(lista, clavesExistentes, "espera.mensaje","Tu información ha sido recibida. Un sensei revisará tus documentos y activará tu cuenta en las próximas horas. Recibirás un correo cuando tu perfil esté aprobado.", "Your information has been received. A sensei will review your documents and activate your account in the next few hours. You will receive an email when your profile is approved.", "Suas informações foram recebidas. Um sensei revisará seus documentos e ativará sua conta nas próximas horas. Você receberá um email quando seu perfil for aprovado.");
+        agregarSiNoExiste(lista, clavesExistentes, "espera.usuario","Tu usuario para ingresar es tu correo electrónico", "Your username to log in is your email address", "Seu usuário para entrar é seu endereço de email");
+        agregarSiNoExiste(lista, clavesExistentes, "menu.espera.autorizacion","Tu perfil está en revisión. Espera la activación.", "Your profile is under review. Wait for activation.", "Seu perfil está em revisão. Aguarde a ativação.");
+        agregarSiNoExiste(lista, clavesExistentes,"menu.tarifas", "Tarifas", "Pricing", "Tarifas");
+
+
 
 
         if (!lista.isEmpty()) {

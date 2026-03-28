@@ -91,6 +91,10 @@ public class Usuario implements Serializable {
 
     @OneToMany(mappedBy = "acudiente", fetch = FetchType.LAZY)
     private List<Judoka> judokas;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_grupo_tarifario")
+    private GrupoEntrenamiento grupoTarifario;
     /**
      * Relación Muchos-a-Muchos (ManyToMany) con la entidad Rol.
      * Un usuario puede tener múltiples roles, y un rol puede tener múltiples usuarios.
@@ -237,6 +241,14 @@ public class Usuario implements Serializable {
 
     public void setJudokas(List<Judoka> judokas) {
         this.judokas = judokas;
+    }
+
+    public GrupoEntrenamiento getGrupoTarifario() {
+        return grupoTarifario;
+    }
+
+    public void setGrupoTarifario(GrupoEntrenamiento grupoTarifario) {
+        this.grupoTarifario = grupoTarifario;
     }
 
     @Override

@@ -103,10 +103,16 @@ public class AdmisionesService {
         usuarioInvitado.setSenseiInvitador(senseiActual);
         usuarioInvitado.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
 
-        // Asignar rol
+// Asignar rol
         Rol rol = rolRepository.findByNombre(rolEsperado)
                 .orElseThrow(() -> new RuntimeException("El rol " + rolEsperado + " no existe."));
         usuarioInvitado.setRoles(Set.of(rol));
+
+// ✅ Si es acudiente y se proporcionó grupo, guardamos el grupo en el usuario
+        // Si es acudiente y se proporcionó grupo, guardamos el grupo en el usuario (para herencia)
+        if ("ROLE_ACUDIENTE".equals(rolEsperado) && grupo != null) {
+            usuarioInvitado.setGrupoTarifario(grupo);
+        }
 
         usuarioRepository.saveAndFlush(usuarioInvitado);
 
@@ -396,6 +402,9 @@ public class AdmisionesService {
             if (j.getDocumentos() != null) {
                 j.getDocumentos().size(); // Llamar a .size() obliga a Hibernate a traer los documentos
             }
+            if (j.getGrupoFacturacion() != null) {
+                Hibernate.initialize(j.getGrupoFacturacion());
+            }
         }
         return lista;
     }
@@ -420,7 +429,7 @@ public class AdmisionesService {
 
     // Activa la cuenta después de que el usuario eligió su contraseña
     @Transactional
-    public Usuario activarInvitacionConPassword(String tokenUuid, String password) {
+    public ActivationResult activarInvitacionConPassword(String tokenUuid, String password) {
         TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
                 .orElseThrow(() -> new RuntimeException("Token inválido."));
         if (!token.isValido()) {
@@ -430,8 +439,35 @@ public class AdmisionesService {
         usuario.setPasswordHash(passwordEncoder.encode(password));
         usuario.setActivo(true);
         usuarioRepository.save(usuario);
+
+        Judoka judoka = token.getJudoka();
+        Long judokaId = null;
+        if (judoka != null) {
+            // Forzar carga de relaciones necesarias (aunque no se usen aquí, se inicializan)
+            Hibernate.initialize(judoka);
+            Hibernate.initialize(judoka.getAcudiente());
+            Hibernate.initialize(judoka.getGrupoFacturacion());
+            Hibernate.initialize(judoka.getGrupo());
+            Hibernate.initialize(judoka.getSensei());
+            Hibernate.initialize(judoka.getMecenas());
+            judokaId = judoka.getId();
+        }
+
         token.setUsado(true);
         tokenRepository.save(token);
-        return usuario;
+
+        return new ActivationResult(usuario, judokaId);
+    }
+
+    // Clase auxiliar (puede ser un record)
+    public static class ActivationResult {
+        private final Usuario usuario;
+        private final Long judokaId;
+        public ActivationResult(Usuario usuario, Long judokaId) {
+            this.usuario = usuario;
+            this.judokaId = judokaId;
+        }
+        public Usuario getUsuario() { return usuario; }
+        public Long getJudokaId() { return judokaId; }
     }
 }

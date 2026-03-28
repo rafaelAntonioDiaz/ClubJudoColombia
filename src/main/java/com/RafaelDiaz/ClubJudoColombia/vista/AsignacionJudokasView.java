@@ -96,7 +96,8 @@ public class AsignacionJudokasView extends SenseiLayout implements Serializable,
     }
 
     private void configureGrupoCombo() {
-        grupoCombo.setItems(grupoService.findAll(0, 100, ""));
+        // Obtener solo grupos de entrenamiento (esTarifario = false)
+        grupoCombo.setItems(grupoService.findAll(0, 100, "", false));
         grupoCombo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
         grupoCombo.setWidth("400px");
         grupoCombo.addValueChangeListener(event -> {

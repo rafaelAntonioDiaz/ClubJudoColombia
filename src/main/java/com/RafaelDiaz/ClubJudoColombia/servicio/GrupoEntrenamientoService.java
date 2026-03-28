@@ -13,6 +13,7 @@ import com.RafaelDiaz.ClubJudoColombia.repositorio.MicrocicloRepository;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,34 +58,30 @@ public class GrupoEntrenamientoService {
     }
 
     @Transactional(readOnly = true)
-    public List<GrupoEntrenamiento> findAll(int offset, int limit, String filter) {
+    public List<GrupoEntrenamiento> findAll(int offset, int limit, String filter, boolean esTarifario) {
         Long miSenseiId = securityService.getSenseiIdActual();
         if (miSenseiId == null) return List.of();
 
         PageRequest pageable = PageRequest.of(offset / limit, limit);
-        List<GrupoEntrenamiento> grupos;
-
+        Page<GrupoEntrenamiento> page;
         if (filter == null || filter.trim().isEmpty()) {
-            grupos = grupoRepository.findBySenseiId(miSenseiId, pageable).getContent();
+            page = grupoRepository.findBySenseiIdAndEsTarifario(miSenseiId, esTarifario, pageable);
         } else {
-            grupos = grupoRepository.findBySenseiIdAndNombreContainingIgnoreCase(miSenseiId, filter, pageable).getContent();
+            page = grupoRepository.findBySenseiIdAndNombreContainingIgnoreCaseAndEsTarifario(
+                    miSenseiId, filter, esTarifario, pageable);
         }
-
-        for (GrupoEntrenamiento grupo : grupos) {
-            grupo.getJudokas().size();
-        }
-        return grupos;
+        return page.getContent();
     }
 
     @Transactional(readOnly = true)
-    public long count(String filter) {
+    public long count(String filter, boolean esTarifario) {
         Long miSenseiId = securityService.getSenseiIdActual();
         if (miSenseiId == null) return 0;
-
         if (filter == null || filter.trim().isEmpty()) {
-            return grupoRepository.countBySenseiId(miSenseiId);
+            return grupoRepository.countBySenseiIdAndEsTarifario(miSenseiId, esTarifario);
         }
-        return grupoRepository.countBySenseiIdAndNombreContainingIgnoreCase(miSenseiId, filter);
+        return grupoRepository.countBySenseiIdAndNombreContainingIgnoreCaseAndEsTarifario(
+                miSenseiId, filter, esTarifario);
     }
 
     @Transactional
@@ -239,7 +236,7 @@ public class GrupoEntrenamientoService {
     public GrupoEntrenamiento crearGrupo(Sensei sensei, String nombre, String descripcion,
                                          BigDecimal tarifaMensual, // sin parámetro comision
                                          boolean incluyeMatricula, BigDecimal montoMatricula,
-                                         int diasGracia) {
+                                         int diasGracia, boolean esTarifario) {
         BigDecimal precioMinimo = configService.getPrecioMinimoMensual();
         if (tarifaMensual.compareTo(precioMinimo) < 0) {
             throw new RuntimeException("La tarifa no puede ser menor a la mínima global: " + precioMinimo);
@@ -254,6 +251,7 @@ public class GrupoEntrenamientoService {
         grupo.setIncluyeMatricula(incluyeMatricula);
         grupo.setMontoMatricula(incluyeMatricula ? montoMatricula : null);
         grupo.setDiasGracia(diasGracia);
+        grupo.setEsTarifario(esTarifario);
         return grupoRepository.save(grupo);
     }
 
@@ -295,6 +293,16 @@ public class GrupoEntrenamientoService {
     @Transactional(readOnly = true)
     public List<GrupoEntrenamiento> findAllGroups() {
         return grupoRepository.findAll();
+    }
+
+    public GrupoEntrenamiento obtenerGrupoTarifarioPorDefecto(Sensei sensei) {
+        return grupoRepository.findBySensei(sensei).stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("El sensei no tiene grupos tarifarios definidos."));
+    }
+
+    @Transactional(readOnly = true)
+    public List<GrupoEntrenamiento> findBySenseiAndEsTarifario(Sensei sensei, boolean esTarifario) {
+        return grupoRepository.findBySenseiAndEsTarifario(sensei, esTarifario);
     }
 
 }

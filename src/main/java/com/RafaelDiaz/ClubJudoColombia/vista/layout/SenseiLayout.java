@@ -159,6 +159,7 @@ public class SenseiLayout extends AppLayout {
         agregarTab(tabs, getTexto("menu.senseis", "Profesores"), VaadinIcon.COGS, GestionSenseisView.class);
 
         agregarTab(tabs, getTexto("menu.backup", "Back up"), VaadinIcon.COGS, BackupView.class);
+        agregarTab(tabs, getTexto("menu.tarifas", "Tarifas"), VaadinIcon.CALC, GestionTarifasView.class);
         agregarTab(tabs, getTexto("admin.titulo", "Configuración"), VaadinIcon.COGS, AdministracionView.class);
 
         // --- SALIR ---

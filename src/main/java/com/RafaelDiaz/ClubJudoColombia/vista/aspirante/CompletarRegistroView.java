@@ -1,5 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.aspirante;
 
+import com.RafaelDiaz.ClubJudoColombia.modelo.Rol;
 import com.RafaelDiaz.ClubJudoColombia.modelo.TokenInvitacion;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
@@ -108,21 +109,27 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
 
         try {
             // Activar usuario y consumir token
-            Usuario usuario = admisionesService.activarInvitacionConPassword(tokenActual.getToken(), pass);
+            AdmisionesService.ActivationResult result = admisionesService.activarInvitacionConPassword(tokenActual.getToken(), pass);
+            Usuario usuario = result.getUsuario();
+            Long judokaId = result.getJudokaId();
+
+            // Si existe judoka y grupo, generar cobro de bienvenida (esto ya se hace en activarInvitacionConPassword)
+            // pero lo dejamos aquí si es necesario (nota: el servicio ya lo hace internamente)
+            if (judokaId != null && tokenActual.getGrupo() != null) {
+                // Opcional: si el servicio no lo hizo, se puede llamar. En el código actual ya se llama en el servicio,
+                // así que no es necesario repetir.
+            }
 
             // Autenticar automáticamente
             UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getUsername());
-            if (tokenActual.getJudoka() != null && tokenActual.getGrupo() != null) {
-                finanzasService.generarCobroBienvenida(tokenActual.getJudoka());
-            }
-            autenticarYRedirigir(userDetails);
+            autenticarYRedirigir(userDetails, judokaId);
 
         } catch (Exception e) {
             NotificationHelper.error(traduccionService.get("error.activacion") + ": " + e.getMessage());
         }
     }
 
-    private void autenticarYRedirigir(UserDetails userDetails) {
+    private void autenticarYRedirigir(UserDetails userDetails, Long judokaId) {
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContext context = SecurityContextHolder.createEmptyContext();
@@ -136,22 +143,30 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
         securityContextRepository.saveContext(context, request, null);
 
         // Redirigir según rol
-        String redirect = determinarRedireccion(usuarioActual);
+        String redirect = determinarRedireccion(usuarioActual, judokaId);
         UI.getCurrent().navigate(redirect);
     }
 
-    private String determinarRedireccion(Usuario usuario) {
-        if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_SENSEI"))) {
-            // Redirigir al formulario de completar perfil, pasando el token original
-            return "/completar-perfil-sensei/" + tokenActual.getToken();
-        } else if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"))) {
-            return "/mi-familia";
-        } else if (usuario.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_MECENAS"))) {
-            return "/dashboard-mecenas";
-        } else {
-            return "/";
-        }
+    private String determinarRedireccion(Usuario usuario, Long judokaId) {
+        // Extraemos el rol principal (el primero que coincida)
+        String rol = usuario.getRoles().stream()
+                .map(Rol::getNombre)
+                .filter(r -> r.equals("ROLE_SENSEI") ||
+                        r.equals("ROLE_ACUDIENTE") ||
+                        r.equals("ROLE_MECENAS") ||
+                        r.equals("ROLE_JUDOKA_ADULTO"))
+                .findFirst()
+                .orElse("");
+
+        return switch (rol) {
+            case "ROLE_SENSEI" -> "/completar-perfil-sensei/" + tokenActual.getToken();
+            case "ROLE_ACUDIENTE" -> "/mi-familia";
+            case "ROLE_MECENAS" -> "/dashboard-mecenas";
+            case "ROLE_JUDOKA_ADULTO" -> (judokaId != null) ? "/completar-perfil-judoka/" + judokaId : "/";
+            default -> "/";
+        };
     }
+
     private void mostrarError(String mensaje) {
         removeAll();
         add(new H2(traduccionService.get("error.titulo_ops")));

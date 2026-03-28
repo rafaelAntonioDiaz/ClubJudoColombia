@@ -208,15 +208,9 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
 
             if (grupo.getId() == null) {
                 // Crear nuevo grupo con los valores del formulario
-                grupoService.crearGrupo(
-                        sensei,
-                        grupo.getNombre(),
-                        grupo.getDescripcion(),
-                        grupo.getTarifaMensual(),
-                        grupo.isIncluyeMatricula(),
-                        grupo.getMontoMatricula(),
-                        grupo.getDiasGracia()
-                );
+                grupo = grupoService.crearGrupo(sensei, grupo.getNombre(), grupo.getDescripcion(),
+                        grupo.getTarifaMensual(), grupo.isIncluyeMatricula(),
+                        grupo.getMontoMatricula(), grupo.getDiasGracia(), false);
             } else {
                 // Actualizar grupo existente
                 grupoService.actualizarGrupo(
@@ -251,11 +245,13 @@ public class SenseiGruposView extends VerticalLayout implements Serializable {
 
     private Stream<GrupoEntrenamiento> fetchGrupos(Query<GrupoEntrenamiento, Void> query) {
         String filter = (currentFilter != null && currentFilter.nombre() != null) ? currentFilter.nombre() : "";
-        return grupoService.findAll(query.getOffset(), query.getLimit(), filter).stream();
+        // 🔧 Cambio: pasamos `false` para obtener solo grupos de entrenamiento
+        return grupoService.findAll(query.getOffset(), query.getLimit(), filter, false).stream();
     }
 
     private int countGrupos(Query<GrupoEntrenamiento, Void> query) {
         String filter = (currentFilter != null && currentFilter.nombre() != null) ? currentFilter.nombre() : "";
-        return (int) grupoService.count(filter);
+        // 🔧 Cambio: pasamos `false` para contar solo grupos de entrenamiento
+        return (int) grupoService.count(filter, false);
     }
 }

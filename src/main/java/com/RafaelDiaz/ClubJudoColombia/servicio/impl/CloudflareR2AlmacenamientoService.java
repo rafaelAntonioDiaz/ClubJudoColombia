@@ -49,19 +49,30 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
         String rutaEnNube = "judokas/" + judokaId + "/" + uniqueFileName;
 
         try {
+            String contentType = detectContentType(nombreOriginal);
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(rutaEnNube)
-                    .contentType("image/jpeg") // o detecta el tipo real
+                    .contentType(contentType)
                     .build();
 
             byte[] bytes = inputStream.readAllBytes();
             s3Client.putObject(request, RequestBody.fromBytes(bytes));
 
-            // ✅ Devuelve solo el nombre (¡esto es clave!)
             return uniqueFileName;
         } catch (Exception e) {
             throw new RuntimeException("Fallo al subir archivo", e);
+        }
+    }
+
+    private String detectContentType(String fileName) {
+        String ext = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+        switch (ext) {
+            case "pdf": return "application/pdf";
+            case "jpg":
+            case "jpeg": return "image/jpeg";
+            case "png": return "image/png";
+            default: return "application/octet-stream";
         }
     }
 
@@ -97,25 +108,20 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
 
     public String generarUrlSegura(String objectKey) {
         try {
-            // Validaciones críticas
-            if (bucketName == null) {
-                throw new IllegalStateException("bucketName no está inyectado. Revisa la propiedad cloudflare.r2.bucket-name");
-            }
-            if (objectKey == null || objectKey.isBlank()) {
-                throw new IllegalArgumentException("objectKey no puede ser nulo o vacío");
-            }
-            if (s3Presigner == null) {
-                throw new IllegalStateException("s3Presigner no está inyectado. Revisa la configuración de AWS SDK");
-            }
+            if (bucketName == null) throw new IllegalStateException("bucketName not set");
+            if (objectKey == null || objectKey.isBlank()) throw new IllegalArgumentException("objectKey empty");
+            if (s3Presigner == null) throw new IllegalStateException("s3Presigner not set");
 
+            String contentType = detectContentTypeFromKey(objectKey);
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(objectKey)
-                    // No incluyas responseContentType ni responseContentDisposition a menos que sean estrictamente necesarios
+                    .responseContentDisposition("inline")   // mostrar en línea, no descargar
+                    .responseContentType(contentType)
                     .build();
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofDays(7)) // 7 días de validez
+                    .signatureDuration(Duration.ofDays(7))
                     .getObjectRequest(getObjectRequest)
                     .build();
 
@@ -124,4 +130,14 @@ public class CloudflareR2AlmacenamientoService implements AlmacenamientoCloudSer
             throw new RuntimeException("Fallo al firmar el documento: " + objectKey, e);
         }
     }
-}
+
+    private String detectContentTypeFromKey(String key) {
+        String ext = key.substring(key.lastIndexOf('.') + 1).toLowerCase();
+        switch (ext) {
+            case "pdf": return "application/pdf";
+            case "jpg":
+            case "jpeg": return "image/jpeg";
+            case "png": return "image/png";
+            default: return "application/octet-stream";
+        }
+    }}

@@ -1,23 +1,26 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.judoka;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.Sexo;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
-import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService;
-import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.servicio.*;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.OptionalParameter;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.streams.UploadHandler;
@@ -27,11 +30,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.util.Optional;
 
-@PageTitle("Activación de Perfil | Club Judo Colombia")
+@PageTitle("Completar Perfil | Club Judo Colombia")
 @Route("completar-perfil-judoka")
-@RolesAllowed({"ROLE_JUDOKA", "ROLE_JUDOKA_ADULTO"})
-public class CompletarPerfilJudokaView extends VerticalLayout {
+@RolesAllowed({"ROLE_JUDOKA_ADULTO", "ROLE_MASTER", "ROLE_SENSEI"})
+public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlParameter<Long> {
 
     private static final Logger log = LoggerFactory.getLogger(CompletarPerfilJudokaView.class);
 
@@ -39,125 +44,273 @@ public class CompletarPerfilJudokaView extends VerticalLayout {
     private final AdmisionesService admisionesService;
     private final AlmacenamientoCloudService almacenamientoCloudService;
     private final JudokaRepository judokaRepository;
+    private final TraduccionService traduccionService;
+    private final ConfiguracionService configuracionService;
+    private final FinanzasService finanzasService;
 
-    private final Judoka judokaActual;
+    private Judoka judokaActual;
+    private Long judokaId;
+
+    // Componentes UI
+    private final H2 titulo = new H2();
+    private final Paragraph descripcion = new Paragraph();
+    private final FormLayout formDatos = new FormLayout();
+
+    private final DatePicker fechaNacimiento = new DatePicker();
+    private final ComboBox<Sexo> sexo = new ComboBox<>();
+    private final TextField peso = new TextField();
+    private final TextField estatura = new TextField();
+    private final TextField eps = new TextField();
+    private final TextField nombreContactoEmergencia = new TextField();
+    private final TextField telefonoEmergencia = new TextField();
+
+    // Documentos
+    private final VerticalLayout seccionDocumentos = new VerticalLayout();
+    private boolean waiverSubido = false;
+    private boolean epsSubido = false;
+    private String urlWaiver = null;
+    private String urlEps = null;
+
+    // Pago
+    private final VerticalLayout seccionPago = new VerticalLayout();
     private boolean pagoSubido = false;
-    private Button btnFinalizar;
+    private String urlComprobante = null;
+    private final Paragraph textoMontoPago = new Paragraph();
+
+    private final Button btnGuardar = new Button();
 
     public CompletarPerfilJudokaView(SecurityService securityService,
                                      AdmisionesService admisionesService,
                                      AlmacenamientoCloudService almacenamientoCloudService,
-                                     JudokaRepository judokaRepository) {
+                                     JudokaRepository judokaRepository,
+                                     TraduccionService traduccionService,
+                                     ConfiguracionService configuracionService,
+                                     FinanzasService finanzasService) {
         this.securityService = securityService;
         this.admisionesService = admisionesService;
         this.almacenamientoCloudService = almacenamientoCloudService;
         this.judokaRepository = judokaRepository;
+        this.traduccionService = traduccionService;
+        this.configuracionService = configuracionService;
+        this.finanzasService = finanzasService;
 
-        this.judokaActual = securityService.getAuthenticatedJudoka()
-                .orElseThrow(() -> new RuntimeException("Error: Ningún judoka ha iniciado sesión."));
-
-        configurarVista();
-    }
-
-    private void configurarVista() {
         setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);
 
+        // Configurar componentes
+        fechaNacimiento.setLabel(traduccionService.get("label.fecha_nacimiento"));
+        sexo.setLabel(traduccionService.get("label.sexo"));
+        sexo.setItems(Sexo.values());
+        sexo.setItemLabelGenerator(s -> traduccionService.get("sexo." + s.name().toLowerCase()));
+        peso.setLabel(traduccionService.get("label.peso_kg"));
+        estatura.setLabel(traduccionService.get("label.estatura_cm"));
+        eps.setLabel(traduccionService.get("label.eps"));
+        nombreContactoEmergencia.setLabel(traduccionService.get("label.contacto_emergencia"));
+        telefonoEmergencia.setLabel(traduccionService.get("label.telefono_emergencia"));
+
+        btnGuardar.setText(traduccionService.get("boton.guardar_enviar_revision"));
+        btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+        btnGuardar.addClickListener(e -> guardarYEnviarRevision());
+
         VerticalLayout card = new VerticalLayout();
-        card.addClassName("card-blanca"); // Reutiliza tu clase CSS
-        card.setMaxWidth("500px");
+        card.addClassName("card-blanca");
+        card.setMaxWidth("800px");
         card.setPadding(true);
-        card.setAlignItems(Alignment.CENTER);
-
-        H2 titulo = new H2("¡Bienvenido al Dojo!");
-        Paragraph subtitulo = new Paragraph("Para activar tu perfil y acceder a tu carnet digital, debes realizar el pago de tu primera mensualidad y adjuntar el comprobante.");
-        subtitulo.getStyle().set("text-align", "center");
-
-        // --- INSTRUCCIONES DE NEQUI ---
-        VerticalLayout infoNequi = new VerticalLayout();
-        infoNequi.setAlignItems(Alignment.CENTER);
-        infoNequi.getStyle().set("background-color", "var(--lumo-contrast-5pct)");
-        infoNequi.getStyle().set("border-radius", "8px");
-        infoNequi.setPadding(true);
-        infoNequi.setWidthFull();
-
-        Span textoNequi = new Span("Transfiere a nuestra cuenta Nequi oficial:");
-
-        // El número idealmente debería extraerse del Sensei asociado, pero usamos este placeholder por ahora.
-        H3 numeroNequi = new H3("📱 300 123 4567");
-        numeroNequi.getStyle().set("color", "#6710ba"); // Color representativo de Nequi
-        numeroNequi.getStyle().set("margin-top", "var(--lumo-space-s)");
-
-        infoNequi.add(textoNequi, numeroNequi);
-
-        // --- UPLOAD DEL COMPROBANTE ---
-        Upload uploadPago = configurarUploadComprobante();
-
-        btnFinalizar = new Button("Enviar a Revisión", VaadinIcon.CHECK_CIRCLE.create());
-        btnFinalizar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
-        btnFinalizar.setWidthFull();
-        btnFinalizar.setEnabled(false); // Permanece bloqueado hasta que la imagen esté en la nube
-
-        btnFinalizar.addClickListener(e -> finalizarOnboarding());
-
-        card.add(titulo, subtitulo, infoNequi, uploadPago, btnFinalizar);
+        card.add(titulo, descripcion, new H3(traduccionService.get("perfil.datos_personales")), formDatos);
+        card.add(new H3(traduccionService.get("perfil.documentos")), seccionDocumentos);
+        card.add(new H3(traduccionService.get("perfil.pago")), seccionPago);
+        card.add(btnGuardar);
         add(card);
     }
 
-    private Upload configurarUploadComprobante() {
+    @Override
+    public void setParameter(BeforeEvent event, @OptionalParameter Long judokaId) {
+        if (judokaId == null) {
+            // Si no se pasa ID, intentamos obtener el judoka autenticado
+            judokaActual = securityService.getAuthenticatedJudoka()
+                    .orElseThrow(() -> new RuntimeException("No se pudo identificar el judoka."));
+        } else {
+            this.judokaId = judokaId;
+            judokaActual = judokaRepository.findByIdWithDetails(judokaId)
+                    .orElseThrow(() -> new RuntimeException("Judoka no encontrado."));
+        }
+        cargarDatos();
+    }
+
+    private void cargarDatos() {
+        // Verificar permisos (el propio judoka o master/sensei)
+        Usuario usuarioActual = securityService.getAuthenticatedUsuario().orElse(null);
+        if (usuarioActual == null) {
+            getUI().ifPresent(ui -> ui.navigate(""));
+            return;
+        }
+        boolean puedeEditar = usuarioActual.equals(judokaActual.getAcudiente()) ||
+                (securityService.isMaster() || securityService.isSensei());
+        if (!puedeEditar) {
+            Notification.show("No tienes permiso para completar este perfil.").addThemeVariants(NotificationVariant.LUMO_ERROR);
+            getUI().ifPresent(ui -> ui.navigate(""));
+            return;
+        }
+
+        titulo.setText(traduccionService.get("perfil.completar.titulo", judokaActual.getNombre()));
+        descripcion.setText(traduccionService.get("perfil.completar.descripcion"));
+
+        // Cargar valores existentes
+        fechaNacimiento.setValue(judokaActual.getFechaNacimiento());
+        if (judokaActual.getSexo() != null) sexo.setValue(judokaActual.getSexo());
+        if (judokaActual.getPeso() != null) peso.setValue(String.valueOf(judokaActual.getPeso()));
+        if (judokaActual.getEstatura() != null) estatura.setValue(String.valueOf(judokaActual.getEstatura()));
+
+        // Asignar cadena vacía si el valor es null
+        eps.setValue(judokaActual.getEps() != null ? judokaActual.getEps() : "");
+        nombreContactoEmergencia.setValue(judokaActual.getNombreContactoEmergencia() != null ? judokaActual.getNombreContactoEmergencia() : "");
+        telefonoEmergencia.setValue(judokaActual.getTelefonoEmergencia() != null ? judokaActual.getTelefonoEmergencia() : "");
+
+        formDatos.add(fechaNacimiento, sexo, peso, estatura, eps, nombreContactoEmergencia, telefonoEmergencia);
+        formDatos.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1),
+                new FormLayout.ResponsiveStep("500px", 2));
+
+        // Determinar si es SaaS (pertenece a sensei externo) o dojo principal
+        boolean esSaaS = judokaActual.getSensei() != null &&
+                !judokaActual.getSensei().getUsuario().getUsername().equals("master_admin");
+
+        // Configurar sección de documentos (solo si no es SaaS)
+        if (!esSaaS) {
+            Upload uploadWaiver = crearComponenteSubida(traduccionService.get("perfil.subir_waiver"), url -> {
+                urlWaiver = url;
+                waiverSubido = true;
+            });
+            Upload uploadEps = crearComponenteSubida(traduccionService.get("perfil.subir_eps"), url -> {
+                urlEps = url;
+                epsSubido = true;
+            });
+            seccionDocumentos.add(uploadWaiver, uploadEps);
+        } else {
+            seccionDocumentos.add(new Span(traduccionService.get("perfil.saas.no_documentos")));
+        }
+
+        // Configurar sección de pago
+        GrupoEntrenamiento grupo = judokaActual.getGrupoFacturacion();
+        if (grupo == null) {
+            textoMontoPago.setText(traduccionService.get("perfil.pago.sin_grupo"));
+            seccionPago.add(textoMontoPago);
+        } else {
+            BigDecimal monto = grupo.getTarifaMensual();
+            if (monto == null || monto.compareTo(BigDecimal.ZERO) == 0) {
+                textoMontoPago.setText(traduccionService.get("perfil.pago.sin_costo"));
+                seccionPago.add(textoMontoPago);
+            } else {
+                String montoFormateado = configuracionService.obtenerFormatoMoneda().format(monto);
+                textoMontoPago.setText(traduccionService.get("perfil.pago.monto_esperado", montoFormateado));
+                Upload uploadPago = crearComponenteSubida(traduccionService.get("perfil.subir_comprobante"), url -> {
+                    urlComprobante = url;
+                    pagoSubido = true;
+                });
+                seccionPago.add(textoMontoPago, uploadPago);
+            }
+        }
+    }
+
+    private Upload crearComponenteSubida(String etiqueta, java.util.function.Consumer<String> onSuccess) {
         Upload upload = new Upload();
-        upload.setAcceptedFileTypes("image/png", ".png", "image/jpeg", ".jpg", ".jpeg");
-        upload.setMaxFileSize(10 * 1024 * 1024); // Límite de 10MB
-        upload.setDropLabel(new Span("Sube aquí la captura de pantalla de Nequi (.png o .jpg)"));
+        upload.setAcceptedFileTypes("application/pdf", ".pdf", "image/png", ".png", "image/jpeg", ".jpg");
+        upload.setMaxFileSize(10 * 1024 * 1024);
+        upload.setDropLabel(new Span(etiqueta));
         upload.setMaxFiles(1);
 
         upload.setUploadHandler(UploadHandler.inMemory((metadata, bytes) -> {
-            String originalFileName = metadata.fileName();
-            log.info("Iniciando subida de comprobante de pago: {}", originalFileName);
-
             try {
                 InputStream in = new ByteArrayInputStream(bytes);
-                String keyEnLaNube = almacenamientoCloudService.subirArchivo(judokaActual.getId(), originalFileName, in);
-                String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), keyEnLaNube);
-
-                // Vinculamos el comprobante al Judoka en la base de datos
-                admisionesService.cargarRequisito(judokaActual, TipoDocumento.COMPROBANTE_PAGO, urlEnLaNube);
+                // subirArchivo devuelve solo el nombre del archivo (ej. "uuid_nombre.pdf")
+                String nombreArchivo = almacenamientoCloudService.subirArchivo(judokaActual.getId(), metadata.fileName(), in);
+                // Construimos la clave completa que se guardará en BD
+                String claveCompleta = "judokas/" + judokaActual.getId() + "/" + nombreArchivo;
+                onSuccess.accept(claveCompleta);  // ✅ Guardamos la clave completa
 
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    Notification.show("¡Comprobante subido con éxito!", 3000, Notification.Position.TOP_CENTER)
+                    Notification.show("¡" + metadata.fileName() + " subido con éxito!", 3000, Notification.Position.TOP_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-
-                    pagoSubido = true;
-                    btnFinalizar.setEnabled(true);
                 }));
-
             } catch (Exception ex) {
-                log.error("Error al subir el comprobante", ex);
-                getUI().ifPresent(ui -> ui.access(() -> {
-                    Notification.show("Error al subir el archivo: " + ex.getMessage(), 4000, Notification.Position.TOP_CENTER)
-                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                }));
+                log.error("Error subiendo archivo", ex);
+                getUI().ifPresent(ui -> ui.access(() -> Notification.show("Error al subir archivo.", 4000, Notification.Position.TOP_CENTER)
+                        .addThemeVariants(NotificationVariant.LUMO_ERROR)));
             }
         }));
-
         return upload;
     }
 
-    private void finalizarOnboarding() {
+    private void guardarYEnviarRevision() {
+        // Validaciones
+        if (fechaNacimiento.getValue() == null) {
+            Notification.show(traduccionService.get("error.fecha_nacimiento_requerida")).addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+
+        boolean esSaaS = judokaActual.getSensei() != null &&
+                !judokaActual.getSensei().getUsuario().getUsername().equals("master_admin");
+
+        if (!esSaaS) {
+            if (!waiverSubido) {
+                Notification.show(traduccionService.get("error.waiver_requerido")).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+            if (!epsSubido) {
+                Notification.show(traduccionService.get("error.eps_requerido")).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+        }
+
+        GrupoEntrenamiento grupo = judokaActual.getGrupoFacturacion();
+        if (grupo != null && grupo.getTarifaMensual() != null && grupo.getTarifaMensual().compareTo(BigDecimal.ZERO) > 0) {
+            if (!pagoSubido) {
+                Notification.show(traduccionService.get("error.pago_requerido")).addThemeVariants(NotificationVariant.LUMO_ERROR);
+                return;
+            }
+        }
+
         try {
-            // Actualizamos el estado del Judoka para que el Sensei lo pueda auditar
+            // Actualizar datos personales
+            judokaActual.setFechaNacimiento(fechaNacimiento.getValue());
+            judokaActual.setSexo(sexo.getValue());
+            if (!peso.isEmpty()) judokaActual.setPeso(Double.parseDouble(peso.getValue()));
+            if (!estatura.isEmpty()) judokaActual.setEstatura(Double.parseDouble(estatura.getValue()));
+            judokaActual.setEps(eps.getValue());
+            judokaActual.setNombreContactoEmergencia(nombreContactoEmergencia.getValue());
+            judokaActual.setTelefonoEmergencia(telefonoEmergencia.getValue());
+
+            // Guardar documentos en DocumentoRequisito
+            if (waiverSubido) {
+                admisionesService.cargarRequisito(judokaActual, TipoDocumento.WAIVER, urlWaiver);
+            }
+            if (epsSubido) {
+                admisionesService.cargarRequisito(judokaActual, TipoDocumento.EPS, urlEps);
+            }
+            if (pagoSubido) {
+                admisionesService.cargarRequisito(judokaActual, TipoDocumento.COMPROBANTE_PAGO, urlComprobante);
+            }
+
+            // Si aún no se ha generado la cuenta de cobro, la generamos
+            boolean tieneCobro = finanzasService.obtenerDeudasPendientes(judokaActual.getAcudiente()).stream()
+                    .anyMatch(c -> c.getJudokaBeneficiario().getId().equals(judokaActual.getId()));
+            if (!tieneCobro && grupo != null && grupo.getTarifaMensual() != null && grupo.getTarifaMensual().compareTo(BigDecimal.ZERO) > 0) {
+                finanzasService.generarCobroBienvenida(judokaActual);
+            }
+
+            // Cambiar estado a EN_REVISION
             judokaActual.setEstado(EstadoJudoka.EN_REVISION);
             judokaRepository.save(judokaActual);
 
-            Notification.show("Tu pago está en revisión por el Sensei. ¡Pronto serás activado!", 5000, Notification.Position.MIDDLE)
+            Notification.show(traduccionService.get("perfil.guardado_exito"), 5000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
-            // Una vez en revisión, lo dirigimos a la vista general o a una sala de espera visual
-            getUI().ifPresent(ui -> ui.navigate(""));
+            // Redirigir a la página de espera
+            getUI().ifPresent(ui -> ui.navigate("espera-autorizacion"));
 
         } catch (Exception e) {
-            Notification.show("Error al finalizar: " + e.getMessage(), 4000, Notification.Position.TOP_CENTER)
+            log.error("Error guardando perfil", e);
+            Notification.show("Error al guardar: " + e.getMessage(), 5000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
     }

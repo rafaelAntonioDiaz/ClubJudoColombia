@@ -32,12 +32,16 @@ import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static org.reflections.Reflections.log;
 
 @Route(value = "admisiones", layout = SenseiLayout.class)
 @RolesAllowed("ROLE_MASTER")
@@ -50,7 +54,7 @@ public class ValidacionIngresoView extends VerticalLayout {
     private final TraduccionService traduccionService;
     private final FinanzasService finanzasService;
     private final CloudflareR2AlmacenamientoService cloudflareR2AlmacenamientoService;
-
+    private static final Logger log = LoggerFactory.getLogger(ValidacionIngresoView.class);
     private Grid<Judoka> gridDojoPrincipal;
     private Grid<Judoka> gridSaaS;
 
@@ -222,7 +226,10 @@ public class ValidacionIngresoView extends VerticalLayout {
     private Component crearComponenteWaiver(Judoka judoka) {
         Optional<DocumentoRequisito> waiverOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.WAIVER);
         if (waiverOpt.isPresent()) {
-            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(waiverOpt.get().getUrlArchivo());
+            String clave = waiverOpt.get().getUrlArchivo(); // ahora es la clave
+            log.info("Clave recuperada de BD: {}", clave);
+            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(clave); // genera URL temporal/firmada
+            log.info("URL segura generada: {}", urlSegura);
             Anchor link = new Anchor(urlSegura, traduccionService.get("btn.ver_pdf"));
             link.getElement().setAttribute("target", "_blank");
             Button btnVer = new Button(new Icon(VaadinIcon.FILE_TEXT));
@@ -239,24 +246,24 @@ public class ValidacionIngresoView extends VerticalLayout {
         }
     }
 
-// En ValidacionIngresoView, en el método crearComponentePago
-
     private Component crearComponentePago(Judoka judoka) {
         HorizontalLayout layout = new HorizontalLayout();
         layout.setAlignItems(Alignment.CENTER);
 
-        // Obtener el grupo (primer grupo)
-        grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId());
+        // Obtener el grupo de facturación directamente desde el judoka
+        GrupoEntrenamiento grupo = judoka.getGrupoFacturacion();
         String tarifaEsperada = "";
-        if (grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId()) != null && !grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId()).isEmpty()) {
-            GrupoEntrenamiento grupo = grupoEntrenamientoRepository.findByJudokas_Id(judoka.getId()).iterator().next();
+        if (grupo != null && grupo.getTarifaMensual() != null) {
             tarifaEsperada = "Esperado: $" + grupo.getTarifaMensual();
         }
 
         Optional<DocumentoRequisito> pagoOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.COMPROBANTE_PAGO);
 
         if (pagoOpt.isPresent()) {
-            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(pagoOpt.get().getUrlArchivo());
+            String clave = pagoOpt.get().getUrlArchivo();
+            log.info("Clave recuperada de BD: {}", clave);
+            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(clave);
+            log.info("URL segura generada: {}", urlSegura);
             Anchor link = new Anchor(urlSegura, "Ver Recibo Nequi");
             link.getElement().setAttribute("target", "_blank");
             Button btnVer = new Button(new Icon(VaadinIcon.PICTURE));
@@ -290,7 +297,10 @@ public class ValidacionIngresoView extends VerticalLayout {
     private Component crearComponenteEps(Judoka judoka) {
         Optional<DocumentoRequisito> epsOpt = obtenerDocumentoCompartido(judoka, TipoDocumento.EPS);
         if (epsOpt.isPresent()) {
-            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(epsOpt.get().getUrlArchivo());
+            String clave = epsOpt.get().getUrlArchivo(); // Clave almacenada
+            log.info("Clave recuperada de BD: {}", clave);
+            String urlSegura = cloudflareR2AlmacenamientoService.generarUrlSegura(clave);
+            log.info("URL segura generada: {}", urlSegura);
             Anchor link = new Anchor(urlSegura, traduccionService.get("btn.ver_pdf"));
             link.getElement().setAttribute("target", "_blank");
             Button btnVer = new Button(new Icon(VaadinIcon.AMBULANCE));

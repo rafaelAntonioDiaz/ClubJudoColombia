@@ -30,6 +30,9 @@ public class GrupoEntrenamiento implements Serializable {
     @Column(name = "descripcion")
     private String descripcion;
 
+    @Column(name = "es_tarifario", nullable = false)
+    private boolean esTarifario = false;
+
     @Column(name = "lugar_practica", length = 150)
     private String lugarPractica;
 
@@ -210,6 +213,14 @@ public class GrupoEntrenamiento implements Serializable {
 
     public void setDiasGracia(int diasGracia) {
         this.diasGracia = diasGracia;
+    }
+
+    public boolean isEsTarifario() {
+        return esTarifario;
+    }
+
+    public void setEsTarifario(boolean esTarifario) {
+        this.esTarifario = esTarifario;
     }
 
     // --- hashCode y equals ---

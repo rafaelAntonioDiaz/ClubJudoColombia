@@ -24,7 +24,7 @@ public class DocumentoRequisito {
     @NotNull(message = "{validation.doc.tipo_obligatorio}")
     private TipoDocumento tipo;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 2048)
     @NotBlank(message = "{validation.doc.archivo_obligatorio}")
     private String urlArchivo; // Ruta donde se guardó el PDF/Imagen
     /**
