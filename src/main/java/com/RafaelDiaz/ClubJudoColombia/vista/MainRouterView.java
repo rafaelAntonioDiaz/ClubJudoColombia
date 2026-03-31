@@ -88,7 +88,7 @@ public class MainRouterView extends VerticalLayout implements BeforeEnterObserve
 
             case "ROLE_MECENAS" -> event.forwardTo(MecenasDashboardView.class);
 
-            case "ROLE_JUDOKA" -> {
+            case "ROLE_JUDOKA","ROLE_JUDOKA_ADULTO" -> {
                 Optional<Judoka> judokaOpt = securityService.getAuthenticatedJudoka();
                 if (judokaOpt.isPresent() && judokaOpt.get().getEstado() == EstadoJudoka.ACTIVO) {
                     event.forwardTo(JudokaDashboardView.class);
@@ -110,6 +110,7 @@ public class MainRouterView extends VerticalLayout implements BeforeEnterObserve
         if (hasRole(userDetails, "ROLE_ACUDIENTE")) return "ROLE_ACUDIENTE";
         if (hasRole(userDetails, "ROLE_MECENAS")) return "ROLE_MECENAS";
         if (hasRole(userDetails, "ROLE_JUDOKA")) return "ROLE_JUDOKA";
+        if (hasRole(userDetails, "ROLE_JUDOKA_ADULTO")) return "ROLE_JUDOKA_ADULTO";
         return "SIN_ROL";
     }
 

@@ -6,6 +6,8 @@ import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -39,4 +41,21 @@ public interface GrupoEntrenamientoRepository extends JpaRepository<GrupoEntrena
             Long senseiId, String nombre, boolean esTarifario);
     List<GrupoEntrenamiento> findBySenseiAndEsTarifario(Sensei sensei, boolean esTarifario);
 
+    @Query("SELECT DISTINCT g FROM GrupoEntrenamiento g " +
+            "LEFT JOIN FETCH g.judokas j " +
+            "LEFT JOIN FETCH j.acudiente " +
+            "WHERE g.sensei = :sensei")
+    List<GrupoEntrenamiento> findBySenseiWithJudokas(@Param("sensei") Sensei sensei);
+    /**
+     * Busca todos los grupos de un sensei filtrados por esTarifario,
+     * haciendo JOIN FETCH de judokas y sus acudientes para evitar
+     * LazyInitializationException en la vista.
+     */
+    @Query("SELECT DISTINCT g FROM GrupoEntrenamiento g " +
+            "LEFT JOIN FETCH g.judokas j " +
+            "LEFT JOIN FETCH j.acudiente " +
+            "WHERE g.sensei = :sensei AND g.esTarifario = :esTarifario")
+    List<GrupoEntrenamiento> findBySenseiAndEsTarifarioWithJudokas(
+            @Param("sensei") Sensei sensei,
+            @Param("esTarifario") boolean esTarifario);
 }

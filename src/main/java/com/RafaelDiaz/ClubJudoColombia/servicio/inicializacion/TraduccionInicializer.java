@@ -1191,8 +1191,50 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "espera.usuario","Tu usuario para ingresar es tu correo electrónico", "Your username to log in is your email address", "Seu usuário para entrar é seu endereço de email");
         agregarSiNoExiste(lista, clavesExistentes, "menu.espera.autorizacion","Tu perfil está en revisión. Espera la activación.", "Your profile is under review. Wait for activation.", "Seu perfil está em revisão. Aguarde a ativação.");
         agregarSiNoExiste(lista, clavesExistentes,"menu.tarifas", "Tarifas", "Pricing", "Tarifas");
+// Etiquetas generales de datos personales
+        agregarSiNoExiste(lista, clavesExistentes, "label.fecha_nacimiento", "Fecha de Nacimiento", "Date of Birth", "Data de Nascimento");
+        agregarSiNoExiste(lista, clavesExistentes, "label.sexo", "Sexo", "Sex", "Sexo");
+        agregarSiNoExiste(lista, clavesExistentes, "label.peso_kg", "Peso (kg)", "Weight (kg)", "Peso (kg)");
+        agregarSiNoExiste(lista, clavesExistentes, "label.estatura_cm", "Estatura (cm)", "Height (cm)", "Altura (cm)");
+        agregarSiNoExiste(lista, clavesExistentes, "label.eps", "EPS", "Health Insurance (EPS)", "Plano de Saúde (EPS)");
+        agregarSiNoExiste(lista, clavesExistentes, "label.contacto_emergencia", "Nombre del Contacto de Emergencia", "Emergency Contact Name", "Nome do Contato de Emergência");
+        agregarSiNoExiste(lista, clavesExistentes, "label.telefono_emergencia", "Teléfono de Emergencia", "Emergency Phone", "Telefone de Emergência");
 
+// Claves dinámicas inferidas del enum Sexo
+        agregarSiNoExiste(lista, clavesExistentes, "sexo.masculino", "Masculino", "Male", "Masculino");
+        agregarSiNoExiste(lista, clavesExistentes, "sexo.femenino", "Femenino", "Female", "Feminino");
 
+// Títulos de secciones y botones
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.datos_personales", "Datos Personales", "Personal Data", "Dados Pessoais");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.documentos", "Documentos Requeridos", "Required Documents", "Documentos Necessários");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.pago", "Información de Pago", "Payment Information", "Informações de Pagamento");
+        agregarSiNoExiste(lista, clavesExistentes, "boton.guardar_enviar_revision", "Guardar y Enviar a Revisión", "Save and Submit for Review", "Salvar e Enviar para Revisão");
+
+// Textos de completar perfil (soportan parámetros como {0} o %s dependiendo de tu implementación)
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.completar.titulo", "Completar Perfil de {0}", "Complete Profile for {0}", "Completar Perfil de {0}");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.completar.descripcion", "Por favor, completa la información requerida para habilitar la participación en el dojo.", "Please complete the required information to enable participation in the dojo.", "Por favor, preencha as informações necessárias para habilitar a participação no dojo.");
+
+// Textos de documentos
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.subir_waiver", "Subir Exoneración (Waiver)", "Upload Waiver", "Enviar Termo de Responsabilidade (Waiver)");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.subir_eps", "Subir Certificado de EPS", "Upload Health Insurance Certificate", "Enviar Certificado do Plano de Saúde");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.saas.no_documentos", "No se requieren documentos físicos adicionales para este dojo.", "No additional physical documents are required for this dojo.", "Nenhum documento físico adicional é necessário para este dojo.");
+
+// Textos de pagos y facturación
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.pago.sin_grupo", "No tienes un grupo de entrenamiento asignado para facturación.", "You do not have a training group assigned for billing.", "Você não tem um grupo de treinamento atribuído para faturamento.");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.pago.sin_costo", "Tu grupo de entrenamiento no tiene costo de mensualidad.", "Your training group has no monthly fee.", "Seu grupo de treinamento não tem mensalidade.");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.pago.monto_esperado", "El monto de la mensualidad es de {0}", "The monthly fee amount is {0}", "O valor da mensalidade é de {0}");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.subir_comprobante", "Subir Comprobante de Pago", "Upload Payment Receipt", "Enviar Comprovante de Pagamento");
+
+// Notificaciones de error y éxito
+        agregarSiNoExiste(lista, clavesExistentes, "error.fecha_nacimiento_requerida", "La fecha de nacimiento es obligatoria.", "Date of birth is required.", "A data de nascimento é obrigatória.");
+        agregarSiNoExiste(lista, clavesExistentes, "error.waiver_requerido", "El documento de exoneración (Waiver) es obligatorio.", "The waiver document is required.", "O documento de isenção (Waiver) é obrigatório.");
+        agregarSiNoExiste(lista, clavesExistentes, "error.eps_requerido", "El certificado de la EPS es obligatorio.", "The health insurance certificate is required.", "O certificado do plano de saúde é obrigatório.");
+        agregarSiNoExiste(lista, clavesExistentes, "error.pago_requerido", "El comprobante de pago es obligatorio para tu grupo.", "The payment receipt is required for your group.", "O comprovante de pagamento é obrigatório para o seu grupo.");
+        agregarSiNoExiste(lista, clavesExistentes, "perfil.guardado_exito", "El perfil ha sido guardado y enviado a revisión con éxito.", "Profile successfully saved and submitted for review.", "Perfil salvo e enviado para revisão com sucesso.");
+// cambiar tarifa deportista
+        agregarSiNoExiste(lista, clavesExistentes, "tarifas.tooltip.gestionar_judokas","Gestionar judokas asignados","Manage assigned judokas","Gerenciar judokas atribuídos");
+        agregarSiNoExiste(lista, clavesExistentes, "tarifas.dialog.titulo=Judokas en grupo {0}","Judokas in group {0}","Judokas no grupo {0}","Judokas no grupo {0}");
+        agregarSiNoExiste(lista, clavesExistentes, "tarifas.msg.sin_judokas","No hay judokas asignados a este grupo tarifario.","There are no judokas assigned to this pricing group.","Não há judokas atribuídos a este grupo tarifário.");
 
 
         if (!lista.isEmpty()) {

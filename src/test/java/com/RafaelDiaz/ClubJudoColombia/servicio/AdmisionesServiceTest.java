@@ -1,15 +1,9 @@
 package com.RafaelDiaz.ClubJudoColombia.servicio;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.DocumentoRequisito;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Rol;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.DocumentoRequisitoRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.RolRepository;
-import com.RafaelDiaz.ClubJudoColombia.repositorio.UsuarioRepository;
+import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +24,8 @@ class AdmisionesServiceTest {
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private DocumentoRequisitoRepository documentoRepository;
     @Mock private RolRepository rolRepository;
+    @Mock private TraduccionService traduccionService;
+    @Mock private SenseiService senseiService;
 
     @InjectMocks
     private AdmisionesService admisionesService;
@@ -37,42 +33,57 @@ class AdmisionesServiceTest {
     @Test
     @DisplayName("Debe fallar si intenta activar sin Waiver")
     void activar_SinWaiver_LanzaExcepcion() {
-        // 1. PREPARAR: Judoka pagó pero NO tiene waiver
         Judoka novato = new Judoka();
         novato.setMatriculaPagada(true);
         novato.setEstado(EstadoJudoka.PENDIENTE);
 
-        // 2. & 3. ACTUAR Y VERIFICAR
+        when(traduccionService.get("error.admisiones.falta_waiver"))
+                .thenReturn("Falta cargar el Waiver");
+
         Exception ex = assertThrows(RuntimeException.class, () -> {
             admisionesService.activarJudoka(novato);
         });
 
-        assertTrue(ex.getMessage().contains("Falta cargar el Waiver"));
-        assertEquals(EstadoJudoka.PENDIENTE, novato.getEstado()); // No debió cambiar
+        assertTrue(ex.getMessage().contains("Waiver"));
+        assertEquals(EstadoJudoka.PENDIENTE, novato.getEstado());
     }
 
     @Test
     @DisplayName("Debe activar correctamente si cumple todo")
     void activar_TodoCumplido_Exito() {
-        // 1. PREPARAR
-        Usuario usuarioMock = new Usuario();
+        // 1. Preparar usuario del judoka (adulto)
+        Usuario usuarioJudoka = new Usuario();
+        usuarioJudoka.setUsername("test@test.com");
+        usuarioJudoka.setActivo(false);
 
+        // 2. Crear sensei de prueba (mock, no persistido)
+        Usuario usuarioSensei = new Usuario("sensei@test.com", "pass", "Sensei", "Test");
+        usuarioSensei.setActivo(true);
+        Sensei senseiTest = new Sensei();
+        senseiTest.setUsuario(usuarioSensei);
+        senseiTest.setNombreClub("Club Test");
+
+        // 3. Judoka adulto (tiene su propio usuario)
         Judoka aspirante = new Judoka();
-        aspirante.setAcudiente(usuarioMock);
+        aspirante.setSensei(senseiTest);
+        aspirante.setAcudiente(usuarioJudoka);
         aspirante.setMatriculaPagada(true);
-        // Le agregamos el Waiver
         aspirante.getDocumentos().add(new DocumentoRequisito(aspirante, TipoDocumento.WAIVER, "path/file.pdf"));
 
-        // Mock del Rol
+        // 4. Mockear repositorios
         Rol rolJudoka = new Rol("ROLE_JUDOKA");
         when(rolRepository.findByNombre("ROLE_JUDOKA")).thenReturn(Optional.of(rolJudoka));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        // 2. ACTUAR
+        // 5. Actuar
         admisionesService.activarJudoka(aspirante);
 
-        // 3. VERIFICAR
-        assertEquals(EstadoJudoka.ACTIVO, aspirante.getEstado(), "El estado debe cambiar a ACTIVO");
-        assertTrue(usuarioMock.isActivo(), "El usuario debe quedar habilitado para login");
+        // 6. Verificar
+        assertEquals(EstadoJudoka.ACTIVO, aspirante.getEstado());
+        assertTrue(usuarioJudoka.isActivo());
+        // Verificar que se asignó el rol
+        assertTrue(usuarioJudoka.getRoles().stream().anyMatch(r -> r.getNombre().equals("ROLE_JUDOKA")));
         verify(judokaRepository).save(aspirante);
+        verify(usuarioRepository).save(usuarioJudoka);
     }
 }

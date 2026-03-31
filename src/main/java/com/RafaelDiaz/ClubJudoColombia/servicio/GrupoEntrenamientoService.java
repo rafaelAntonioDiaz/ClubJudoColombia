@@ -304,5 +304,41 @@ public class GrupoEntrenamientoService {
     public List<GrupoEntrenamiento> findBySenseiAndEsTarifario(Sensei sensei, boolean esTarifario) {
         return grupoRepository.findBySenseiAndEsTarifario(sensei, esTarifario);
     }
+    // GrupoEntrenamientoService.java
+    @Transactional(readOnly = true)
+    public List<GrupoEntrenamiento> findBySenseiWithJudokas(Sensei sensei) {
+        return grupoRepository.findBySenseiWithJudokas(sensei);
+    }
 
+    @Transactional
+    public void cambiarGrupoFacturacionJudoka(Long judokaId, Long nuevoGrupoTarifarioId) {
+        Judoka judoka = judokaRepository.findById(judokaId)
+                .orElseThrow(() -> new RuntimeException("Judoka no encontrado"));
+        GrupoEntrenamiento nuevoGrupo = grupoRepository.findById(nuevoGrupoTarifarioId)
+                .orElseThrow(() -> new RuntimeException("Grupo tarifario no encontrado"));
+
+        // Validar que el sensei sea el mismo
+        if (!judoka.getSensei().equals(nuevoGrupo.getSensei())) {
+            throw new RuntimeException("No puedes cambiar a un grupo de otro sensei");
+        }
+        if (!nuevoGrupo.isEsTarifario()) {
+            throw new RuntimeException("El grupo seleccionado no es tarifario");
+        }
+
+        judoka.setGrupoFacturacion(nuevoGrupo);
+        judokaRepository.save(judoka);
+    }
+
+    /**
+     * Devuelve los grupos de un sensei filtrados por tipo (deportivo o tarifario),
+     * con los judokas y acudientes ya cargados para evitar LazyInitializationException.
+     *
+     * @param sensei      el sensei propietario de los grupos
+     * @param esTarifario false = grupos deportivos, true = planes tarifarios
+     * @return lista de grupos con judokas inicializados
+     */
+    public List<GrupoEntrenamiento> findBySenseiAndEsTarifarioWithJudokas(
+            Sensei sensei, boolean esTarifario) {
+        return grupoRepository.findBySenseiAndEsTarifarioWithJudokas(sensei, esTarifario);
+    }
 }

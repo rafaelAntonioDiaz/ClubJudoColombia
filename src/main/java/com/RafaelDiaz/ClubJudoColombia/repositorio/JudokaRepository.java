@@ -57,7 +57,7 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
     @Query("SELECT j FROM Judoka j " +
             "LEFT JOIN FETCH j.acudiente " +
             "LEFT JOIN FETCH j.sensei s " +
-            "LEFT JOIN FETCH s.usuario " +  // <-- NUEVO
+            "LEFT JOIN FETCH s.usuario " +
             "WHERE j.id = :id")
     Optional<Judoka> findByIdWithDetails(@Param("id") Long id);
 
@@ -73,5 +73,6 @@ public interface JudokaRepository extends JpaRepository<Judoka, Long> {
     List<Judoka> findBySensei(Sensei sensei);
 
     List<Judoka> findByGrupoFacturacionAndEstado(GrupoEntrenamiento grupo, EstadoJudoka estadoJudoka);
-
+    @Query("SELECT j FROM Judoka j LEFT JOIN FETCH j.acudiente WHERE j.grupoFacturacion = :grupo")
+    List<Judoka> findByGrupoFacturacionWithAcudiente(@Param("grupo") GrupoEntrenamiento grupo);
 }

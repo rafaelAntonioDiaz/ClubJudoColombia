@@ -2,6 +2,7 @@ package com.RafaelDiaz.ClubJudoColombia.servicio;
 
 import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
+import com.RafaelDiaz.ClubJudoColombia.modelo.enums.GradoCinturon;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.*;
 import org.hibernate.Hibernate;
@@ -12,10 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +22,7 @@ public class AdmisionesService {
     private final EmailService emailService;
     private final ConfiguracionService configuracionService;
     private final GrupoEntrenamientoService grupoService;
+    private final SenseiService senseiRepo;
     private final JudokaRepository judokaRepository;
     private final UsuarioRepository usuarioRepository;
     private final DocumentoRequisitoRepository documentoRepository;
@@ -37,7 +36,7 @@ public class AdmisionesService {
     private static final Logger logger = LoggerFactory.getLogger(AdmisionesService.class);
     private final FinanzasService finanzasService;
 
-    public AdmisionesService(SecurityService securityService, ConfiguracionService configuracionService, GrupoEntrenamientoService grupoService, JudokaRepository judokaRepository,
+    public AdmisionesService(SecurityService securityService, ConfiguracionService configuracionService, GrupoEntrenamientoService grupoService, SenseiService senseiRepo, JudokaRepository judokaRepository,
                              UsuarioRepository usuarioRepository,
                              DocumentoRequisitoRepository documentoRepository,
                              RolRepository rolRepository, GrupoEntrenamientoRepository grupoRepository,
@@ -48,6 +47,7 @@ public class AdmisionesService {
         this.securityService = securityService;
         this.configuracionService = configuracionService;
         this.grupoService = grupoService;
+        this.senseiRepo = senseiRepo;
         this.judokaRepository = judokaRepository;
         this.usuarioRepository = usuarioRepository;
         this.documentoRepository = documentoRepository;
@@ -106,8 +106,9 @@ public class AdmisionesService {
 // Asignar rol
         Rol rol = rolRepository.findByNombre(rolEsperado)
                 .orElseThrow(() -> new RuntimeException("El rol " + rolEsperado + " no existe."));
-        usuarioInvitado.setRoles(Set.of(rol));
-
+        Set<Rol> roles = new HashSet<>();
+        roles.add(rol);
+        usuarioInvitado.setRoles(roles);
 // ✅ Si es acudiente y se proporcionó grupo, guardamos el grupo en el usuario
         // Si es acudiente y se proporcionó grupo, guardamos el grupo en el usuario (para herencia)
         if ("ROLE_ACUDIENTE".equals(rolEsperado) && grupo != null) {
@@ -119,20 +120,19 @@ public class AdmisionesService {
         // 5. Crear Judoka si el rol lo requiere
         Judoka judokaVinculado = null;
         if ("ROLE_JUDOKA".equals(rolEsperado) || "ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
-
             judokaVinculado = new Judoka();
 
             if ("ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
                 // Adulto: el acudiente es él mismo
                 judokaVinculado.setAcudiente(usuarioInvitado);
+                // ✅ NUEVO: asignar nombre y apellido al judoka a partir del usuario
+                judokaVinculado.setNombre(usuarioInvitado.getNombre());
+                judokaVinculado.setApellido(usuarioInvitado.getApellido());
             } else {
                 // Menor: el acudiente es el usuario que se está creando (el padre/madre)
-                // Nota: En este flujo, el usuario invitado es el acudiente, no el judoka.
-                // El judoka menor no tiene usuario propio, solo el acudiente.
-                // Por lo tanto, NO debemos crear un usuario para el menor. El usuario ya es el acudiente.
-                // Pero aquí estamos creando un judoka asociado al acudiente, eso está bien.
                 judokaVinculado.setAcudiente(usuarioInvitado);
             }
+
             if (grupo != null) {
                 judokaVinculado.setGrupoFacturacion(grupo);
                 judokaVinculado.setGrupo(grupo);
@@ -218,11 +218,9 @@ public class AdmisionesService {
     public void activarJudoka(Judoka judoka) {
         List<String> faltantes = new ArrayList<>();
 
-        // Identificar si es SaaS o alumno directo del Master
-        boolean esSaaS = judoka.getSensei() != null && !judoka.getSensei().getUsuario().getUsername().equals("master_admin");
+        boolean esSaaS = judoka.getSensei() != null &&
+                !judoka.getSensei().getUsuario().getUsername().equals("master_admin");
 
-        // --- LA TRINIDAD DEL DOJO PRINCIPAL ---
-        // Solo exigimos Waiver y EPS si NO es SaaS
         if (!esSaaS) {
             boolean tieneWaiver = judoka.getDocumentos().stream()
                     .anyMatch(d -> d.getTipo() == TipoDocumento.WAIVER);
@@ -238,23 +236,37 @@ public class AdmisionesService {
             }
         }
 
-        // --- REQUISITO UNIVERSAL ---
-        // El pago sí es obligatorio para absolutamente todos
         if (!judoka.isMatriculaPagada()) {
             faltantes.add(traduccionService.get("error.admisiones.falta_pago"));
         }
 
-        // Si falta algo, bloqueamos la activación y mostramos la lista exacta de lo que falta
         if (!faltantes.isEmpty()) {
             throw new RuntimeException(traduccionService.get("error.admisiones.requisitos_incompletos") + ": " + String.join(", ", faltantes));
         }
 
-        // --- SI PASA TODAS LAS PRUEBAS, LO ACTIVAMOS ---
-        judoka.setEstado(EstadoJudoka.ACTIVO);
+        // Determinar el usuario a activar
+        Usuario usuario = null;
+        if (judoka.getUsuario() != null) {
+            // Judoka adulto (tiene su propio usuario)
+            usuario = judoka.getUsuario();
+            // Asegurar que tenga el rol de judoka si es adulto
+            if (usuario.getRoles().stream().noneMatch(r -> r.getNombre().equals("ROLE_JUDOKA"))) {
+                Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
+                        .orElseThrow(() -> new RuntimeException("Rol ROLE_JUDOKA no encontrado"));
+                Set<Rol> nuevosRoles = new HashSet<>(usuario.getRoles());
+                nuevosRoles.add(rolJudoka);
+                usuario.setRoles(nuevosRoles);
+            }
+        } else if (judoka.getAcudiente() != null) {
+            // Judoka menor: el usuario es el acudiente (padre/madre)
+            usuario = judoka.getAcudiente();
+            // No se le asigna el rol de judoka, ya debería tener ROLE_ACUDIENTE u otro
+        } else {
+            throw new RuntimeException("No se pudo determinar el usuario a activar");
+        }
 
-        Usuario usuario = judoka.getUsuario();
-        // NO reasignamos roles, ya vienen correctos desde la invitación
         usuario.setActivo(true);
+        judoka.setEstado(EstadoJudoka.ACTIVO);
 
         usuarioRepository.save(usuario);
         judokaRepository.save(judoka);
@@ -281,20 +293,33 @@ public class AdmisionesService {
     }
 
     /**
-     * Helper para pruebas o creación manual
+     * Helper para pruebas
+     */
+    // En AdmisionesService.java
+
+    /**
+     * Helper para pruebas. Crea un aspirante (judoka menor) con su usuario acudiente.
+     * @param sensei Sensei que invita (puede ser null, pero se recomienda pasarlo para cumplir NOT NULL)
      */
     @Transactional
-    public String crearAspiranteYGenerarToken(String nombre, String apellido, String email) {
+    public String crearAspiranteYGenerarToken(String nombre, String apellido, String email, Sensei sensei) {
         Usuario nuevoUsuario = new Usuario(email, "PENDIENTE", nombre, apellido);
         nuevoUsuario.setEmail(email);
         nuevoUsuario.setUsername(email);
-
         nuevoUsuario.setActivo(false);
+        // Asignar rol de ACUDIENTE
+        Rol rolAcudiente = rolRepository.findByNombre("ROLE_ACUDIENTE")
+                .orElseThrow(() -> new RuntimeException("Rol ROLE_ACUDIENTE no encontrado"));
+        Set<Rol> roles = new HashSet<>();
+        roles.add(rolAcudiente);
+        nuevoUsuario.setRoles(roles);
         usuarioRepository.save(nuevoUsuario);
 
         Judoka nuevoJudoka = new Judoka();
         nuevoJudoka.setAcudiente(nuevoUsuario);
-        nuevoJudoka.setSensei(securityService.getAuthenticatedSensei().get());
+        if (sensei != null) {
+            nuevoJudoka.setSensei(sensei);   // 🔧 Asignamos sensei si se proporciona
+        }
         nuevoJudoka.setEstado(EstadoJudoka.PENDIENTE);
         judokaRepository.save(nuevoJudoka);
 
@@ -305,6 +330,11 @@ public class AdmisionesService {
         return token.getToken();
     }
 
+    // Overload para mantener compatibilidad con otros tests que no necesitan sensei
+    public String crearAspiranteYGenerarToken(String nombre, String apellido, String email) {
+        return crearAspiranteYGenerarToken(nombre, apellido, email, null);
+    }
+
     @Transactional
     public void consumirToken(String uuid) {
         TokenInvitacion token = tokenRepository.findByToken(uuid)
@@ -312,9 +342,101 @@ public class AdmisionesService {
         token.setUsado(true);
         tokenRepository.save(token);
     }
-    // En AdmisionesService.java
 
+
+    @Transactional(readOnly = true)
+    public List<Judoka> obtenerJudokasParaValidacion() {
+        // 1. Buscamos solo los que nos interesan
+        List<Judoka> lista = judokaRepository.findAll().stream()
+                .filter(j -> j.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.EN_REVISION ||
+                        j.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.PENDIENTE)
+                .collect(java.util.stream.Collectors.toList());
+
+        for (Judoka j : lista) {
+            // Despertamos Sensei y su Usuario
+            if (j.getSensei() != null && j.getSensei().getUsuario() != null) {
+                j.getSensei().getUsuario().getUsername();
+                j.getSensei().getUsuario().getNombre();
+            }
+
+            try {
+                if (j.getUsuario() != null) {
+                    j.getUsuario().getNombre();
+                }
+            } catch (Exception ignored) { }
+
+            if (j.getDocumentos() != null) {
+                j.getDocumentos().size(); // Llamar a .size() obliga a Hibernate a traer los documentos
+            }
+            if (j.getGrupoFacturacion() != null) {
+                Hibernate.initialize(j.getGrupoFacturacion());
+            }
+        }
+        return lista;
+    }
+    // Solo valida que el token sea válido, sin activar ni consumir
+    @Transactional(readOnly = true)
+    public TokenInvitacion validarTokenInvitacion(String tokenUuid) {
+        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
+                .orElseThrow(() -> new RuntimeException("Token inválido."));
+        if (!token.isValido()) {
+            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
+        }
+
+        // Inicializar usuario y roles
+        Usuario usuario = token.getUsuarioInvitado();
+        Hibernate.initialize(usuario);
+        Hibernate.initialize(usuario.getRoles());
+
+        // ✅ Inicializar el sensei que invitó (si existe)
+        if (token.getSensei() != null) {
+            Hibernate.initialize(token.getSensei());
+        }
+
+        return token;
+    }
+
+    // Activa la cuenta después de que el usuario eligió su contraseña
     @Transactional
+    public ActivationResult activarInvitacionConPassword(String tokenUuid, String password) {
+        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
+                .orElseThrow(() -> new RuntimeException("Token inválido."));
+        if (!token.isValido()) {
+            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
+        }
+        Usuario usuario = token.getUsuarioInvitado();
+        usuario.setPasswordHash(passwordEncoder.encode(password));
+        usuario.setActivo(true);
+        usuarioRepository.save(usuario);
+
+        Judoka judoka = token.getJudoka();
+        Long judokaId = null;
+        if (judoka != null) {
+            // Forzar carga de relaciones necesarias (aunque no se usen aquí, se inicializan)
+            Hibernate.initialize(judoka);
+            Hibernate.initialize(judoka.getAcudiente());
+            Hibernate.initialize(judoka.getGrupoFacturacion());
+            Hibernate.initialize(judoka.getGrupo());
+            Hibernate.initialize(judoka.getSensei());
+            Hibernate.initialize(judoka.getMecenas());
+            judokaId = judoka.getId();
+        }
+        return new ActivationResult(usuario, judokaId);
+    }
+
+    // Clase auxiliar (puede ser un record)
+    public static class ActivationResult {
+        private final Usuario usuario;
+        private final Long judokaId;
+        public ActivationResult(Usuario usuario, Long judokaId) {
+            this.usuario = usuario;
+            this.judokaId = judokaId;
+        }
+        public Usuario getUsuario() { return usuario; }
+        public Long getJudokaId() { return judokaId; }
+    }
+}
+/** @Transactional
     public void registrarJudokaAdulto(String nombre, String apellido, String email, String telefono, String nombreEmergencia, String telEmergencia) {
 
         // 1. BUSCAR EL ROL EN LA BD (No puedes asignar el String directo)
@@ -360,114 +482,22 @@ public class AdmisionesService {
      * Validación de Onboarding.
      * Lee el token, activa el usuario y quema la invitación.
      */
-    @Transactional
-    public Usuario validarYActivarInvitacion(String tokenUuid) {
-        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
-                .orElseThrow(() -> new RuntimeException("Token inválido o no existe."));
+/**
+@Transactional
+public Usuario validarYActivarInvitacion(String tokenUuid) {
+    TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
+            .orElseThrow(() -> new RuntimeException("Token inválido o no existe."));
 
-        if (!token.isValido()) {
-            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
-        }
-
-        Usuario usuario = token.getUsuarioInvitado();
-        usuario.setActivo(true);
-        usuarioRepository.save(usuario);
-        token.setUsado(true);
-        tokenRepository.save(token);
-        usuario.getRoles().size();
-        return usuario;
+    if (!token.isValido()) {
+        throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
     }
 
-    @Transactional(readOnly = true)
-    public List<Judoka> obtenerJudokasParaValidacion() {
-        // 1. Buscamos solo los que nos interesan
-        List<Judoka> lista = judokaRepository.findAll().stream()
-                .filter(j -> j.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.EN_REVISION ||
-                        j.getEstado() == com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka.PENDIENTE)
-                .collect(java.util.stream.Collectors.toList());
-
-        for (Judoka j : lista) {
-            // Despertamos Sensei y su Usuario
-            if (j.getSensei() != null && j.getSensei().getUsuario() != null) {
-                j.getSensei().getUsuario().getUsername();
-                j.getSensei().getUsuario().getNombre();
-            }
-
-            try {
-                if (j.getUsuario() != null) {
-                    j.getUsuario().getNombre();
-                }
-            } catch (Exception ignored) { }
-
-            if (j.getDocumentos() != null) {
-                j.getDocumentos().size(); // Llamar a .size() obliga a Hibernate a traer los documentos
-            }
-            if (j.getGrupoFacturacion() != null) {
-                Hibernate.initialize(j.getGrupoFacturacion());
-            }
-        }
-        return lista;
-    }
-    // Solo valida que el token sea válido, sin activar ni consumir
-    @Transactional(readOnly = true)
-    public TokenInvitacion validarTokenInvitacion(String tokenUuid) {
-        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
-                .orElseThrow(() -> new RuntimeException(
-                        traduccionService.get("error.token_invalido") // o mensaje directo
-                ));
-        if (!token.isValido()) {
-            throw new RuntimeException(traduccionService.get("error.token_expirado"));
-        }
-
-        // Inicializar el usuario y sus roles dentro de la transacción
-        Usuario usuario = token.getUsuarioInvitado();
-        Hibernate.initialize(usuario);
-        Hibernate.initialize(usuario.getRoles()); // si roles son lazy
-
-        return token;
-    }
-
-    // Activa la cuenta después de que el usuario eligió su contraseña
-    @Transactional
-    public ActivationResult activarInvitacionConPassword(String tokenUuid, String password) {
-        TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
-                .orElseThrow(() -> new RuntimeException("Token inválido."));
-        if (!token.isValido()) {
-            throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
-        }
-        Usuario usuario = token.getUsuarioInvitado();
-        usuario.setPasswordHash(passwordEncoder.encode(password));
-        usuario.setActivo(true);
-        usuarioRepository.save(usuario);
-
-        Judoka judoka = token.getJudoka();
-        Long judokaId = null;
-        if (judoka != null) {
-            // Forzar carga de relaciones necesarias (aunque no se usen aquí, se inicializan)
-            Hibernate.initialize(judoka);
-            Hibernate.initialize(judoka.getAcudiente());
-            Hibernate.initialize(judoka.getGrupoFacturacion());
-            Hibernate.initialize(judoka.getGrupo());
-            Hibernate.initialize(judoka.getSensei());
-            Hibernate.initialize(judoka.getMecenas());
-            judokaId = judoka.getId();
-        }
-
-        token.setUsado(true);
-        tokenRepository.save(token);
-
-        return new ActivationResult(usuario, judokaId);
-    }
-
-    // Clase auxiliar (puede ser un record)
-    public static class ActivationResult {
-        private final Usuario usuario;
-        private final Long judokaId;
-        public ActivationResult(Usuario usuario, Long judokaId) {
-            this.usuario = usuario;
-            this.judokaId = judokaId;
-        }
-        public Usuario getUsuario() { return usuario; }
-        public Long getJudokaId() { return judokaId; }
-    }
+    Usuario usuario = token.getUsuarioInvitado();
+    usuario.setActivo(true);
+    usuarioRepository.save(usuario);
+    token.setUsado(true);
+    tokenRepository.save(token);
+    usuario.getRoles().size();
+    return usuario;
 }
+*/

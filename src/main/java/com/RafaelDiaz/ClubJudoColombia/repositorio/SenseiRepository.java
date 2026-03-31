@@ -28,4 +28,5 @@ public interface SenseiRepository extends JpaRepository<Sensei, Long> {
     List<Sensei> findBySaldoWalletGreaterThan(BigDecimal saldo);
     @Query("SELECT s FROM Sensei s LEFT JOIN FETCH s.usuario WHERE s.id = :id")
     Optional<Sensei> findByIdWithUsuario(@Param("id") Long id);
+
 }

@@ -100,6 +100,9 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
 
         // Configurar componentes
         fechaNacimiento.setLabel(traduccionService.get("label.fecha_nacimiento"));
+        fechaNacimiento.setRequired(true);  // si es obligatorio
+        fechaNacimiento.setWidthFull();
+
         sexo.setLabel(traduccionService.get("label.sexo"));
         sexo.setItems(Sexo.values());
         sexo.setItemLabelGenerator(s -> traduccionService.get("sexo." + s.name().toLowerCase()));
@@ -157,7 +160,7 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
         descripcion.setText(traduccionService.get("perfil.completar.descripcion"));
 
         // Cargar valores existentes
-        fechaNacimiento.setValue(judokaActual.getFechaNacimiento());
+        if (judokaActual.getFechaNacimiento() != null) fechaNacimiento.setValue(judokaActual.getFechaNacimiento());
         if (judokaActual.getSexo() != null) sexo.setValue(judokaActual.getSexo());
         if (judokaActual.getPeso() != null) peso.setValue(String.valueOf(judokaActual.getPeso()));
         if (judokaActual.getEstatura() != null) estatura.setValue(String.valueOf(judokaActual.getEstatura()));
@@ -166,8 +169,15 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
         eps.setValue(judokaActual.getEps() != null ? judokaActual.getEps() : "");
         nombreContactoEmergencia.setValue(judokaActual.getNombreContactoEmergencia() != null ? judokaActual.getNombreContactoEmergencia() : "");
         telefonoEmergencia.setValue(judokaActual.getTelefonoEmergencia() != null ? judokaActual.getTelefonoEmergencia() : "");
-
-        formDatos.add(fechaNacimiento, sexo, peso, estatura, eps, nombreContactoEmergencia, telefonoEmergencia);
+        formDatos.removeAll();    // Configurar y agregar cada campo individualmente
+        fechaNacimiento.setVisible(true);
+        formDatos.add(fechaNacimiento);
+        formDatos.add(sexo);
+        formDatos.add(peso);
+        formDatos.add(estatura);
+        formDatos.add(eps);
+        formDatos.add(nombreContactoEmergencia);
+        formDatos.add(telefonoEmergencia);
         formDatos.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("500px", 2));
 
@@ -207,6 +217,7 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
                     urlComprobante = url;
                     pagoSubido = true;
                 });
+
                 seccionPago.add(textoMontoPago, uploadPago);
             }
         }

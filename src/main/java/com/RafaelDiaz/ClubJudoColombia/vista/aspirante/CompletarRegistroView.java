@@ -159,7 +159,7 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
                 .orElse("");
 
         return switch (rol) {
-            case "ROLE_SENSEI" -> "/completar-perfil-sensei/" + tokenActual.getToken();
+            case "ROLE_SENSEI" -> "/completar-perfil-sensei/" + tokenActual.getToken(); // ✅ Agregar token
             case "ROLE_ACUDIENTE" -> "/mi-familia";
             case "ROLE_MECENAS" -> "/dashboard-mecenas";
             case "ROLE_JUDOKA_ADULTO" -> (judokaId != null) ? "/completar-perfil-judoka/" + judokaId : "/";

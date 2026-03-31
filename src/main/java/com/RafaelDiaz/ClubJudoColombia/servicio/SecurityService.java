@@ -148,6 +148,7 @@ public class SecurityService {
                         .anyMatch(auth -> auth.getAuthority().equals("ROLE_MASTER")))
                 .orElse(false);
     }
+
     /**
      * MAGIA MULTI-TENANT: Obtiene el ID del Sensei logueado.
      * Si ya está en la caché de la sesión, lo devuelve al instante.
