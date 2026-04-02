@@ -150,7 +150,7 @@ public class GestorInvitacionesView extends VerticalLayout {
         comboTipoSensei.setVisible(isSensei);
         porcentajeComision.setVisible(isSensei);
 
-        boolean requiereGrupo = "ROLE_JUDOKA_ADULTO".equals(rol);
+        boolean requiereGrupo = "ROLE_JUDOKA_ADULTO".equals(rol) || "ROLE_ACUDIENTE".equals(rol);
         comboTarifas.setVisible(requiereGrupo);
 
         if (requiereGrupo) {

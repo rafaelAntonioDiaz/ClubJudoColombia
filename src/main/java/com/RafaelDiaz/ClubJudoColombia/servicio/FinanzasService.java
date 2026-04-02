@@ -333,7 +333,7 @@ public class FinanzasService {
     }
 
     public List<CuentaCobro> obtenerDeudasPendientes(Usuario usuario) {
-        return cuentaCobroRepo.findByResponsablePagoAndEstado(usuario, EstadoPago.PENDIENTE);
+        return cuentaCobroRepo.findByResponsablePagoAndEstadoWithJudoka(usuario, EstadoPago.PENDIENTE);
     }
 
     public BigDecimal calcularDeudaTotal(Usuario usuario) {

@@ -239,7 +239,6 @@ public class JudokaService {
         if (grupo == null) {
             grupo = acudiente.getGrupoTarifario();
             if (grupo == null) {
-                // Fallback: primer grupo del sensei que invitó al acudiente
                 Sensei senseiInvitador = acudiente.getSenseiInvitador();
                 if (senseiInvitador == null) {
                     throw new RuntimeException("No se pudo determinar el sensei responsable. Contacte al administrador.");
@@ -250,6 +249,17 @@ public class JudokaService {
                 }
                 grupo = gruposSensei.get(0);
             }
+        }
+
+        // ✅ Inicializar el grupo (y su sensei) antes de acceder a sus propiedades perezosas
+        // Si el grupo es un proxy o está detached, lo volvemos a buscar gestionado
+        Long grupoId = grupo.getId();
+        grupo = grupoRepository.findById(grupoId)
+                .orElseThrow(() -> new RuntimeException("Grupo no encontrado con ID: " + grupoId));
+        // Ahora grupo está gestionado por la sesión actual
+        Hibernate.initialize(grupo);
+        if (grupo.getSensei() != null) {
+            Hibernate.initialize(grupo.getSensei());
         }
 
         Sensei sensei = grupo.getSensei();
@@ -271,6 +281,7 @@ public class JudokaService {
 
         return judoka;
     }
+
     @Transactional(readOnly = true)
     public Judoka findByIdWithDetails(Long id) {
         // Usa un query con JOIN FETCH para evitar proxies

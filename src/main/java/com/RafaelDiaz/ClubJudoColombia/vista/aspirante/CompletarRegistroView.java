@@ -71,10 +71,22 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
         try {
             tokenActual = admisionesService.validarTokenInvitacion(tokenUuid);
             usuarioActual = tokenActual.getUsuarioInvitado();
+
+            // ✅ Si es acudiente, redirigir directamente a CompletarPerfilAcudienteView
+            if (esAcudiente()) {
+                UI.getCurrent().navigate("/completar-perfil-acudiente?token=" + tokenUuid);
+                return;
+            }
+
             construirFormulario();
         } catch (RuntimeException e) {
             mostrarError(e.getMessage());
         }
+    }
+
+    private boolean esAcudiente() {
+        return usuarioActual.getRoles().stream()
+                .anyMatch(r -> r.getNombre().equals("ROLE_ACUDIENTE"));
     }
 
     private void construirFormulario() {
@@ -148,7 +160,6 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     }
 
     private String determinarRedireccion(Usuario usuario, Long judokaId) {
-        // Extraemos el rol principal (el primero que coincida)
         String rol = usuario.getRoles().stream()
                 .map(Rol::getNombre)
                 .filter(r -> r.equals("ROLE_SENSEI") ||
@@ -159,14 +170,13 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
                 .orElse("");
 
         return switch (rol) {
-            case "ROLE_SENSEI" -> "/completar-perfil-sensei/" + tokenActual.getToken(); // ✅ Agregar token
-            case "ROLE_ACUDIENTE" -> "/mi-familia";
+            case "ROLE_SENSEI" -> "/completar-perfil-sensei/" + tokenActual.getToken();
+            case "ROLE_ACUDIENTE" -> "/completar-perfil-acudiente?token=" + tokenActual.getToken(); // ✅ redirige con token
             case "ROLE_MECENAS" -> "/dashboard-mecenas";
             case "ROLE_JUDOKA_ADULTO" -> (judokaId != null) ? "/completar-perfil-judoka/" + judokaId : "/";
             default -> "/";
         };
     }
-
     private void mostrarError(String mensaje) {
         removeAll();
         add(new H2(traduccionService.get("error.titulo_ops")));

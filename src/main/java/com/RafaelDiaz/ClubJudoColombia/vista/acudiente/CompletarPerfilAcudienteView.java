@@ -1,9 +1,6 @@
 package com.RafaelDiaz.ClubJudoColombia.vista.acudiente;
 
-import com.RafaelDiaz.ClubJudoColombia.modelo.ConfiguracionSistema;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Sensei;
-import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
+import com.RafaelDiaz.ClubJudoColombia.modelo.*;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.EstadoJudoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoDocumento;
 import com.RafaelDiaz.ClubJudoColombia.repositorio.JudokaRepository;
@@ -13,11 +10,13 @@ import com.RafaelDiaz.ClubJudoColombia.servicio.AdmisionesService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.ConfiguracionService;
 import com.RafaelDiaz.ClubJudoColombia.servicio.SecurityService;
+import com.RafaelDiaz.ClubJudoColombia.vista.util.NotificationHelper;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
@@ -25,22 +24,32 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.*;
+import com.vaadin.flow.server.VaadinServletRequest;
 import com.vaadin.flow.server.streams.UploadHandler;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @PageTitle("Completar Perfil Acudiente | Club Judo Colombia")
 @Route("completar-perfil-acudiente")
 @RolesAllowed("ROLE_ACUDIENTE")
-public class CompletarPerfilAcudienteView extends VerticalLayout {
+public class CompletarPerfilAcudienteView extends VerticalLayout implements HasUrlParameter<String> {
 
     private final SecurityService securityService;
     private final UsuarioRepository usuarioRepository;
@@ -50,12 +59,11 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
     private final AlmacenamientoCloudService almacenamientoCloudService;
     private final AdmisionesService admisionesService;
     private final ConfiguracionService configuracionService;
-
+    private final UserDetailsService userDetailsService;
     // --- Componentes UX ---
     private final PasswordField passwordField = new PasswordField("Crea tu Contraseña");
     private final PasswordField confirmarPasswordField = new PasswordField("Confirma tu Contraseña");
     private final Paragraph textoInstruccionPago = new Paragraph();
-
     // Lista dinámica de formularios para hijos
     private final VerticalLayout contenedorHijos = new VerticalLayout();
     private final List<FormularioHijo> listaFormulariosHijos = new ArrayList<>();
@@ -63,6 +71,11 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
     // Pago global
     private boolean pagoSubido = false;
     private String urlComprobanteNube = null;
+    // Admisiones
+    private String tokenInvitacion;
+    private Usuario usuarioToken; // Usuario asociado al token
+    private boolean vieneDeToken = false;
+    private boolean uiBuilt = false; // evita reconstrucción
 
     public CompletarPerfilAcudienteView(SecurityService securityService,
                                         UsuarioRepository usuarioRepository,
@@ -70,7 +83,9 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
                                         SenseiRepository senseiRepository,
                                         PasswordEncoder passwordEncoder,
                                         AlmacenamientoCloudService almacenamientoCloudService,
-                                        AdmisionesService admisionesService, ConfiguracionService configuracionService) {
+                                        AdmisionesService admisionesService,
+                                        ConfiguracionService configuracionService,
+                                        UserDetailsService userDetailsService) {
         this.securityService = securityService;
         this.usuarioRepository = usuarioRepository;
         this.judokaRepository = judokaRepository;
@@ -79,69 +94,9 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
         this.almacenamientoCloudService = almacenamientoCloudService;
         this.admisionesService = admisionesService;
         this.configuracionService = configuracionService;
+        this.userDetailsService = userDetailsService;
 
 
-        configurarVista();
-    }
-
-    private void configurarVista() {
-        setSizeFull();
-        setAlignItems(Alignment.CENTER);
-
-        VerticalLayout card = new VerticalLayout();
-        card.addClassName("card-blanca");
-        card.setMaxWidth("700px");
-        card.setPadding(true);
-
-        card.add(new H2("¡Bienvenido a la Academia!"));
-        card.add(new Paragraph("Como acudiente, desde aquí podrás gestionar la cuenta de tus deportistas."));
-
-        // 1. SECCIÓN CONTRASEÑA
-        passwordField.setRequired(true);
-        confirmarPasswordField.setRequired(true);
-        FormLayout formPassword = new FormLayout(passwordField, confirmarPasswordField);
-        card.add(new H3("1. Tu Seguridad"), formPassword);
-
-        // 2. DESCARGA DE FORMATO GLOBAL
-        card.add(new H3("2. Formato de Exoneración"));
-        card.add(new Paragraph("Descarga este formato. Deberás firmar uno por cada deportista que registres y subirlo en su respectiva tarjeta."));
-        Anchor enlaceDescarga = new Anchor("documentos/formato_waiver.pdf", "");
-        enlaceDescarga.getElement().setAttribute("download", true);
-        Button btnDescargar = new Button("Descargar Formato Vacío", new com.vaadin.flow.component.icon.Icon(VaadinIcon.DOWNLOAD));
-        btnDescargar.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
-        enlaceDescarga.add(btnDescargar);
-        card.add(enlaceDescarga);
-
-        // 3. SECCIÓN HIJOS (Judokas + Documentos Granulares)
-        card.add(new H3("3. Registra a tus Deportistas"));
-        contenedorHijos.setPadding(false);
-        agregarFormularioHijo(); // Agrega el primer hijo por defecto
-
-        Button btnAñadirHijo = new Button("Añadir otro deportista", VaadinIcon.PLUS.create());
-        btnAñadirHijo.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        btnAñadirHijo.addClickListener(e -> agregarFormularioHijo());
-        card.add(contenedorHijos, btnAñadirHijo);
-
-        // 4. SECCIÓN PAGO GLOBAL
-        card.add(new H3("4. Activación y Pago Unificado"));
-        textoInstruccionPago.getStyle().set("font-weight", "bold");
-        textoInstruccionPago.getStyle().set("color", "var(--lumo-primary-text-color)");
-        card.add(textoInstruccionPago);
-
-        Upload uploadPago = crearComponenteSubida("Sube aquí el comprobante Nequi GLOBAL (.png o .jpg)", url -> {
-            this.urlComprobanteNube = url;
-            this.pagoSubido = true;
-        });
-        card.add(uploadPago);
-
-        // 5. BOTÓN FINALIZAR
-        Button btnFinalizar = new Button("Guardar Perfil y Enviar a Revisión", VaadinIcon.CHECK_CIRCLE.create());
-        btnFinalizar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
-        btnFinalizar.setWidthFull();
-        btnFinalizar.addClickListener(e -> procesarOnboarding());
-
-        card.add(new Hr(), btnFinalizar);
-        add(card);
     }
 
     private void agregarFormularioHijo() {
@@ -203,9 +158,23 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
         }
 
         try {
-            Usuario acudiente = getAcudienteLogueado();
-            acudiente.setPasswordHash(passwordEncoder.encode(passwordField.getValue()));
-            usuarioRepository.save(acudiente);
+            Usuario acudiente;
+            if (vieneDeToken) {
+                // Usuario del token aún no activo, debemos establecer su contraseña y activarlo
+                acudiente = usuarioToken;
+                String pass = passwordField.getValue();
+                if (pass.isEmpty() || !pass.equals(confirmarPasswordField.getValue())) {
+                    Notification.show("Las contraseñas no coinciden o están vacías.", 3000, Notification.Position.TOP_CENTER)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                    return;
+                }
+                acudiente.setPasswordHash(passwordEncoder.encode(pass));
+                acudiente.setActivo(true);
+                usuarioRepository.save(acudiente);
+            } else {
+                acudiente = getAcudienteLogueado();
+                // Si ya estaba autenticado, no se modifica la contraseña
+            }
 
             Sensei senseiAsignado = senseiRepository.findAll().stream().findFirst()
                     .orElseThrow(() -> new RuntimeException("No hay un Sensei disponible para asignar."));
@@ -222,18 +191,31 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
 
                 Judoka guardado = judokaRepository.save(nuevoHijo);
 
-                // Asignación Granular: El pago es el mismo, pero EPS y Waiver son únicos por niño
                 admisionesService.cargarRequisito(guardado, TipoDocumento.COMPROBANTE_PAGO, urlComprobanteNube);
                 admisionesService.cargarRequisito(guardado, TipoDocumento.EPS, fh.urlEpsNube);
                 admisionesService.cargarRequisito(guardado, TipoDocumento.WAIVER, fh.urlWaiverNube);
             }
 
-            Notification.show("¡Registro completado exitosamente!", 5000, Notification.Position.MIDDLE).addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            // Consumir el token si vino por invitación
+            if (vieneDeToken && tokenInvitacion != null) {
+                admisionesService.consumirToken(tokenInvitacion);
+            }
+
+            // Si vino de token, autenticar al usuario para que inicie sesión automáticamente
+            if (vieneDeToken) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(acudiente.getUsername());
+                autenticarUsuario(userDetails);
+            }
+
+            Notification.show("¡Registro completado exitosamente!", 5000, Notification.Position.MIDDLE)
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             getUI().ifPresent(ui -> ui.navigate(""));
 
         } catch (Exception e) {
-            Notification.show("Error en el registro: " + e.getMessage(), 5000, Notification.Position.TOP_CENTER).addThemeVariants(NotificationVariant.LUMO_ERROR);
+            Notification.show("Error en el registro: " + e.getMessage(), 5000, Notification.Position.TOP_CENTER)
+                    .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
+
     }
 
     private Usuario getAcudienteLogueado() {
@@ -305,5 +287,123 @@ public class CompletarPerfilAcudienteView extends VerticalLayout {
             setColspan(uploadWaiver, 2);
             setColspan(uploadEps, 2);
         }
+    }
+    @Override
+    public void setParameter(BeforeEvent event, @OptionalParameter String token) {
+        System.out.println("DEBUG: token recibido = " + token);
+        if (token != null && !token.isEmpty()) {
+            try {
+                TokenInvitacion tokenObj = admisionesService.validarTokenInvitacion(token);
+                usuarioToken = tokenObj.getUsuarioInvitado();
+                tokenInvitacion = token;
+                vieneDeToken = true;
+
+                // Verificar que si ya hay sesión, corresponda al mismo usuario
+                Optional<Usuario> usuarioActual = securityService.getAuthenticatedUsuario();
+                if (usuarioActual.isPresent() && !usuarioActual.get().getId().equals(usuarioToken.getId())) {
+                    NotificationHelper.error("Esta invitación pertenece a otro usuario.");
+                    getUI().ifPresent(ui -> ui.navigate(""));
+                    return;
+                }
+            } catch (RuntimeException e) {
+                System.out.println("DEBUG: token inválido - " + e.getMessage());
+                NotificationHelper.error("Token inválido o expirado: " + e.getMessage());
+                getUI().ifPresent(ui -> ui.navigate("login"));
+                return;
+            }
+        } else {
+            // Sin token, se espera que el usuario ya esté autenticado (edición de perfil)
+            vieneDeToken = false;
+            usuarioToken = securityService.getAuthenticatedUsuario()
+                    .orElseThrow(() -> new RuntimeException("Usuario no autenticado."));
+        }
+
+        buildUI();
+    }
+
+    private void buildUI() {
+        if (uiBuilt) return;
+        uiBuilt = true;
+
+        setSizeFull();
+        setAlignItems(Alignment.CENTER);
+
+        VerticalLayout card = new VerticalLayout();
+        card.addClassName("card-blanca");
+        card.setMaxWidth("700px");
+        card.setPadding(true);
+
+        card.add(new H2("¡Bienvenido a la Academia!"));
+        card.add(new Paragraph("Como acudiente, desde aquí podrás gestionar la cuenta de tus deportistas."));
+
+        // 1. SECCIÓN CONTRASEÑA - solo si viene de token
+        if (vieneDeToken) {
+            System.out.println("DEBUG: vieneDeToken = true, mostrando campos de contraseña");
+            passwordField.setRequired(true);
+            confirmarPasswordField.setRequired(true);
+            FormLayout formPassword = new FormLayout(passwordField, confirmarPasswordField);
+            card.add(new H3("1. Tu Seguridad"), formPassword);
+        } else {
+            // Opcional: mostrar un mensaje si ya está autenticado
+            card.add(new H3("1. Tu Perfil"));
+            card.add(new Paragraph("Puedes editar la información de tus deportistas."));
+        }
+        // 2. DESCARGA DE FORMATO GLOBAL (sin cambios)
+        card.add(new H3("2. Formato de Exoneración"));
+        card.add(new Paragraph("Descarga este formato. Deberás firmar uno por cada deportista que registres y subirlo en su respectiva tarjeta."));
+        Anchor enlaceDescarga = new Anchor("documentos/formato_waiver.pdf", "");
+        enlaceDescarga.getElement().setAttribute("download", true);
+        Button btnDescargar = new Button("Descargar Formato Vacío", new Icon(VaadinIcon.DOWNLOAD));
+        btnDescargar.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+        enlaceDescarga.add(btnDescargar);
+        card.add(enlaceDescarga);
+
+        // 3. SECCIÓN HIJOS (Judokas + Documentos Granulares)
+        card.add(new H3("3. Registra a tus Deportistas"));
+        contenedorHijos.setPadding(false);
+        // Solo añadimos un hijo por defecto si no hay ninguno
+        if (listaFormulariosHijos.isEmpty()) {
+            agregarFormularioHijo();
+        }
+
+        Button btnAñadirHijo = new Button("Añadir otro deportista", VaadinIcon.PLUS.create());
+        btnAñadirHijo.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        btnAñadirHijo.addClickListener(e -> agregarFormularioHijo());
+        card.add(contenedorHijos, btnAñadirHijo);
+
+        // 4. SECCIÓN PAGO GLOBAL (sin cambios)
+        card.add(new H3("4. Activación y Pago Unificado"));
+        textoInstruccionPago.getStyle().set("font-weight", "bold");
+        textoInstruccionPago.getStyle().set("color", "var(--lumo-primary-text-color)");
+        card.add(textoInstruccionPago);
+
+        Upload uploadPago = crearComponenteSubida("Sube aquí el comprobante Nequi GLOBAL (.png o .jpg)", url -> {
+            this.urlComprobanteNube = url;
+            this.pagoSubido = true;
+        });
+        card.add(uploadPago);
+
+        // 5. BOTÓN FINALIZAR
+        Button btnFinalizar = new Button("Guardar Perfil y Enviar a Revisión", VaadinIcon.CHECK_CIRCLE.create());
+        btnFinalizar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+        btnFinalizar.setWidthFull();
+        btnFinalizar.addClickListener(e -> procesarOnboarding());
+
+        card.add(new Hr(), btnFinalizar);
+        add(card);
+    }
+    // Método auxiliar para autenticar después de establecer contraseña
+    private void autenticarUsuario(UserDetails userDetails) {
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(auth);
+        SecurityContextHolder.setContext(context);
+
+        HttpServletRequest request = VaadinServletRequest.getCurrent().getHttpServletRequest();
+        HttpSession session = request.getSession(true);
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+        SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+        securityContextRepository.saveContext(context, request, null);
     }
 }

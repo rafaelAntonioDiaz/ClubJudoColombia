@@ -76,6 +76,10 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
     private boolean pagoSubido = false;
     private String urlComprobante = null;
     private final Paragraph textoMontoPago = new Paragraph();
+    //Admisiones por token (si se accede desde invitación)
+    private String tokenInvitacion;
+    private Usuario usuarioToken; // Usuario asociado al token
+    private boolean vieneDeToken = false;
 
     private final Button btnGuardar = new Button();
 
@@ -103,14 +107,23 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
         fechaNacimiento.setRequired(true);  // si es obligatorio
         fechaNacimiento.setWidthFull();
 
+        // CORRECCIÓN: todos los campos necesitan setWidthFull() para que FormLayout
+        // los posicione en sus columnas. Sin ancho explícito, un ComboBox colapsa
+        // a 0px en layout de 2 columnas, desplazando visualmente a fechaNacimiento.
         sexo.setLabel(traduccionService.get("label.sexo"));
         sexo.setItems(Sexo.values());
         sexo.setItemLabelGenerator(s -> traduccionService.get("sexo." + s.name().toLowerCase()));
+        sexo.setWidthFull();
         peso.setLabel(traduccionService.get("label.peso_kg"));
+        peso.setWidthFull();
         estatura.setLabel(traduccionService.get("label.estatura_cm"));
+        estatura.setWidthFull();
         eps.setLabel(traduccionService.get("label.eps"));
+        eps.setWidthFull();
         nombreContactoEmergencia.setLabel(traduccionService.get("label.contacto_emergencia"));
+        nombreContactoEmergencia.setWidthFull();
         telefonoEmergencia.setLabel(traduccionService.get("label.telefono_emergencia"));
+        telefonoEmergencia.setWidthFull();
 
         btnGuardar.setText(traduccionService.get("boton.guardar_enviar_revision"));
         btnGuardar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
@@ -148,8 +161,17 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
             getUI().ifPresent(ui -> ui.navigate(""));
             return;
         }
-        boolean puedeEditar = usuarioActual.equals(judokaActual.getAcudiente()) ||
-                (securityService.isMaster() || securityService.isSensei());
+        // CORRECCIÓN: no usar equals() directamente sobre el acudiente porque
+        // Hibernate puede devolver un proxy no inicializado cuyo equals() compara
+        // por identidad de objeto y no por ID, causando que el judoka adulto
+        // (que ES su propio acudiente) sea rechazado con "no tienes permiso"
+        // y la vista redirija sin mostrar el formulario.
+        // Se compara por ID para garantizar igualdad independiente del proxy.
+        boolean esElPropioPropietario = judokaActual.getAcudiente() != null
+                && usuarioActual.getId().equals(judokaActual.getAcudiente().getId());
+        boolean puedeEditar = esElPropioPropietario
+                || securityService.isMaster()
+                || securityService.isSensei();
         if (!puedeEditar) {
             Notification.show("No tienes permiso para completar este perfil.").addThemeVariants(NotificationVariant.LUMO_ERROR);
             getUI().ifPresent(ui -> ui.navigate(""));
@@ -159,18 +181,27 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
         titulo.setText(traduccionService.get("perfil.completar.titulo", judokaActual.getNombre()));
         descripcion.setText(traduccionService.get("perfil.completar.descripcion"));
 
-        // Cargar valores existentes
+        // CORRECCIÓN: formDatos.removeAll() debe ir ANTES de setValue().
+        // En el código original, removeAll() se llamaba después de asignar valores,
+        // lo que borraba los campos del layout pero dejaba los valores en los
+        // componentes en estado inconsistente. Además, setVisible(true) era un
+        // parche de una versión anterior donde el campo se ocultaba explícitamente;
+        // se elimina porque la visibilidad debe controlarse con add/remove, no con
+        // setVisible en un FormLayout.
+        formDatos.removeAll();
+
+        // Cargar valores existentes (si el judoka ya tenía datos guardados)
         if (judokaActual.getFechaNacimiento() != null) fechaNacimiento.setValue(judokaActual.getFechaNacimiento());
         if (judokaActual.getSexo() != null) sexo.setValue(judokaActual.getSexo());
         if (judokaActual.getPeso() != null) peso.setValue(String.valueOf(judokaActual.getPeso()));
         if (judokaActual.getEstatura() != null) estatura.setValue(String.valueOf(judokaActual.getEstatura()));
 
-        // Asignar cadena vacía si el valor es null
+        // Cadena vacía explícita para campos de texto (nunca null en TextField)
         eps.setValue(judokaActual.getEps() != null ? judokaActual.getEps() : "");
         nombreContactoEmergencia.setValue(judokaActual.getNombreContactoEmergencia() != null ? judokaActual.getNombreContactoEmergencia() : "");
         telefonoEmergencia.setValue(judokaActual.getTelefonoEmergencia() != null ? judokaActual.getTelefonoEmergencia() : "");
-        formDatos.removeAll();    // Configurar y agregar cada campo individualmente
-        fechaNacimiento.setVisible(true);
+
+        // Añadir campos al formulario en el orden de aparición
         formDatos.add(fechaNacimiento);
         formDatos.add(sexo);
         formDatos.add(peso);
