@@ -125,12 +125,14 @@ public class AdmisionesService {
             if ("ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
                 // Adulto: el acudiente es él mismo
                 judokaVinculado.setAcudiente(usuarioInvitado);
-                // ✅ NUEVO: asignar nombre y apellido al judoka a partir del usuario
+                // Asignar nombre, apellido y flag de mayoría de edad
                 judokaVinculado.setNombre(usuarioInvitado.getNombre());
                 judokaVinculado.setApellido(usuarioInvitado.getApellido());
+                judokaVinculado.setMayorEdad(true);
             } else {
                 // Menor: el acudiente es el usuario que se está creando (el padre/madre)
                 judokaVinculado.setAcudiente(usuarioInvitado);
+                judokaVinculado.setMayorEdad(false);
             }
 
             if (grupo != null) {
