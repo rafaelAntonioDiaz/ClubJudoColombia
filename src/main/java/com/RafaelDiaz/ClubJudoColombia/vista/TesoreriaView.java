@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.vista;
 import com.RafaelDiaz.ClubJudoColombia.modelo.ConceptoFinanciero;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Judoka;
 import com.RafaelDiaz.ClubJudoColombia.modelo.MovimientoCaja;
+import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.MetodoPago;
 import com.RafaelDiaz.ClubJudoColombia.modelo.enums.TipoTransaccion;
 import com.RafaelDiaz.ClubJudoColombia.servicio.AlmacenamientoCloudService; // <-- NUEVO
@@ -98,7 +99,10 @@ public class TesoreriaView extends VerticalLayout {
         // ... (judokaSelect y conceptoSelect se mantienen igual) ...
         ComboBox<Judoka> judokaSelect = new ComboBox<>(traduccionService.get("tesoreria.alumno"));
         judokaSelect.setItems(judokaService.findAllJudokas());
-        judokaSelect.setItemLabelGenerator(j -> j.getUsuario().getNombre() + " " + j.getUsuario().getApellido());
+        judokaSelect.setItemLabelGenerator(j ->
+                j.getUsuario().getNombre() + " " + j.getUsuario().getApellido() +
+                        " (" + j.getNombre() + ")"
+        );
         judokaSelect.setWidthFull();
 
         ComboBox<ConceptoFinanciero> conceptoSelect = new ComboBox<>(traduccionService.get("tesoreria.concepto"));
@@ -355,8 +359,11 @@ public class TesoreriaView extends VerticalLayout {
         gridMovimientos.addColumn(m -> m.getMonto())
                 .setHeader(traduccionService.get("tesoreria.grid.monto")).setAutoWidth(true);
 
-        gridMovimientos.addColumn(m -> m.getJudoka() != null ? m.getJudoka().getUsuario().getNombre() : "-")
-                .setHeader(traduccionService.get("tesoreria.grid.judoka"));
+        gridMovimientos.addColumn(m -> {
+            if (m.getJudoka() == null) return "-";
+            Usuario resp = m.getJudoka().getUsuario();
+            return resp.getNombre() + " " + resp.getApellido();
+        }).setHeader(traduccionService.get("tesoreria.grid.judoka"));
 
         // --- REFACTORIZACIÓN VISUAL: Botones adaptativos ---
         gridMovimientos.addColumn(new ComponentRenderer<>(mov -> {

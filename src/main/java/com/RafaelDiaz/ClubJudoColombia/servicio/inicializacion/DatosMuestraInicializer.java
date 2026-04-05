@@ -92,11 +92,10 @@ public class DatosMuestraInicializer {
 
     @Transactional
     public void inicializar(Sensei masterSensei) {
-        // Si ya existe algún sensei de muestra, asumimos que los datos ya están cargados
-       // if (usuarioRepo.findByUsername("kiuzo").isPresent()) {
-     //       System.out.println(">>> Datos de muestra ya existen. Omitiendo.");
-     //       return;
-    //    }
+        if (usuarioRepo.findByUsername("kiuzo").isPresent()) {
+           System.out.println(">>> Datos de muestra ya existen. Omitiendo.");
+            return;
+        }
 
         System.out.println(">>> Creando senseis y judokas de muestra...");
 

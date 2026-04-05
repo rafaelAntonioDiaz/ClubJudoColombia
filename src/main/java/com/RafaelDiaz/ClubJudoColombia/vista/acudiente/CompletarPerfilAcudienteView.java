@@ -55,14 +55,10 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
     private final UsuarioRepository usuarioRepository;
     private final JudokaRepository judokaRepository;
     private final SenseiRepository senseiRepository;
-    private final PasswordEncoder passwordEncoder;
     private final AlmacenamientoCloudService almacenamientoCloudService;
     private final AdmisionesService admisionesService;
     private final ConfiguracionService configuracionService;
-    private final UserDetailsService userDetailsService;
     // --- Componentes UX ---
-    private final PasswordField passwordField = new PasswordField("Crea tu Contraseña");
-    private final PasswordField confirmarPasswordField = new PasswordField("Confirma tu Contraseña");
     private final Paragraph textoInstruccionPago = new Paragraph();
     // Lista dinámica de formularios para hijos
     private final VerticalLayout contenedorHijos = new VerticalLayout();
@@ -81,20 +77,16 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
                                         UsuarioRepository usuarioRepository,
                                         JudokaRepository judokaRepository,
                                         SenseiRepository senseiRepository,
-                                        PasswordEncoder passwordEncoder,
                                         AlmacenamientoCloudService almacenamientoCloudService,
                                         AdmisionesService admisionesService,
-                                        ConfiguracionService configuracionService,
-                                        UserDetailsService userDetailsService) {
+                                        ConfiguracionService configuracionService) {
         this.securityService = securityService;
         this.usuarioRepository = usuarioRepository;
         this.judokaRepository = judokaRepository;
         this.senseiRepository = senseiRepository;
-        this.passwordEncoder = passwordEncoder;
         this.almacenamientoCloudService = almacenamientoCloudService;
         this.admisionesService = admisionesService;
         this.configuracionService = configuracionService;
-        this.userDetailsService = userDetailsService;
 
 
     }
@@ -130,17 +122,13 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
     }
 
     private void procesarOnboarding() {
-        if (passwordField.isEmpty() || !passwordField.getValue().equals(confirmarPasswordField.getValue())) {
-            Notification.show("Las contraseñas no coinciden o están vacías.", 3000, Notification.Position.TOP_CENTER).addThemeVariants(NotificationVariant.LUMO_ERROR);
-            return;
-        }
-
+        // 1. Validaciones de deportistas
         if (listaFormulariosHijos.isEmpty() || listaFormulariosHijos.get(0).nombreField.isEmpty()) {
             Notification.show("Debes registrar al menos un deportista.", 3000, Notification.Position.TOP_CENTER).addThemeVariants(NotificationVariant.LUMO_ERROR);
             return;
         }
 
-        // Validación profunda: Cada niño debe tener sus 2 documentos
+        // Validación documentos: Cada niño debe tener sus 2 documentos
         for (FormularioHijo fh : listaFormulariosHijos) {
             if (fh.nombreField.isEmpty() || fh.fechaNacField.isEmpty()) {
                 Notification.show("Completa los datos personales de todos los deportistas.", 3000, Notification.Position.TOP_CENTER).addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -158,26 +146,15 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
         }
 
         try {
-            Usuario acudiente;
-            if (vieneDeToken) {
-                // Usuario del token aún no activo, debemos establecer su contraseña y activarlo
-                acudiente = usuarioToken;
-                String pass = passwordField.getValue();
-                if (pass.isEmpty() || !pass.equals(confirmarPasswordField.getValue())) {
-                    Notification.show("Las contraseñas no coinciden o están vacías.", 3000, Notification.Position.TOP_CENTER)
-                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
-                    return;
-                }
-                acudiente.setPasswordHash(passwordEncoder.encode(pass));
-                acudiente.setActivo(true);
-                usuarioRepository.save(acudiente);
-            } else {
-                acudiente = getAcudienteLogueado();
-                // Si ya estaba autenticado, no se modifica la contraseña
-            }
+            Usuario acudiente = getAcudienteLogueado();
+            // Obtenemos el grupo que el Master le asignó al acudiente en la invitación
+            GrupoEntrenamiento grupoAcudiente = acudiente.getGrupoTarifario();
 
-            Sensei senseiAsignado = senseiRepository.findAll().stream().findFirst()
-                    .orElseThrow(() -> new RuntimeException("No hay un Sensei disponible para asignar."));
+            // Priorizamos el sensei del grupo asignado; fallback al primer sensei si no hay grupo
+            Sensei senseiAsignado = (grupoAcudiente != null && grupoAcudiente.getSensei() != null)
+                    ? grupoAcudiente.getSensei()
+                    : senseiRepository.findAll().stream().findFirst()
+                      .orElseThrow(() -> new RuntimeException("No hay un Sensei disponible para asignar."));
 
             for (FormularioHijo fh : listaFormulariosHijos) {
                 Judoka nuevoHijo = new Judoka();
@@ -186,6 +163,10 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
                 nuevoHijo.setFechaNacimiento(fh.fechaNacField.getValue());
                 nuevoHijo.setAcudiente(acudiente);
                 nuevoHijo.setSensei(senseiAsignado);
+                // ✅ HERENCIA: Asignamos el grupo de facturación y el grupo deportivo
+                nuevoHijo.setGrupoFacturacion(grupoAcudiente);
+                nuevoHijo.setGrupo(grupoAcudiente);
+
                 nuevoHijo.setEstado(EstadoJudoka.EN_REVISION);
                 nuevoHijo.setMayorEdad(false);
 
@@ -195,22 +176,9 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
                 admisionesService.cargarRequisito(guardado, TipoDocumento.EPS, fh.urlEpsNube);
                 admisionesService.cargarRequisito(guardado, TipoDocumento.WAIVER, fh.urlWaiverNube);
             }
-
-            // Consumir el token si vino por invitación
-            if (vieneDeToken && tokenInvitacion != null) {
-                admisionesService.consumirToken(tokenInvitacion);
-            }
-
-            // Si vino de token, autenticar al usuario para que inicie sesión automáticamente
-            if (vieneDeToken) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(acudiente.getUsername());
-                autenticarUsuario(userDetails);
-            }
-
             Notification.show("¡Registro completado exitosamente!", 5000, Notification.Position.MIDDLE)
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             getUI().ifPresent(ui -> ui.navigate(""));
-
         } catch (Exception e) {
             Notification.show("Error en el registro: " + e.getMessage(), 5000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -219,8 +187,13 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
     }
 
     private Usuario getAcudienteLogueado() {
-        String username = securityService.getAuthenticatedUserDetails().get().getUsername();
-        return usuarioRepository.findByUsername(username).orElseThrow();
+        String username = securityService.getAuthenticatedUserDetails()
+                .map(UserDetails::getUsername)
+                .orElseThrow(() -> new RuntimeException("No hay sesión de usuario activa."));
+
+        // CAMBIO: Usamos findByUsernameWithRoles para asegurar que el GrupoEntrenamiento esté cargado
+        return usuarioRepository.findByUsernameWithRoles(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado en la base de datos."));
     }
 
     private Upload crearComponenteSubida(String etiqueta, java.util.function.Consumer<String> onSuccess) {
@@ -234,11 +207,16 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
             try {
                 Usuario acudiente = getAcudienteLogueado();
                 InputStream in = new ByteArrayInputStream(bytes);
+
+                // 1. Subir el archivo (obtenemos el nombre único generado por el servicio)
                 String keyEnLaNube = almacenamientoCloudService.subirArchivo(acudiente.getId(), metadata.fileName(), in);
-                String url = almacenamientoCloudService.obtenerUrl(acudiente.getId(), keyEnLaNube);
+
+                // 2. Construir la CLAVE completa (S3 Key) que persistiremos en BD
+                String claveCompleta = "judokas/" + acudiente.getId() + "/" + keyEnLaNube;
 
                 getUI().ifPresent(ui -> ui.access(() -> {
-                    onSuccess.accept(url);
+                    // Notificamos la clave al consumidor (onSuccess) para guardarla en DocumentoRequisito
+                    onSuccess.accept(claveCompleta);
                     Notification.show("¡" + metadata.fileName() + " subido con éxito!", 3000, Notification.Position.TOP_CENTER)
                             .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
                 }));
@@ -248,7 +226,6 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
         }));
         return upload;
     }
-
     // --- IMPORTANTE: No es 'static' para poder acceder al uploader de la clase padre ---
     private class FormularioHijo extends FormLayout {
         TextField nombreField = new TextField("Nombre");
@@ -336,17 +313,13 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
         card.add(new H2("¡Bienvenido a la Academia!"));
         card.add(new Paragraph("Como acudiente, desde aquí podrás gestionar la cuenta de tus deportistas."));
 
-        // 1. SECCIÓN CONTRASEÑA - solo si viene de token
-        if (vieneDeToken) {
-            System.out.println("DEBUG: vieneDeToken = true, mostrando campos de contraseña");
-            passwordField.setRequired(true);
-            confirmarPasswordField.setRequired(true);
-            FormLayout formPassword = new FormLayout(passwordField, confirmarPasswordField);
-            card.add(new H3("1. Tu Seguridad"), formPassword);
-        } else {
+
             // Opcional: mostrar un mensaje si ya está autenticado
-            card.add(new H3("1. Tu Perfil"));
-            card.add(new Paragraph("Puedes editar la información de tus deportistas."));
+        card.add(new H3("1. Tu Perfil"));
+        if (vieneDeToken && usuarioToken != null) {
+            card.add(new Paragraph("¡Bienvenido " + usuarioToken.getNombre() + "! Completa los datos de tus deportistas para finalizar el registro."));
+        } else {
+            card.add(new Paragraph("Desde aquí puedes gestionar la información de tus deportistas."));
         }
         // 2. DESCARGA DE FORMATO GLOBAL (sin cambios)
         card.add(new H3("2. Formato de Exoneración"));
@@ -392,18 +365,4 @@ public class CompletarPerfilAcudienteView extends VerticalLayout implements HasU
         card.add(new Hr(), btnFinalizar);
         add(card);
     }
-    // Método auxiliar para autenticar después de establecer contraseña
-    private void autenticarUsuario(UserDetails userDetails) {
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(auth);
-        SecurityContextHolder.setContext(context);
-
-        HttpServletRequest request = VaadinServletRequest.getCurrent().getHttpServletRequest();
-        HttpSession session = request.getSession(true);
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-        SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
-        securityContextRepository.saveContext(context, request, null);
     }
-}

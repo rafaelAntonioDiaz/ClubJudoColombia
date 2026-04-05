@@ -20,9 +20,12 @@ import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinServletRequest;
+import com.vaadin.flow.server.VaadinServletResponse;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,11 +39,20 @@ import org.springframework.security.web.context.SecurityContextRepository;
 @AnonymousAllowed
 public class CompletarRegistroView extends VerticalLayout implements HasUrlParameter<String> {
 
+    private static final Logger log = LoggerFactory.getLogger(CompletarRegistroView.class);
+
     private final AdmisionesService admisionesService;
     private final UserDetailsService userDetailsService;
     private final FinanzasService finanzasService;
-    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final TraduccionService traduccionService;
+
+    // CORRECCIÓN: Se mantiene HttpSessionSecurityContextRepository como implementación
+    // concreta porque necesitamos llamar saveContext() con el HttpServletResponse real.
+    // Con la interfaz SecurityContextRepository también funciona, pero la implementación
+    // por defecto en Spring Security 6 es DelegatingSecurityContextRepository que puede
+    // ignorar el response según la configuración. Ser explícito es más seguro.
+    private final SecurityContextRepository securityContextRepository =
+            new HttpSessionSecurityContextRepository();
 
     private TokenInvitacion tokenActual;
     private Usuario usuarioActual;
@@ -53,9 +65,9 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     private final PasswordField confirmarPasswordField = new PasswordField();
     private final Button btnActivar = new Button();
 
-    // Constructor con todas las dependencias
     public CompletarRegistroView(AdmisionesService admisionesService,
-                                 UserDetailsService userDetailsService, FinanzasService finanzasService,
+                                 UserDetailsService userDetailsService,
+                                 FinanzasService finanzasService,
                                  TraduccionService traduccionService) {
         this.admisionesService = admisionesService;
         this.userDetailsService = userDetailsService;
@@ -72,11 +84,8 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
             tokenActual = admisionesService.validarTokenInvitacion(tokenUuid);
             usuarioActual = tokenActual.getUsuarioInvitado();
 
-            // ✅ Si es acudiente, redirigir directamente a CompletarPerfilAcudienteView
-            if (esAcudiente()) {
-                UI.getCurrent().navigate("/completar-perfil-acudiente?token=" + tokenUuid);
-                return;
-            }
+            // ELIMINADO: Ya no redirigimos prematuramente.
+            // Todos los usuarios deben ver el formulario para establecer su contraseña primero.
 
             construirFormulario();
         } catch (RuntimeException e) {
@@ -120,63 +129,94 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
         }
 
         try {
-            // Activar usuario y consumir token
-            AdmisionesService.ActivationResult result = admisionesService.activarInvitacionConPassword(tokenActual.getToken(), pass);
+            // Activar usuario y consumir token en una sola transacción
+            AdmisionesService.ActivationResult result =
+                    admisionesService.activarInvitacionConPassword(tokenActual.getToken(), pass);
+
             Usuario usuario = result.getUsuario();
             Long judokaId = result.getJudokaId();
 
-            // Si existe judoka y grupo, generar cobro de bienvenida (esto ya se hace en activarInvitacionConPassword)
-            // pero lo dejamos aquí si es necesario (nota: el servicio ya lo hace internamente)
-            if (judokaId != null && tokenActual.getGrupo() != null) {
-                // Opcional: si el servicio no lo hizo, se puede llamar. En el código actual ya se llama en el servicio,
-                // así que no es necesario repetir.
-            }
-
-            // Autenticar automáticamente
+            // Cargar los UserDetails frescos desde BD para que Spring Security
+            // tenga los GrantedAuthority correctos (especialmente ROLE_JUDOKA_ADULTO)
             UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getUsername());
+
             autenticarYRedirigir(userDetails, judokaId);
 
         } catch (Exception e) {
+            log.error("Error en procesarActivacion", e);
             NotificationHelper.error(traduccionService.get("error.activacion") + ": " + e.getMessage());
         }
     }
 
     private void autenticarYRedirigir(UserDetails userDetails, Long judokaId) {
+        // Construir el token de autenticación con los authorities del usuario
         UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities()
+                );
+
+        // Crear y poblar el SecurityContext
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(auth);
         SecurityContextHolder.setContext(context);
 
-        // Obtener request de Vaadin
-        HttpServletRequest request = VaadinServletRequest.getCurrent().getHttpServletRequest();
-        HttpSession session = request.getSession(true);
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
-        securityContextRepository.saveContext(context, request, null);
+        // ── CORRECCIÓN CRÍTICA ────────────────────────────────────────────────
+        // El código original llamaba:
+        //   securityContextRepository.saveContext(context, request, null)
+        //
+        // El tercer parámetro (HttpServletResponse) era null.
+        // HttpSessionSecurityContextRepository.saveContext() necesita el response
+        // para escribir la cookie de sesión (JSESSIONID) en el navegador.
+        // Con null, el contexto se guardaba en la sesión del servidor pero el
+        // navegador no recibía la cookie actualizada.
+        // Resultado: el siguiente request (navegación a completar-perfil-judoka)
+        // llegaba sin cookie válida → Spring Security no encontraba el contexto
+        // → getAuthenticatedUsuario() devolvía Optional.empty()
+        // → cargarDatos() redirigía a "" sin construir el formulario
+        // → el DatePicker nunca aparecía en pantalla.
+        //
+        // Solución: obtener el HttpServletResponse real desde VaadinServletResponse.
+        // ─────────────────────────────────────────────────────────────────────
+        HttpServletRequest request =
+                VaadinServletRequest.getCurrent().getHttpServletRequest();
+        HttpServletResponse response =
+                VaadinServletResponse.getCurrent().getHttpServletResponse();
 
-        // Redirigir según rol
-        String redirect = determinarRedireccion(usuarioActual, judokaId);
-        UI.getCurrent().navigate(redirect);
+        securityContextRepository.saveContext(context, request, response);
+
+        log.debug("Contexto de seguridad guardado para usuario: {} con roles: {}",
+                userDetails.getUsername(), userDetails.getAuthorities());
+
+        // Navegar según el rol del usuario recién autenticado
+        String destino = determinarRedireccion(usuarioActual, judokaId);
+        log.debug("Redirigiendo a: {}", destino);
+        UI.getCurrent().navigate(destino);
     }
 
     private String determinarRedireccion(Usuario usuario, Long judokaId) {
+        // Buscamos el rol relevante. Se incluye ROLE_JUDOKA para el flujo de menores.
         String rol = usuario.getRoles().stream()
                 .map(Rol::getNombre)
                 .filter(r -> r.equals("ROLE_SENSEI") ||
                         r.equals("ROLE_ACUDIENTE") ||
                         r.equals("ROLE_MECENAS") ||
+                        r.equals("ROLE_JUDOKA") ||
                         r.equals("ROLE_JUDOKA_ADULTO"))
                 .findFirst()
                 .orElse("");
 
         return switch (rol) {
             case "ROLE_SENSEI" -> "/completar-perfil-sensei/" + tokenActual.getToken();
-            case "ROLE_ACUDIENTE" -> "/completar-perfil-acudiente?token=" + tokenActual.getToken(); // ✅ redirige con token
+            case "ROLE_ACUDIENTE" -> "/completar-perfil-acudiente?token=" + tokenActual.getToken();
             case "ROLE_MECENAS" -> "/dashboard-mecenas";
-            case "ROLE_JUDOKA_ADULTO" -> (judokaId != null) ? "/completar-perfil-judoka/" + judokaId : "/";
+            // Si es judoka (adulto o menor), vamos a completar su perfil deportivo
+            case "ROLE_JUDOKA", "ROLE_JUDOKA_ADULTO" -> judokaId != null
+                    ? "/completar-perfil-judoka/" + judokaId
+                    : "/";
             default -> "/";
         };
     }
+
     private void mostrarError(String mensaje) {
         removeAll();
         add(new H2(traduccionService.get("error.titulo_ops")));

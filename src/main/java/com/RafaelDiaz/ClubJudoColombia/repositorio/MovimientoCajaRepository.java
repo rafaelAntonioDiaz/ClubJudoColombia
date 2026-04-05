@@ -22,4 +22,13 @@ public interface MovimientoCajaRepository extends JpaRepository<MovimientoCaja, 
     BigDecimal sumarTotalPorTipoYFecha(@Param("tipo") TipoTransaccion tipo,
                                        @Param("inicio") LocalDateTime inicio,
                                        @Param("fin") LocalDateTime fin);
+
+    @Query("SELECT m FROM MovimientoCaja m " +
+                "LEFT JOIN FETCH m.judoka j " +
+                "LEFT JOIN FETCH j.acudiente a " +
+                "LEFT JOIN FETCH m.concepto c " +
+                "WHERE m.fecha BETWEEN :inicio AND :fin " +
+                "ORDER BY m.fecha DESC")
+    List<MovimientoCaja> findByFechaBetweenWithDetails(@Param("inicio") LocalDateTime inicio,
+                                                       @Param("fin") LocalDateTime fin);
 }

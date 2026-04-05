@@ -180,9 +180,8 @@ public class AdmisionesService {
         tokenRepository.save(token);
 
         // 7. (Opcional) Enviar email
-        if (email != null && !email.isEmpty()) {
-            emailService.enviarInvitacionMagicLink(email, nombre, token.getToken(), baseUrl);
-        }
+
+        // La invitacion se hace por whatsapp
 
         // 8. Retornar el token
         return token.getToken();
@@ -401,18 +400,24 @@ public class AdmisionesService {
     public ActivationResult activarInvitacionConPassword(String tokenUuid, String password) {
         TokenInvitacion token = tokenRepository.findByToken(tokenUuid)
                 .orElseThrow(() -> new RuntimeException("Token inválido."));
+
         if (!token.isValido()) {
             throw new RuntimeException("El enlace ha expirado o ya fue utilizado.");
         }
+
         Usuario usuario = token.getUsuarioInvitado();
         usuario.setPasswordHash(passwordEncoder.encode(password));
         usuario.setActivo(true);
         usuarioRepository.save(usuario);
 
+        // NUEVO: Consumir el token para que no se pueda volver a usar
+        token.setUsado(true);
+        tokenRepository.save(token);
+
         Judoka judoka = token.getJudoka();
         Long judokaId = null;
         if (judoka != null) {
-            // Forzar carga de relaciones necesarias (aunque no se usen aquí, se inicializan)
+            // Inicialización de relaciones para evitar LazyInitializationException
             Hibernate.initialize(judoka);
             Hibernate.initialize(judoka.getAcudiente());
             Hibernate.initialize(judoka.getGrupoFacturacion());
@@ -423,7 +428,6 @@ public class AdmisionesService {
         }
         return new ActivationResult(usuario, judokaId);
     }
-
     // Clase auxiliar (puede ser un record)
     public static class ActivationResult {
         private final Usuario usuario;

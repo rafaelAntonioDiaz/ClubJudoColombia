@@ -3,6 +3,7 @@ package com.RafaelDiaz.ClubJudoColombia.repositorio;
 import com.RafaelDiaz.ClubJudoColombia.modelo.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -32,6 +33,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      * que pueden ser nulos (si el usuario no se encuentra).
      */
     Optional<Usuario> findByUsername(String username);
-    @Query("SELECT u FROM Usuario u LEFT JOIN FETCH u.roles WHERE u.username = :username")
-    Optional<Usuario> findByUsernameWithRoles(String username);
+    @Query("SELECT u FROM Usuario u " +
+            "LEFT JOIN FETCH u.roles " +
+            "LEFT JOIN FETCH u.grupoTarifario " + // Carga el grupo inmediatamente
+            "WHERE u.username = :username")
+    Optional<Usuario> findByUsernameWithRoles(@Param("username") String username);
 }

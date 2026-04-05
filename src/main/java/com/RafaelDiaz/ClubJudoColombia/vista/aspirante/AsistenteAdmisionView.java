@@ -238,17 +238,18 @@ public class AsistenteAdmisionView extends VerticalLayout {
             log.info(">>>> Iniciando intento de subida directa a S3 para el archivo: {}", originalFileName);
 
             try {
-                // 1. Convertimos los bytes en memoria a InputStream para que tu AWS SDK (S3) lo consuma
                 InputStream in = new ByteArrayInputStream(bytes);
 
-                // 2. Subida directa a la nube
+                // 1. Subida directa a la nube
                 String keyEnLaNube = almacenamientoCloudService.subirArchivo(judokaActual.getId(), originalFileName, in);
-                String urlEnLaNube = almacenamientoCloudService.obtenerUrl(judokaActual.getId(), keyEnLaNube);
+
+                // 2.  Persistir la clave completa (S3 Key) en lugar de la URL temporal
+                String claveCompleta = "judokas/" + judokaActual.getId() + "/" + keyEnLaNube;
 
                 // 3. Registro en Base de Datos
-                admisionesService.cargarRequisito(judokaActual, tipoDoc, urlEnLaNube);
+                admisionesService.cargarRequisito(judokaActual, tipoDoc, claveCompleta);
 
-                log.info("<<<< ÉXITO: Archivo {} subido a la nube correctamente.", originalFileName);
+                log.info("<<<< ÉXITO: Archivo {} subido a la nube correctamente con clave: {}", originalFileName, claveCompleta);
 
                 // 4. Actualización de la Interfaz Gráfica (Siempre dentro de ui.access)
                 getUI().ifPresent(ui -> ui.access(() -> {

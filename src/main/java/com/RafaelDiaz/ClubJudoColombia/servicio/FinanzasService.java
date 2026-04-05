@@ -114,9 +114,9 @@ public class FinanzasService {
         LocalDateTime inicio = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime fin = LocalDate.now()
                 .withDayOfMonth(LocalDate.now().lengthOfMonth()).atTime(LocalTime.MAX);
-        return movimientoRepo.findByFechaBetweenOrderByFechaDesc(inicio, fin);
+        // Cambiar el método llamado para asegurar la carga de relaciones
+        return movimientoRepo.findByFechaBetweenWithDetails(inicio, fin);
     }
-
     // --- DASHBOARD DE BALANCE ---
     public BigDecimal calcularTotalIngresosMes() {
         return calcularTotal(TipoTransaccion.INGRESO);
@@ -309,10 +309,17 @@ public class FinanzasService {
         cuentaCobroRepo.save(cc);
     }
 
-    private boolean existeCobro(Judoka j, String periodo) {
-        // Lógica simplificada: Buscar si existe cobro con el mismo concepto (mes/año) generado este mes
-        LocalDate inicio = LocalDate.now().withDayOfMonth(1);
-        return cuentaCobroRepo.existsByJudokaBeneficiarioAndConceptoLikeAndFechaGeneracionAfter(j, "%" + periodo + "%", inicio);
+    // Valida duplicados en el mes actual (por defecto)
+    private boolean existeCobro(Judoka j, String conceptoCompleto) {
+        LocalDate inicioMes = LocalDate.now().withDayOfMonth(1);
+        return cuentaCobroRepo.existsByJudokaBeneficiarioAndConceptoLikeAndFechaGeneracionAfter(
+                j, conceptoCompleto, inicioMes);
+    }
+
+    // Valida duplicados con una fecha de inicio personalizada (ej. inicio de año)
+    private boolean existeCobro(Judoka j, String conceptoCompleto, LocalDate fechaDesde) {
+        return cuentaCobroRepo.existsByJudokaBeneficiarioAndConceptoLikeAndFechaGeneracionAfter(
+                j, conceptoCompleto, fechaDesde);
     }
 
     private void activarBeneficios(CuentaCobro cuenta) {
@@ -356,40 +363,62 @@ public class FinanzasService {
                 judoka.getMecenas().getUsuario() : judoka.getAcudiente();
 
         if (responsable == null) {
-            throw new RuntimeException("Error: El judoka no tiene responsable financiero (Acudiente/Mecenas).");
+            throw new RuntimeException("Error: El judoka no tiene responsable financiero.");
         }
 
+        // --- CORRECCIÓN: Herencia de grupo ---
         GrupoEntrenamiento grupo = judoka.getGrupoFacturacion();
+        if (grupo == null && responsable.getGrupoTarifario() != null) {
+            grupo = responsable.getGrupoTarifario();
+            // Persistimos la herencia para evitar chequeos futuros
+            judoka.setGrupoFacturacion(grupo);
+            if (judoka.getGrupo() == null) judoka.setGrupo(grupo);
+            if (judoka.getSensei() == null) judoka.setSensei(grupo.getSensei());
+        }
+
         if (grupo == null) {
             throw new RuntimeException("Error: El judoka no tiene grupo de facturación asignado.");
         }
 
-        // 1. Matrícula si el grupo la incluye
+        // --- Evita duplicados ---
+        String periodoActual = String.valueOf(LocalDate.now().getYear());
+        String nombreGrupo = grupo.getNombre();
+
+        // 1. Matrícula: Solo si no existe una para el año actual
         if (grupo.isIncluyeMatricula() && grupo.getMontoMatricula() != null &&
                 grupo.getMontoMatricula().compareTo(BigDecimal.ZERO) > 0) {
 
+            String labelMatricula = traduccionService.get("finanzas.concepto.matricula", periodoActual);
+            LocalDate inicioAnio = LocalDate.now().withDayOfYear(1);
+
+            if (!existeCobro(judoka, labelMatricula, inicioAnio)) {
+                crearCuentaCobro(
+                        judoka,
+                        responsable,
+                        grupo.getMontoMatricula(),
+                        BigDecimal.ZERO,
+                        labelMatricula,
+                        grupo.getDiasGracia()
+                );
+            }
+        }
+
+        // 2. Primera mensualidad: Solo si no existe una para este grupo en el mes actual
+        String labelMensualidad = traduccionService.get("finanzas.concepto.mensualidad_inicial", nombreGrupo);
+        if (!existeCobro(judoka, labelMensualidad)) {
             crearCuentaCobro(
                     judoka,
                     responsable,
-                    grupo.getMontoMatricula(),
-                    BigDecimal.ZERO, // La matrícula no genera comisión para el sensei
-                    traduccionService.get("finanzas.concepto.matricula", LocalDate.now().getYear()),
+                    grupo.getTarifaMensual(),
+                    grupo.getComisionSensei(),
+                    labelMensualidad,
                     grupo.getDiasGracia()
             );
         }
 
-        // 2. Primera mensualidad
-        crearCuentaCobro(
-                judoka,
-                responsable,
-                grupo.getTarifaMensual(),
-                grupo.getComisionSensei(),
-                traduccionService.get("finanzas.concepto.mensualidad_inicial", grupo.getNombre()),
-                grupo.getDiasGracia()
-        );
-
-        judokaRepo.save(judoka); // Por si cambia algo (no debería)
+        judokaRepo.save(judoka);
     }
+
     /**
      * CRON JOB: Ejecutar el día 6 de cada mes.
      * Busca cuentas vencidas y suspende a los judokas asociados.
