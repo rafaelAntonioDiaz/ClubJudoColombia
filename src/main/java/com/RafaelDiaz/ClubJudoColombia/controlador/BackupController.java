@@ -25,11 +25,18 @@ public class BackupController {
     public ResponseEntity<byte[]> descargarBackup() throws IOException {
         File backupFile = backupService.backupDatabase();
         byte[] contenido = Files.readAllBytes(backupFile.toPath());
-        String fileName = "backup_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".zip";
+        
+        String extension = backupFile.getName().endsWith(".zip") ? ".zip" : ".sql";
+        String contentType = backupFile.getName().endsWith(".zip") ? "application/zip" : "application/sql";
+        
+        String fileName = "backup_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + extension;
+
+        // Eliminar archivo temporal después de leerlo
+        backupFile.delete();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .header(HttpHeaders.CONTENT_TYPE, "application/zip")
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
                 .body(contenido);
     }
 }

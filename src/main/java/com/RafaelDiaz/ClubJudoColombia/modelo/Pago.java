@@ -7,7 +7,12 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pagos")
+@Table(name = "pagos", indexes = {
+    @Index(name = "idx_pago_usuario", columnList = "id_usuario"),
+    @Index(name = "idx_pago_producto", columnList = "id_producto"),
+    @Index(name = "idx_pago_estado", columnList = "estado"),
+    @Index(name = "idx_pago_fecha", columnList = "fecha_creacion")
+})
 public class Pago implements Serializable {
 
     @Id

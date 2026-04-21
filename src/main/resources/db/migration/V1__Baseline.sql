@@ -1,0 +1,3 @@
+-- Script inicial para establecer el baseline de la base de datos PostgreSQL.
+-- Las tablas son creadas inicialmente por Hibernate debido a la configuración ddl-auto=update.
+-- Este script permite que Flyway tome el control para futuras migraciones.

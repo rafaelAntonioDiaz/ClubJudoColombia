@@ -14,7 +14,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "judokas")
+@Table(name = "judokas", indexes = {
+    @Index(name = "idx_judoka_acudiente", columnList = "id_acudiente"),
+    @Index(name = "idx_judoka_sensei", columnList = "id_sensei"),
+    @Index(name = "idx_judoka_grupo", columnList = "id_grupo"),
+    @Index(name = "idx_judoka_estado", columnList = "estado"),
+    @Index(name = "idx_judoka_suscripcion", columnList = "suscripcion_activa")
+})
 public class Judoka implements Serializable {
 
     @Id

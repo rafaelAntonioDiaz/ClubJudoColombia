@@ -27,6 +27,9 @@ RUN ./gradlew clean build -Pvaadin.productionMode=true -x test --no-daemon
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Instalar cliente de PostgreSQL para soporte de backups (pg_dump)
+RUN apk add --no-cache postgresql-client
+
 # Creamos un usuario sin privilegios por SEGURIDAD (No correr como root)
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring

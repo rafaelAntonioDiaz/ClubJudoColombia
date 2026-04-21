@@ -10,8 +10,11 @@ import java.time.LocalDateTime;
  * Judoka a una SesionProgramada específica.
  */
 @Entity
-@Table(name = "asistencias")
-
+@Table(name = "asistencias", indexes = {
+    @Index(name = "idx_asistencia_judoka", columnList = "id_judoka"),
+    @Index(name = "idx_asistencia_sesion", columnList = "id_sesion_ejecutada"),
+    @Index(name = "idx_asistencia_estado", columnList = "estado")
+})
 public class Asistencia implements Serializable {
 
     @Id

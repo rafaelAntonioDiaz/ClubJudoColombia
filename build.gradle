@@ -67,8 +67,9 @@ dependencies {
     implementation 'com.github.librepdf:openpdf:1.3.30'
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.google.zxing:javase:3.5.3'
-    // Base de datos H2 (runtime)
-    runtimeOnly 'com.h2database:h2'
+    // Bases de datos
+    runtimeOnly 'org.postgresql:postgresql'
+    testRuntimeOnly 'com.h2database:h2'
 
     // ---- Testing ----
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
