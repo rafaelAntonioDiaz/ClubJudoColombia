@@ -233,6 +233,7 @@ public class GrupoEntrenamientoService {
         return tarifa.multiply(sensei.getComisionPorcentaje().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
     }
 
+    @Transactional
     public GrupoEntrenamiento crearGrupo(Sensei sensei, String nombre, String descripcion,
                                          BigDecimal tarifaMensual, // sin parámetro comision
                                          boolean incluyeMatricula, BigDecimal montoMatricula,
@@ -255,6 +256,7 @@ public class GrupoEntrenamientoService {
         return grupoRepository.save(grupo);
     }
 
+    @Transactional
     public GrupoEntrenamiento actualizarGrupo(Long id, String nombre, String descripcion,
                                               BigDecimal tarifaMensual,
                                               boolean incluyeMatricula, BigDecimal montoMatricula,
@@ -280,6 +282,7 @@ public class GrupoEntrenamientoService {
         return grupoRepository.save(grupo);
     }
 
+    @Transactional
     public void eliminarGrupo(Long id) {
         GrupoEntrenamiento grupo = grupoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));

@@ -32,7 +32,6 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     @Override
-    @Transactional
     public void run(String... args) throws Exception {
         System.out.println(">>> INICIANDO INICIALIZACIÓN DE DATOS...");
 

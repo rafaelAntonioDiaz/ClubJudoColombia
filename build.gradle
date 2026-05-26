@@ -68,8 +68,10 @@ dependencies {
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.google.zxing:javase:3.5.3'
     // Bases de datos
-    runtimeOnly 'org.postgresql:postgresql'
-    testRuntimeOnly 'com.h2database:h2'
+    implementation 'org.postgresql:postgresql'
+    implementation 'com.h2database:h2:2.3.232'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
 
     // ---- Testing ----
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -86,6 +88,16 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+        exceptionFormat = 'full'
+    }
+}
+
+bootRun {
+    if (project.hasProperty('args')) {
+        args project.args.split(',')
+    }
 }
 
 // Configuración del plugin de Vaadin
