@@ -55,7 +55,7 @@ public class Sensei implements Serializable {
     /**
      * Campo de texto largo para la biografía del Sensei.
      */
-    @Lob
+
     @Column(name = "biografia", columnDefinition = "TEXT")
     private String biografia;
 

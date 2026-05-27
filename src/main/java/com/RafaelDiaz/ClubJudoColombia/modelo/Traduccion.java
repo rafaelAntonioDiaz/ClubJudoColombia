@@ -33,7 +33,6 @@ public class Traduccion implements Serializable {
     /**
      * El texto traducido.
      */
-    @Lob // Usamos TEXT para textos largos
     @Column(name = "texto", nullable = false, columnDefinition = "TEXT")
     private String texto;
 

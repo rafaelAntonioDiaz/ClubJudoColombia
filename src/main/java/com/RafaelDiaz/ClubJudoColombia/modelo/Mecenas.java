@@ -54,7 +54,7 @@ public class Mecenas implements Serializable {
      * Descripción del patrocinio (ej. "Patrocinio mensual",
      * "Apoyo a competidores juveniles", etc.)
      */
-    @Lob
+
     @Column(name = "descripcion_patrocinio", columnDefinition = "TEXT")
     private String descripcionPatrocinio;
 

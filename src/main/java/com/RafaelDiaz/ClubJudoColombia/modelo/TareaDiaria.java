@@ -21,7 +21,6 @@ public class TareaDiaria implements Serializable {
     @Column(name = "nombre", nullable = false)
     private String nombre;
 
-    @Lob
     @Column(name = "descripcion", columnDefinition = "TEXT")
     private String descripcion;
 

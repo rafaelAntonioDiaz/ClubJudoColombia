@@ -25,11 +25,11 @@ public class PruebaEstandar implements Serializable {
     @Column(name = "nombre_key", unique = true, length = 200)
     private String nombreKey;
 
-    @Lob
+
     @Column(name = "objetivo_key", columnDefinition = "TEXT")
     private String objetivoKey;
 
-    @Lob
+
     @Column(name = "descripcion_key", columnDefinition = "TEXT")
     private String descripcionKey;
 
@@ -50,11 +50,9 @@ public class PruebaEstandar implements Serializable {
     @Column(name = "nombre_personalizado", length = 200)
     private String nombrePersonalizado;
 
-    @Lob
     @Column(name = "objetivo_personalizado", columnDefinition = "TEXT")
     private String objetivoPersonalizado;
-
-    @Lob
+    
     @Column(name = "descripcion_personalizada", columnDefinition = "TEXT")
     private String descripcionPersonalizada;
 

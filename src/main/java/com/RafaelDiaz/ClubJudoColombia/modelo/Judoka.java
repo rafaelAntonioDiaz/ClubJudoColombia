@@ -94,7 +94,6 @@ public class Judoka implements Serializable {
     @Column(name = "grado_cinturon")
     private GradoCinturon grado= GradoCinturon.BLANCO;
 
-    @Lob
     @Column(name = "palmares", columnDefinition = "TEXT")
     private String palmares;
 
@@ -140,7 +139,6 @@ public class Judoka implements Serializable {
     @Column(name = "ruta_autorizacion_waiver")
     private String rutaAutorizacionWaiver;
 
-    @Lob
     @Column(name = "url_foto_perfil", columnDefinition = "TEXT")
     private String urlFotoPerfil;
 

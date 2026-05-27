@@ -21,7 +21,6 @@ public class Reflexion {
     @Column(nullable = false)
     private LocalDateTime fechaUltimaEdicion;
 
-    @Lob // Texto largo
     @Column(columnDefinition = "TEXT", nullable = false)
     private String contenido;
 
