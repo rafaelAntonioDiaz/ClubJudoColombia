@@ -14,17 +14,26 @@ import java.util.List;
 public class SesionEjecutadaService {
 
     private final SesionEjecutadaRepository repository;
+    private final AsistenciaService asistenciaService;
+    private final GamificationService gamificationService;
 
-    public SesionEjecutadaService(SesionEjecutadaRepository repository) {
+    public SesionEjecutadaService(SesionEjecutadaRepository repository, AsistenciaService asistenciaService, GamificationService gamificationService) {
         this.repository = repository;
+        this.asistenciaService = asistenciaService;
+        this.gamificationService = gamificationService;
     }
 
     @Transactional
     public SesionEjecutada guardarSesion(SesionEjecutada sesion) {
-        // Al guardar la sesión, JPA se encarga de guardar las asistencias
-        // asociadas gracias al CascadeType.ALL que pusimos en la entidad.
-        return repository.save(sesion);
+        SesionEjecutada guardada = repository.save(sesion);
+        for (Asistencia a : guardada.getListaAsistencia()) {
+            if (a.getEstado() == EstadoAsistencia.PRESENTE) {
+                gamificationService.verificarLogrosAsistencia(a.getJudoka());
+            }
+        }
+        return guardada;
     }
+
     public String generarResumenMetodologico(SesionEjecutada sesion) {
         long presentes = sesion.getListaAsistencia().stream()
                 .filter(a -> a.getEstado() == EstadoAsistencia.PRESENTE).count();
@@ -38,9 +47,11 @@ public class SesionEjecutadaService {
                 sesion.getMicrociclo().getNombre(),
                 sesion.getNotasRetroalimentacion());
     }
-    // Añade este método en SesionEjecutadaService.java
     public List<SesionEjecutada> obtenerHistorialDelSensei(Sensei sensei) {
         // Usamos el método que creamos en el repositorio para traer todo en 1 solo viaje
         return repository.findBySenseiOrderByFechaHoraEjecucionDesc(sensei);
+    }
+    public SesionEjecutada obtenerPorId(Long id) {
+        return repository.findById(id).orElseThrow(() -> new RuntimeException("Sesión no encontrada"));
     }
 }

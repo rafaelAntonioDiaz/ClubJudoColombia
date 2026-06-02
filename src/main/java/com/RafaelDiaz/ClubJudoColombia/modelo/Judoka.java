@@ -204,7 +204,9 @@ public class Judoka implements Serializable {
     public Usuario getUsuario() {
         return acudiente;
     }
-
+    public void setUsuario(Usuario usuario) {
+        this.acudiente = usuario;
+    }
     public Mecenas getMecenas() { return mecenas; }
     public void setMecenas(Mecenas mecenas) { this.mecenas = mecenas; }
 

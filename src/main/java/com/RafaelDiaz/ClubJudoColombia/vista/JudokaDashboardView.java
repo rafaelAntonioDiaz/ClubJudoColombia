@@ -260,7 +260,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
             }
 
             List<String> etiquetasTraducidas = List.of(
-                    traduccionService.get(BloqueAgudelo.DEFINITORIO),
+                    traduccionService.get(BloqueAgudelo.DETERMINANTE),
                     traduccionService.get(BloqueAgudelo.SUSTENTO),
                     traduccionService.get(BloqueAgudelo.EFICIENCIA),
                     traduccionService.get(BloqueAgudelo.PROTECCION),
@@ -503,7 +503,7 @@ public class JudokaDashboardView extends JudokaLayout implements LocaleChangeObs
     }
 
     private VaadinIcon obtenerIconoParaBloque(String nombreBloque) {
-        if (nombreBloque.contains("Definitorio")) return VaadinIcon.FLASH;
+        if (nombreBloque.contains("Determinante")) return VaadinIcon.FLASH;
         if (nombreBloque.contains("Sustento")) return VaadinIcon.HAMMER;
         if (nombreBloque.contains("Eficiencia")) return VaadinIcon.HEART;
         if (nombreBloque.contains("Protección")) return VaadinIcon.ARROW_FORWARD;

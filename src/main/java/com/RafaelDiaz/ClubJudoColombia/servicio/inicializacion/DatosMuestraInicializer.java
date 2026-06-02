@@ -153,7 +153,7 @@ public class DatosMuestraInicializer {
 
         // 17. Crear sesiones en meses anteriores y futuros
         crearSesionesAdicionales(kiuzo, grupoDemo);
-        crearFamiliaJaimes(masterSensei);
+        //crearFamiliaJaimes(masterSensei);
 
         System.out.println(">>> Datos de muestra cargados exitosamente.");
     }

@@ -128,69 +128,7 @@ public class SenseiTatamiView extends VerticalLayout {
         add(cabecera, progresoClase, labelProgreso);
     }
 
-    private void configurarSelectorYAsistencia() {
-        // --- 1. SELECTOR DE GRUPO ---
-        selectorGrupo = new ComboBox<>("1. Seleccionar Grupo");
-        selectorGrupo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
-        // Usamos el método en GrupoService para traer los grupos del Sensei
-        selectorGrupo.setItems(grupoService.findAllBySenseiId(senseiActual.getId()));
-        selectorGrupo.setWidthFull();
 
-        // --- 2. SELECTOR DE MICROCICLO ---
-        selectorPlan = new ComboBox<>("2. Seleccionar Microciclo (Plan)");
-        selectorPlan.setItemLabelGenerator(Microciclo::getNombre);
-        selectorPlan.setItems(microcicloService.obtenerHistorialDelSensei(senseiActual));
-        selectorPlan.setWidthFull();
-        selectorPlan.setEnabled(false); // Deshabilitado hasta que elija grupo
-
-        // --- CONTENEDOR DE SELECTORES ---
-        HorizontalLayout layoutSelectores = new HorizontalLayout(selectorGrupo, selectorPlan);
-        layoutSelectores.setWidthFull();
-
-        // --- EVENTOS (La Magia) ---
-        selectorGrupo.addValueChangeListener(e -> {
-            boolean grupoSeleccionado = e.getValue() != null;
-            selectorPlan.setEnabled(grupoSeleccionado);
-            if (grupoSeleccionado) {
-                // Si cambia el grupo, redibujamos la asistencia de inmediato
-                dibujarListaAsistencia(e.getValue());
-                // Si ya había un plan seleccionado, recargamos los ejercicios para limpiar progreso
-                if (selectorPlan.getValue() != null) {
-                    cargarDetallesDelPlan(selectorPlan.getValue());
-                }
-            } else {
-                contenedorAsistencia.removeAll();
-                contenedorEjercicios.removeAll();
-                asistenciasActuales.clear();
-            }
-        });
-
-        selectorPlan.addValueChangeListener(e -> {
-            if (e.getValue() != null && selectorGrupo.getValue() != null) {
-                cargarDetallesDelPlan(e.getValue());
-            }
-        });
-// --- BOTÓN TINDER (MODO RÁFAGA) ---
-        Button btnTomarLista = new Button("Pasar Lista (Modo Rápido)", new Icon(VaadinIcon.USERS));
-        btnTomarLista.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
-        btnTomarLista.setWidthFull();
-        btnTomarLista.getStyle().set("margin-top", "10px");
-        btnTomarLista.addClickListener(e -> abrirTinderAsistencia()); // <-- Llamamos al nuevo método
-
-
-
-        // --- CONTENEDOR ASISTENCIA ---
-        contenedorAsistencia = new FlexLayout();
-        contenedorAsistencia.setFlexWrap(FlexLayout.FlexWrap.WRAP);
-        contenedorAsistencia.getStyle().set("gap", "10px");
-        contenedorAsistencia.getStyle().set("margin-top", "10px");
-        contenedorAsistencia.getStyle().set("margin-bottom", "20px");
-
-        Span tituloAsistencia = new Span("Resumen de Asistencia:");
-        tituloAsistencia.getStyle().set("font-weight", "bold");
-
-        add(layoutSelectores, btnTomarLista, tituloAsistencia, contenedorAsistencia);
-    }
 
     private void cargarDetallesDelPlan(Microciclo plan) {
         contenedorEjercicios.removeAll();
@@ -291,75 +229,7 @@ public class SenseiTatamiView extends VerticalLayout {
         }
     }
 
-    private void dibujarListaAsistencia(GrupoEntrenamiento grupo) {
-        contenedorAsistencia.removeAll();
-        List<Judoka> listaJudokas = judokaRepository.findByGrupoWithAcudiente(grupo);
 
-        for (Judoka j : listaJudokas) {
-            final Asistencia asist = new Asistencia(j, EstadoAsistencia.PRESENTE);
-            asistenciasActuales.add(asist);
-
-            // Construir la tarjeta del Judoka (Visual)
-            VerticalLayout cardJudoka = new VerticalLayout();
-            cardJudoka.setAlignItems(Alignment.CENTER);
-            cardJudoka.getStyle().set("border", "2px solid var(--lumo-success-color)"); // Verde por defecto
-            cardJudoka.getStyle().set("border-radius", "8px");
-            cardJudoka.getStyle().set("padding", "10px");
-            cardJudoka.getStyle().set("width", "90px");
-            cardJudoka.getStyle().set("cursor", "pointer"); // Indica que es clicable
-            cardJudoka.getStyle().set("background-color", "white");
-            // --- BOTÓN DE PÁNICO (SOS) ---
-            Button btnSOS = new Button(new Icon(VaadinIcon.AMBULANCE));
-            btnSOS.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_ERROR);
-            btnSOS.setWidth("40px");
-            btnSOS.setHeight("40px");
-            btnSOS.getStyle().set("border-radius", "50%");
-
-            // 1. Lógica Servidor: Abrir diálogo
-            btnSOS.addClickListener(e -> mostrarDialogoSOS(j));
-
-            // 2. Lógica Cliente: Detener propagación del clic para no activar la tarjeta
-            btnSOS.getElement().executeJs("this.addEventListener('click', function(e) { e.stopPropagation(); });");
-            // El Avatar (Foto o Iniciales)
-            Avatar avatar = new Avatar(j.getNombre() + " " + j.getApellido());
-            if (j.getUrlFotoPerfil() != null && !j.getUrlFotoPerfil().isEmpty()) {
-                avatar.setImage(j.getUrlFotoPerfil());
-            }
-
-            // Nombre corto
-            Span nombreCorto = new Span(j.getNombre().split(" ")[0]);
-            nombreCorto.getStyle().set("font-size", "var(--lumo-font-size-xs)");
-            nombreCorto.getStyle().set("font-weight", "bold");
-            nombreCorto.getStyle().set("text-align", "center");
-
-            // Ícono indicador
-            Icon iconEstado = new Icon(VaadinIcon.CHECK_CIRCLE);
-            iconEstado.setColor("var(--lumo-success-color)");
-
-            cardJudoka.add(btnSOS, avatar, nombreCorto, iconEstado);
-
-            // Lógica del clic para cambiar estado
-            cardJudoka.addClickListener(e -> {
-                if (asist.getEstado() == EstadoAsistencia.PRESENTE) {
-                    asist.setEstado(EstadoAsistencia.AUSENTE);
-                    cardJudoka.getStyle().set("border-color", "var(--lumo-error-color)");
-                    cardJudoka.getStyle().set("background-color", "var(--lumo-error-color-10pct)");
-                    cardJudoka.getStyle().set("opacity", "0.6");
-                    iconEstado.getElement().setAttribute("icon", "vaadin:close-circle");
-                    iconEstado.setColor("var(--lumo-error-color)");
-                } else {
-                    asist.setEstado(EstadoAsistencia.PRESENTE);
-                    cardJudoka.getStyle().set("border-color", "var(--lumo-success-color)");
-                    cardJudoka.getStyle().set("background-color", "white");
-                    cardJudoka.getStyle().set("opacity", "1");
-                    iconEstado.getElement().setAttribute("icon", "vaadin:check-circle");
-                    iconEstado.setColor("var(--lumo-success-color)");
-                }
-            });
-
-            contenedorAsistencia.add(cardJudoka);
-        }
-    }
     private void mostrarDialogoSOS(Judoka alumno) {
         Dialog d = new Dialog();
         d.setHeaderTitle(traduccionService.get("asistencia.dialog.sos.titulo"));
@@ -536,6 +406,138 @@ public class SenseiTatamiView extends VerticalLayout {
 
         pantallaCompleta.open();
         tabata.iniciarTabata(t, d, s);
+    }
+
+    private void configurarSelectorYAsistencia() {
+        // --- 1. SELECTOR DE GRUPO ---
+        selectorGrupo = new ComboBox<>("1. Seleccionar Grupo");
+        selectorGrupo.setItemLabelGenerator(GrupoEntrenamiento::getNombre);
+        // Usamos el método en GrupoService para traer los grupos del Sensei
+        selectorGrupo.setItems(grupoService.findAllBySenseiId(senseiActual.getId()));
+        selectorGrupo.setWidthFull();
+
+        // --- 2. SELECTOR DE MICROCICLO ---
+        selectorPlan = new ComboBox<>("2. Seleccionar Microciclo (Plan)");
+        selectorPlan.setItemLabelGenerator(Microciclo::getNombre);
+        selectorPlan.setItems(microcicloService.obtenerHistorialDelSensei(senseiActual));
+        selectorPlan.setWidthFull();
+        selectorPlan.setEnabled(false); // Deshabilitado hasta que elija grupo
+
+        // --- CONTENEDOR DE SELECTORES ---
+        HorizontalLayout layoutSelectores = new HorizontalLayout(selectorGrupo, selectorPlan);
+        layoutSelectores.setWidthFull();
+
+        // --- EVENTOS (La Magia) ---
+        selectorGrupo.addValueChangeListener(e -> {
+            boolean grupoSeleccionado = e.getValue() != null;
+            selectorPlan.setEnabled(grupoSeleccionado);
+            if (grupoSeleccionado) {
+                dibujarListaAsistencia(e.getValue());
+                // Si ya había un plan seleccionado, recargamos los ejercicios para limpiar progreso
+                if (selectorPlan.getValue() != null) {
+                    cargarDetallesDelPlan(selectorPlan.getValue());
+                }
+            } else {
+                // ✅ Limpiar todo al deseleccionar grupo
+                asistenciasActuales.clear();
+                contenedorAsistencia.removeAll();
+                contenedorEjercicios.removeAll();
+            }
+        });
+
+        selectorPlan.addValueChangeListener(e -> {
+            if (e.getValue() != null && selectorGrupo.getValue() != null) {
+                cargarDetallesDelPlan(e.getValue());
+            }
+        });
+// --- BOTÓN TINDER (MODO RÁFAGA) ---
+        Button btnTomarLista = new Button("Pasar Lista (Modo Rápido)", new Icon(VaadinIcon.USERS));
+        btnTomarLista.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+        btnTomarLista.setWidthFull();
+        btnTomarLista.getStyle().set("margin-top", "10px");
+        btnTomarLista.addClickListener(e -> abrirTinderAsistencia()); // <-- Llamamos al nuevo método
+
+
+
+        // --- CONTENEDOR ASISTENCIA ---
+        contenedorAsistencia = new FlexLayout();
+        contenedorAsistencia.setFlexWrap(FlexLayout.FlexWrap.WRAP);
+        contenedorAsistencia.getStyle().set("gap", "10px");
+        contenedorAsistencia.getStyle().set("margin-top", "10px");
+        contenedorAsistencia.getStyle().set("margin-bottom", "20px");
+
+        Span tituloAsistencia = new Span("Resumen de Asistencia:");
+        tituloAsistencia.getStyle().set("font-weight", "bold");
+
+        add(layoutSelectores, btnTomarLista, tituloAsistencia, contenedorAsistencia);
+    }
+
+    private void dibujarListaAsistencia(GrupoEntrenamiento grupo) {
+        // ✅ Limpiar lista global antes de reconstruir
+        asistenciasActuales.clear();
+        contenedorAsistencia.removeAll();
+
+        List<Judoka> listaJudokas = judokaRepository.findByGrupoWithAcudiente(grupo);
+
+        for (Judoka j : listaJudokas) {
+            final Asistencia asist = new Asistencia(j, EstadoAsistencia.PRESENTE);
+            asistenciasActuales.add(asist);
+
+            // Construir la tarjeta del Judoka (Visual)
+            VerticalLayout cardJudoka = new VerticalLayout();
+            cardJudoka.setAlignItems(Alignment.CENTER);
+            cardJudoka.getStyle().set("border", "2px solid var(--lumo-success-color)");
+            cardJudoka.getStyle().set("border-radius", "8px");
+            cardJudoka.getStyle().set("padding", "10px");
+            cardJudoka.getStyle().set("width", "90px");
+            cardJudoka.getStyle().set("cursor", "pointer");
+            cardJudoka.getStyle().set("background-color", "white");
+
+            // Botón SOS
+            Button btnSOS = new Button(new Icon(VaadinIcon.AMBULANCE));
+            btnSOS.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_ERROR);
+            btnSOS.setWidth("40px");
+            btnSOS.setHeight("40px");
+            btnSOS.getStyle().set("border-radius", "50%");
+            btnSOS.addClickListener(e -> mostrarDialogoSOS(j));
+            btnSOS.getElement().executeJs("this.addEventListener('click', function(e) { e.stopPropagation(); });");
+
+            Avatar avatar = new Avatar(j.getNombre() + " " + j.getApellido());
+            if (j.getUrlFotoPerfil() != null && !j.getUrlFotoPerfil().isEmpty()) {
+                avatar.setImage(j.getUrlFotoPerfil());
+            }
+
+            Span nombreCorto = new Span(j.getNombre().split(" ")[0]);
+            nombreCorto.getStyle().set("font-size", "var(--lumo-font-size-xs)");
+            nombreCorto.getStyle().set("font-weight", "bold");
+            nombreCorto.getStyle().set("text-align", "center");
+
+            Icon iconEstado = new Icon(VaadinIcon.CHECK_CIRCLE);
+            iconEstado.setColor("var(--lumo-success-color)");
+
+            cardJudoka.add(btnSOS, avatar, nombreCorto, iconEstado);
+
+            // Lógica del clic para cambiar estado
+            cardJudoka.addClickListener(e -> {
+                if (asist.getEstado() == EstadoAsistencia.PRESENTE) {
+                    asist.setEstado(EstadoAsistencia.AUSENTE);
+                    cardJudoka.getStyle().set("border-color", "var(--lumo-error-color)");
+                    cardJudoka.getStyle().set("background-color", "var(--lumo-error-color-10pct)");
+                    cardJudoka.getStyle().set("opacity", "0.6");
+                    iconEstado.getElement().setAttribute("icon", "vaadin:close-circle");
+                    iconEstado.setColor("var(--lumo-error-color)");
+                } else {
+                    asist.setEstado(EstadoAsistencia.PRESENTE);
+                    cardJudoka.getStyle().set("border-color", "var(--lumo-success-color)");
+                    cardJudoka.getStyle().set("background-color", "white");
+                    cardJudoka.getStyle().set("opacity", "1");
+                    iconEstado.getElement().setAttribute("icon", "vaadin:check-circle");
+                    iconEstado.setColor("var(--lumo-success-color)");
+                }
+            });
+
+            contenedorAsistencia.add(cardJudoka);
+        }
     }
     // =========================================================
     // MODO TINDER: ASISTENCIA EN RÁFAGA
@@ -724,8 +726,9 @@ public class SenseiTatamiView extends VerticalLayout {
                         });
 
                         try {
-                            EjercicioPlanificado ejercicioActual = microciclo.getEjerciciosPlanificados().isEmpty() ? null : microciclo.getEjerciciosPlanificados().get(0);
-
+                            // Si no hay ejercicios, creamos un ejercicio "fantasma" para no romper la relación (opcional)
+                            EjercicioPlanificado ejercicioActual = microciclo.getEjerciciosPlanificados().isEmpty() ?
+                                    new EjercicioPlanificado() : microciclo.getEjerciciosPlanificados().get(0);
                             // 1. RECIBIMOS LA LISTA DE TEXTOS CATEGORIZADOS DESDE EL BACKEND
                             List<String> calculados = resultadoPruebaService.guardarResultadosTatami(judoka, ejercicioActual, prueba, valoresCapturados);
 

@@ -56,4 +56,6 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
 
     @Query("SELECT COUNT(a) FROM Asistencia a WHERE a.sesion.sensei.id = :senseiId AND a.sesion.fechaHoraEjecucion BETWEEN :start AND :end AND a.estado = :estado")
     long countBySenseiAndDateBetweenAndEstado(@Param("senseiId") Long senseiId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("estado") EstadoAsistencia estado);
+    List<Asistencia> findBySesionId(Long sesionId);
+
 }

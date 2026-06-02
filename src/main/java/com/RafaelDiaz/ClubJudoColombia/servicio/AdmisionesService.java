@@ -125,6 +125,8 @@ public class AdmisionesService {
             if ("ROLE_JUDOKA_ADULTO".equals(rolEsperado)) {
                 // Adulto: el acudiente es él mismo
                 judokaVinculado.setAcudiente(usuarioInvitado);
+                // ✅ IMPORTANTE: vincular también el usuario propio
+                judokaVinculado.setUsuario(usuarioInvitado);
                 // Asignar nombre, apellido y flag de mayoría de edad
                 judokaVinculado.setNombre(usuarioInvitado.getNombre());
                 judokaVinculado.setApellido(usuarioInvitado.getApellido());
@@ -242,16 +244,19 @@ public class AdmisionesService {
         }
 
         if (!faltantes.isEmpty()) {
-            throw new RuntimeException(traduccionService.get("error.admisiones.requisitos_incompletos") + ": " + String.join(", ", faltantes));
+            throw new RuntimeException(traduccionService.get("error.admisiones.requisitos_incompletos")
+                    + ": " + String.join(", ", faltantes));
         }
 
         // Determinar el usuario a activar
         Usuario usuario = null;
+
         if (judoka.getUsuario() != null) {
-            // Judoka adulto (tiene su propio usuario)
             usuario = judoka.getUsuario();
-            // Asegurar que tenga el rol de judoka si es adulto
-            if (usuario.getRoles().stream().noneMatch(r -> r.getNombre().equals("ROLE_JUDOKA"))) {
+            // Si el usuario ya tiene ROLE_JUDOKA_ADULTO, no es forzoso agregar ROLE_JUDOKA
+            boolean tieneJudokaRole = usuario.getRoles().stream()
+                    .anyMatch(r -> r.getNombre().equals("ROLE_JUDOKA") || r.getNombre().equals("ROLE_JUDOKA_ADULTO"));
+            if (!tieneJudokaRole) {
                 Rol rolJudoka = rolRepository.findByNombre("ROLE_JUDOKA")
                         .orElseThrow(() -> new RuntimeException("Rol ROLE_JUDOKA no encontrado"));
                 Set<Rol> nuevosRoles = new HashSet<>(usuario.getRoles());

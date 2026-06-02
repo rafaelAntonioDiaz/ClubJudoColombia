@@ -663,7 +663,7 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "enum.estadoasistencia.llegada_tarde", "Llegada tarde", "Late arrival", "Chegada atrasada");
 
         // Bloque Agudelo
-        agregarSiNoExiste(lista, clavesExistentes, "enum.bloqueagudelo.definitorio", "Definitorio", "Defining", "Definitório");
+        agregarSiNoExiste(lista, clavesExistentes, "enum.bloqueagudelo.determinante", "Determinante", "Determinant", "Decisivo");
         agregarSiNoExiste(lista, clavesExistentes, "enum.bloqueagudelo.sustento", "Sustento", "Sustenance", "Sustento");
         agregarSiNoExiste(lista, clavesExistentes, "enum.bloqueagudelo.eficiencia", "Eficiencia", "Efficiency", "Eficiência");
         agregarSiNoExiste(lista, clavesExistentes, "enum.bloqueagudelo.proteccion", "Protección", "Protection", "Proteção");
@@ -1160,7 +1160,7 @@ public class TraduccionInicializer {
 // --- PODER INACTIVO ---
         agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.titulo", "¡Poder Inactivo! \uD83D\uDD12", "Inactive Power! \uD83D\uDD12", "Poder Inativo! \uD83D\uDD12");
         agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.subtitulo_joven", "No te preocupes, todo gran guerrero empieza así. Pídele a tu Sensei que te evalúe.", "Don't worry, every great warrior starts like this. Ask your Sensei to evaluate you.", "Não se preocupe, todo grande guerreiro começa assim. Peça ao seu Sensei para avaliá-lo.");
-        agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.subtitulo_adulto", "Completa tu Bloque Definitorio para despertar tu potencial.", "Complete your Definitive Block to awaken your potential.", "Complete seu Bloco Definitório para despertar seu potencial.");
+        agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.subtitulo_adulto", "Completa tu Bloque Determinante para despertar tu potencial.", "Complete your Determinant Block to awaken your potential.", "Complete seu Bloco Decisivo para despertar seu potencial.");
 
 // --- GRÁFICOS Y RADAR ---
         agregarSiNoExiste(lista, clavesExistentes, "kpi.poder_combate", "Poder de Combate", "Combat Power", "Poder de Combate");

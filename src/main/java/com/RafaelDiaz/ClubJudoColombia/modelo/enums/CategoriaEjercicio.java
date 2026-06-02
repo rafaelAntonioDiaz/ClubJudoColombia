@@ -8,7 +8,7 @@ public enum CategoriaEjercicio {
     // Biometría
     MEDICION_ANTROPOMETRICA ("Medición Antropométrica"),
 
-    // Bloque Definitorio de Aptitudes Físicas
+    // Bloque Determinante de Aptitudes Físicas
     POTENCIA ("Potencia"),
     VELOCIDAD ("Velocidad"),
 

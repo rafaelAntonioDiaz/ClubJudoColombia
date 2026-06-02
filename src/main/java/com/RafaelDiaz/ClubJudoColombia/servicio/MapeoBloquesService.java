@@ -13,9 +13,9 @@ public class MapeoBloquesService {
     private final Map<CategoriaEjercicio, BloqueAgudelo> mapeo = new EnumMap<>(CategoriaEjercicio.class);
 
     public MapeoBloquesService() {
-        // Definitorio
-        mapeo.put(CategoriaEjercicio.POTENCIA, BloqueAgudelo.DEFINITORIO);
-        mapeo.put(CategoriaEjercicio.VELOCIDAD, BloqueAgudelo.DEFINITORIO);
+        // Determiante
+        mapeo.put(CategoriaEjercicio.POTENCIA, BloqueAgudelo.DETERMINANTE);
+        mapeo.put(CategoriaEjercicio.VELOCIDAD, BloqueAgudelo.DETERMINANTE);
 
         // Sustento
         mapeo.put(CategoriaEjercicio.RESISTENCIA_DINAMICA, BloqueAgudelo.SUSTENTO);

@@ -1,7 +1,7 @@
 package com.RafaelDiaz.ClubJudoColombia.modelo.enums;
 
 public enum BloqueAgudelo {
-    DEFINITORIO,
+    DETERMINANTE,
     SUSTENTO,
     EFICIENCIA,
     PROTECCION,
