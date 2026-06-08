@@ -474,7 +474,12 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "msg.bienvenido_academia", "¡Bienvenido a la Academia!", "Welcome to the Academy!", "Bem-vindo à Academia!");
         agregarSiNoExiste(lista, clavesExistentes, "msg.bienvenido_saas", "¡Bienvenido a tu nuevo SaaS!", "Welcome to your new SaaS!", "Bem-vindo ao seu novo SaaS!");
         agregarSiNoExiste(lista, clavesExistentes, "msg.bienvenido_dojo", "¡Bienvenido al Dojo!", "Welcome to the Dojo!", "Bem-vindo ao Dojo!");
-        agregarSiNoExiste(lista, clavesExistentes, "generic.hola_exclamacion", "¡Hola", "Hello", "Olá");
+        agregarSiNoExiste(lista, clavesExistentes, "msg.waiver.descargar", "Descargar Formato Waiver", "Download Waiver Template", "Baixar Modelo de Waiver");
+        agregarSiNoExiste(lista, clavesExistentes, "msg.waiver.instruccion",
+                "Descarga el formato, imprímelo, haz que lo firme el judoka y súbelo aquí.",
+                "Download the template, print it, have the judoka sign it and upload it here.",
+                "Baixe o modelo, imprima-o, façar o judoca assiná-lo e envie-o aqui.");
+                agregarSiNoExiste(lista, clavesExistentes, "generic.hola_exclamacion", "¡Hola", "Hello", "Olá");
         agregarSiNoExiste(lista, clavesExistentes, "generic.msg.recibido", "¡Recibido!", "Received!", "Recebido!");
 
         // ================== REGISTRO / LOGIN ==================
@@ -1156,7 +1161,10 @@ public class TraduccionInicializer {
         agregarSiNoExiste(lista, clavesExistentes, "general.judoka", "Judoka", "Judoka", "Judoca");
         agregarSiNoExiste(lista, clavesExistentes, "dashboard.welcome", "¡Hola, {0}!", "Hello, {0}!", "Olá, {0}!");
         agregarSiNoExiste(lista, clavesExistentes, "sabiduria.titulo", "Sabiduría del Sensei", "Sensei's Wisdom", "Sabedoria do Sensei");
-
+        agregarSiNoExiste(lista, clavesExistentes, "vista.wizard.paso2.desc.descarga",
+                "Descarga el formato, imprímelo, llénalo y escanéalo o fótografia. Luego súbelo aquí:",
+                "Download the form, print it, fill it out and scan or photograph it. Then upload it here:",
+                "Baixe o formulário, imprima-o, preencha-o e escaneie ou fotografe. Em seguida, envie-o aqui:");
 // --- PODER INACTIVO ---
         agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.titulo", "¡Poder Inactivo! \uD83D\uDD12", "Inactive Power! \uD83D\uDD12", "Poder Inativo! \uD83D\uDD12");
         agregarSiNoExiste(lista, clavesExistentes, "dashboard.poder_inactivo.subtitulo_joven", "No te preocupes, todo gran guerrero empieza así. Pídele a tu Sensei que te evalúe.", "Don't worry, every great warrior starts like this. Ask your Sensei to evaluate you.", "Não se preocupe, todo grande guerreiro começa assim. Peça ao seu Sensei para avaliá-lo.");

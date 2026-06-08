@@ -40,6 +40,9 @@ public class SeguridadInicializer {
         crearRolSiNoExiste("ROLE_COMPETIDOR");
         crearRolSiNoExiste("ROLE_ACUDIENTE");
         crearRolSiNoExiste("ROLE_JUDOKA_ADULTO");
+        crearRolSiNoExiste("ROLE_JUDOKA_MENOR");
+        crearRolSiNoExiste("ROLE_MECENAS");
+
         return configurarUsuarioMaster();
     }
 

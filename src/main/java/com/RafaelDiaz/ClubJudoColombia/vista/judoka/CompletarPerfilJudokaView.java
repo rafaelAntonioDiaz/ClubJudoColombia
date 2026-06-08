@@ -11,6 +11,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -245,13 +246,23 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
         boolean esSaaS = judokaActual.getSensei() != null &&
                 !judokaActual.getSensei().getUsuario().getUsername().equals("master_admin");
 
+        seccionDocumentos.removeAll();
+
         if (!esSaaS) {
-            seccionDocumentos.add(crearComponenteSubida(traduccionService.get("perfil.subir_waiver"), url -> { urlWaiver = url; waiverSubido = true; }));
-            seccionDocumentos.add(crearComponenteSubida(traduccionService.get("perfil.subir_eps"), url -> { urlEps = url; epsSubido = true; }));
+            // Sección Waiver: incluye descarga + subida
+            seccionDocumentos.add(crearSeccionWaiverConDescarga());
+
+            // Sección EPS (solo subida, sin descarga porque no hay formato precargado)
+            Upload uploadEps = crearComponenteSubida(
+                    traduccionService.get("msg.eps.instruccion", "Subir documento EPS (PDF o imagen)"),
+                    url -> { urlEps = url; epsSubido = true; }
+            );
+            seccionDocumentos.add(uploadEps);
         } else {
             seccionDocumentos.add(new Span(traduccionService.get("perfil.saas.no_documentos")));
         }
 
+        seccionPago.removeAll();
         GrupoEntrenamiento grupo = judokaActual.getGrupoFacturacion();
         if (grupo != null && grupo.getTarifaMensual() != null && grupo.getTarifaMensual().compareTo(BigDecimal.ZERO) > 0) {
             String montoFormateado = configuracionService.obtenerFormatoMoneda().format(grupo.getTarifaMensual());
@@ -331,5 +342,31 @@ public class CompletarPerfilJudokaView extends VerticalLayout implements HasUrlP
             log.error("Error guardando perfil", e);
             Notification.show("Error al guardar: " + e.getMessage(), 5000, Notification.Position.TOP_CENTER).addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
+    }
+    private VerticalLayout crearSeccionWaiverConDescarga() {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSpacing(true);
+        layout.setPadding(false);
+
+        // Instrucción para descargar el formato
+        Paragraph instruccion = new Paragraph(traduccionService.get("vista.wizard.paso2.desc.descarga",
+                "Descarga el formato, imprímelo, llénalo y escanéalo o fótografia. Luego súbelo aquí:"));
+
+        // Enlace de descarga (ruta relativa al contexto)
+        Anchor enlaceDescarga = new Anchor("documentos/formato_waiver.pdf", "");
+        enlaceDescarga.getElement().setAttribute("download", true); // fuerza descarga
+        Button btnDescargar = new Button(traduccionService.get("msg.waiver.descargar", "Descargar Formato Waiver"),
+                VaadinIcon.DOWNLOAD.create());
+        btnDescargar.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_CONTRAST);
+        enlaceDescarga.add(btnDescargar);
+
+        // Componente de subida (se reutiliza el existente)
+        Upload uploadWaiver = crearComponenteSubida(
+                traduccionService.get("msg.waiver.instruccion", "Subir Waiver firmado (PDF o imagen)"),
+                url -> { urlWaiver = url; waiverSubido = true; }
+        );
+
+        layout.add(instruccion, enlaceDescarga, uploadWaiver);
+        return layout;
     }
 }

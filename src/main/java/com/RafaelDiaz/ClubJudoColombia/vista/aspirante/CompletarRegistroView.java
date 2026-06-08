@@ -46,11 +46,7 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
     private final FinanzasService finanzasService;
     private final TraduccionService traduccionService;
 
-    // CORRECCIÓN: Se mantiene HttpSessionSecurityContextRepository como implementación
-    // concreta porque necesitamos llamar saveContext() con el HttpServletResponse real.
-    // Con la interfaz SecurityContextRepository también funciona, pero la implementación
-    // por defecto en Spring Security 6 es DelegatingSecurityContextRepository que puede
-    // ignorar el response según la configuración. Ser explícito es más seguro.
+
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
@@ -160,23 +156,7 @@ public class CompletarRegistroView extends VerticalLayout implements HasUrlParam
         context.setAuthentication(auth);
         SecurityContextHolder.setContext(context);
 
-        // ── CORRECCIÓN CRÍTICA ────────────────────────────────────────────────
-        // El código original llamaba:
-        //   securityContextRepository.saveContext(context, request, null)
-        //
-        // El tercer parámetro (HttpServletResponse) era null.
-        // HttpSessionSecurityContextRepository.saveContext() necesita el response
-        // para escribir la cookie de sesión (JSESSIONID) en el navegador.
-        // Con null, el contexto se guardaba en la sesión del servidor pero el
-        // navegador no recibía la cookie actualizada.
-        // Resultado: el siguiente request (navegación a completar-perfil-judoka)
-        // llegaba sin cookie válida → Spring Security no encontraba el contexto
-        // → getAuthenticatedUsuario() devolvía Optional.empty()
-        // → cargarDatos() redirigía a "" sin construir el formulario
-        // → el DatePicker nunca aparecía en pantalla.
-        //
-        // Solución: obtener el HttpServletResponse real desde VaadinServletResponse.
-        // ─────────────────────────────────────────────────────────────────────
+
         HttpServletRequest request =
                 VaadinServletRequest.getCurrent().getHttpServletRequest();
         HttpServletResponse response =
