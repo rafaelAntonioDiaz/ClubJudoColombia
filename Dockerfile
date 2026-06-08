@@ -19,6 +19,11 @@ COPY src/ src/
 # 4. LA MAGIA: Compilamos el JAR ignorando los tests (ya los probamos)
 # y activando el "Production Mode" de Vaadin para comprimir el Frontend.
 RUN ./gradlew clean build -Pvaadin.productionMode=true -x test --no-daemon
+# ===== NUEVO: Verificar y forzar inclusión del PDF =====
+
+RUN jar tf build/libs/*-SNAPSHOT.jar | grep -q "META-INF/resources/documentos/formato_waiver.pdf" || \
+    (echo "PDF no encontrado en JAR. Copiando manualmente..." && \
+     jar uf build/libs/*-SNAPSHOT.jar -C src/main/resources META-INF)
 
 # ==========================================
 # ETAPA 2: PRODUCCIÓN (El Corredor)
